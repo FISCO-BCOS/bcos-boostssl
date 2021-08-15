@@ -25,40 +25,44 @@
 #include <string>
 #include <vector>
 
-namespace boostssl {
-namespace net {
-
-class Message {
+namespace boostssl
+{
+namespace net
+{
+class Message
+{
 public:
-  using Ptr = std::shared_ptr<Message>;
+    using Ptr = std::shared_ptr<Message>;
 
 public:
-  virtual ~Message() {}
+    virtual ~Message() {}
 
-  virtual uint32_t length() const = 0;
-  virtual uint32_t seq() const = 0;
-  virtual uint16_t version() const = 0;
-  virtual uint16_t packetType() const = 0;
-  virtual uint16_t ext() const = 0;
-  virtual bool isRespPacket() const = 0;
-  virtual bool encode(std::vector<byte> &_buffer) = 0;
-  virtual ssize_t decode(byte *_data, std::size_t size) = 0;
+    virtual uint32_t length() const = 0;
+    virtual uint32_t seq() const = 0;
+    virtual uint16_t version() const = 0;
+    virtual uint16_t packetType() const = 0;
+    virtual uint16_t ext() const = 0;
+    virtual bool isRespPacket() const = 0;
+    virtual bool encode(std::vector<byte>& _buffer) = 0;
+    virtual ssize_t decode(byte* _data, std::size_t size) = 0;
 };
 
-class MessageFactory {
+class MessageFactory
+{
 public:
-  using Ptr = std::shared_ptr<MessageFactory>;
+    using Ptr = std::shared_ptr<MessageFactory>;
 
 public:
-  virtual ~MessageFactory() {}
-  virtual Message::Ptr buildMessage() = 0;
+    virtual ~MessageFactory() {}
+    virtual Message::Ptr buildMessage() = 0;
 
-  virtual uint32_t newSeq() {
-    uint32_t seq = ++m_seq;
-    return seq;
-  }
-  std::atomic<uint32_t> m_seq = {1};
+    virtual uint32_t newSeq()
+    {
+        uint32_t seq = ++m_seq;
+        return seq;
+    }
+    std::atomic<uint32_t> m_seq = {1};
 };
 
-} // namespace net
-} // namespace boostssl
+}  // namespace net
+}  // namespace boostssl

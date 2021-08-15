@@ -20,7 +20,7 @@
 
 #pragma once
 
-#ifndef LOG // #define LOG(level)  should be defined
+#ifndef LOG  // #define LOG(level)  should be defined
 
 #include <iostream>
 

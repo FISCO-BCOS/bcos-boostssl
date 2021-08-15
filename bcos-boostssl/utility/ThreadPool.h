@@ -26,33 +26,39 @@
 #include <boost/thread/thread.hpp>
 #include <memory>
 
-namespace boostssl {
-namespace utility {
-
-class ThreadPool {
+namespace boostssl
+{
+namespace utility
+{
+class ThreadPool
+{
 public:
-  using Ptr = std::shared_ptr<ThreadPool>;
-  // constructor
-  explicit ThreadPool(const std::string &threadName, size_t size);
-  // destructor
-  ~ThreadPool() { stop(); }
+    using Ptr = std::shared_ptr<ThreadPool>;
+    // constructor
+    explicit ThreadPool(const std::string& threadName, size_t size);
+    // destructor
+    ~ThreadPool() { stop(); }
 
 public:
-  // stop thread pool
-  void stop();
-  // set thread pool name
-  void setThreadName(std::string const &_n);
-  // add new work item to the pool.
-  template <class F> void enqueue(F f) { _ioService.post(f); }
+    // stop thread pool
+    void stop();
+    // set thread pool name
+    void setThreadName(std::string const& _n);
+    // add new work item to the pool.
+    template <class F>
+    void enqueue(F f)
+    {
+        _ioService.post(f);
+    }
 
 private:
-  std::string _threadName;
-  boost::thread_group _workers;
-  boost::asio::io_service _ioService;
-  // m_work ensures that io_service's run() function will not exit while work is
-  // underway
-  boost::asio::io_service::work m_work;
+    std::string _threadName;
+    boost::thread_group _workers;
+    boost::asio::io_service _ioService;
+    // m_work ensures that io_service's run() function will not exit while work is
+    // underway
+    boost::asio::io_service::work m_work;
 };
 
-} // namespace utility
-} // namespace boostssl
+}  // namespace utility
+}  // namespace boostssl

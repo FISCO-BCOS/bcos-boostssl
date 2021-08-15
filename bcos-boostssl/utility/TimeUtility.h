@@ -21,23 +21,25 @@
 #pragma once
 #include <cstdint>
 
-namespace boostssl {
-namespace utility {
-
-class TimeUtility {
+namespace boostssl
+{
+namespace utility
+{
+class TimeUtility
+{
 public:
-  TimeUtility() = delete;
-  ~TimeUtility() = delete;
+    TimeUtility() = delete;
+    ~TimeUtility() = delete;
 
 public:
-  /// Get the current time in seconds since the epoch in UTC(ms)
-  static uint64_t utcTime();
-  static uint64_t utcSteadyTime();
+    /// Get the current time in seconds since the epoch in UTC(ms)
+    static uint64_t utcTime();
+    static uint64_t utcSteadyTime();
 
-  /// Get the current time in seconds since the epoch in UTC(us)
-  static uint64_t utcTimeUs();
-  static uint64_t utcSteadyTimeUs();
+    /// Get the current time in seconds since the epoch in UTC(us)
+    static uint64_t utcTimeUs();
+    static uint64_t utcSteadyTimeUs();
 };
 
-} // namespace utility
-} // namespace boostssl
+}  // namespace utility
+}  // namespace boostssl

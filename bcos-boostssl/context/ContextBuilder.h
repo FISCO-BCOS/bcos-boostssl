@@ -24,27 +24,27 @@
 #include <boost/filesystem.hpp>
 #include <memory>
 
-namespace boostssl {
-namespace context {
-
-class ContextBuilder {
+namespace boostssl
+{
+namespace context
+{
+class ContextBuilder
+{
 public:
-  using Ptr = std::shared_ptr<ContextBuilder>;
+    using Ptr = std::shared_ptr<ContextBuilder>;
 
 private:
-  std::shared_ptr<std::string>
-  readFileContent(boost::filesystem::path const &_file);
+    std::shared_ptr<std::string> readFileContent(boost::filesystem::path const& _file);
 
 public:
-  // build sslcontext
-  std::shared_ptr<boost::asio::ssl::context> buildSslContext();
-  std::shared_ptr<boost::asio::ssl::context>
-  buildSslContext(const std::string &_configPath);
-  std::shared_ptr<boost::asio::ssl::context>
-  buildSslContext(const ContextConfig::CertConfig &_certConfig);
-  std::shared_ptr<boost::asio::ssl::context>
-  buildSslContext(const ContextConfig::SMCertConfig &_smCertConfig);
+    // build sslcontext
+    std::shared_ptr<boost::asio::ssl::context> buildSslContext();
+    std::shared_ptr<boost::asio::ssl::context> buildSslContext(const std::string& _configPath);
+    std::shared_ptr<boost::asio::ssl::context> buildSslContext(
+        const ContextConfig::CertConfig& _certConfig);
+    std::shared_ptr<boost::asio::ssl::context> buildSslContext(
+        const ContextConfig::SMCertConfig& _smCertConfig);
 };
 
-} // namespace context
-} // namespace boostssl
+}  // namespace context
+}  // namespace boostssl

@@ -23,29 +23,33 @@
 using namespace boostssl;
 using namespace boostssl::utility;
 
-ThreadPool::ThreadPool(const std::string &threadName, size_t size)
-    : m_work(_ioService) {
-  _threadName = threadName;
+ThreadPool::ThreadPool(const std::string& threadName, size_t size) : m_work(_ioService)
+{
+    _threadName = threadName;
 
-  for (size_t i = 0; i < size; ++i) {
-    _workers.create_thread([this, i] {
-      setThreadName(_threadName + "_" + std::to_string(i));
-      _ioService.run();
-    });
-  }
+    for (size_t i = 0; i < size; ++i)
+    {
+        _workers.create_thread([this, i] {
+            setThreadName(_threadName + "_" + std::to_string(i));
+            _ioService.run();
+        });
+    }
 }
 
-void ThreadPool::stop() {
-  _ioService.stop();
-  if (!_workers.is_this_thread_in()) {
-    _workers.join_all();
-  }
+void ThreadPool::stop()
+{
+    _ioService.stop();
+    if (!_workers.is_this_thread_in())
+    {
+        _workers.join_all();
+    }
 }
 
-void ThreadPool::setThreadName(std::string const &_n) {
+void ThreadPool::setThreadName(std::string const& _n)
+{
 #if defined(__GLIBC__)
-  pthread_setname_np(pthread_self(), _n.c_str());
+    pthread_setname_np(pthread_self(), _n.c_str());
 #elif defined(__APPLE__)
-  pthread_setname_np(_n.c_str());
+    pthread_setname_np(_n.c_str());
 #endif
 }
