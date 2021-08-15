@@ -42,7 +42,6 @@ struct ResponseCallback : public std::enable_shared_from_this<ResponseCallback>
 {
     using Ptr = std::shared_ptr<ResponseCallback>;
 
-    uint64_t m_startTime;
     SessionCallbackFunc callback;
     std::shared_ptr<boost::asio::deadline_timer> timeoutHandler;
 };

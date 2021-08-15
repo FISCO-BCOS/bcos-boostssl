@@ -20,6 +20,6 @@
 
 #pragma once
 
-#include <bcos-boostssl/Common.h>
+#include <bcos-boostssl/LogDef.h>
 
-#define CONTEXT_LOG(LEVEL) LOG(LEVEL) << "[BOOSTSSL][Context]"
+#define CONTEXT_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][Context]"

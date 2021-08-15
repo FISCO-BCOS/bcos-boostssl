@@ -34,7 +34,7 @@ include(HunterGate)
 HunterGate(
     URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/f864aec833035825be3386db9f58320ec222cc30.tar.gz"
     SHA1 "54f60da3c8d0fdb3066c4af336b2d8249dd06c2d"
-    FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
+    # FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
 )
 
 project(bcos-boostssl VERSION "1.0.0")
@@ -51,17 +51,13 @@ find_package(Boost CONFIG REQUIRED log chrono system filesystem thread)
 # OpenSSL
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
-# add other deps
-# TODO:
 
 include_directories(${CMAKE_INSTALL_INCLUDEDIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_INSTALL_INCLUDEDIR}/include)
 
-set(NETWORK_TARGET "network")
-set(UTILITY_TARGET "utility")
-set(CONTEXT_TARGET "context")
-set(BOOSTSSL_TARGET "boostssl")
+set(BOOSTSSL_NETWORK_TARGET "boostssl_network")
+set(BOOSTSSL_CONTEXT_TARGET "boostssl_context")
 
 add_subdirectory(bcos-boostssl)
 
@@ -76,7 +72,7 @@ include(InstallConfig)
 
 # install boostssl target
 install(
-    TARGETS ${BOOSTSSL_TARGET}
+    TARGETS ${BOOSTSSL_NETWORK_TARGET}
     EXPORT "${TARGETS_EXPORT_NAME}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
@@ -85,16 +81,7 @@ install(
 )
 
 install(
-    TARGETS ${NETWORK_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-install(
-    TARGETS ${UTILITY_TARGET}
+    TARGETS ${BOOSTSSL_CONTEXT_TARGET}
     EXPORT "${TARGETS_EXPORT_NAME}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"

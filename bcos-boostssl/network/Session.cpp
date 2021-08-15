@@ -28,7 +28,6 @@
 #include <bcos-boostssl/network/Session.h>        // for session
 #include <bcos-boostssl/network/SessionFace.h>    // for Respon...
 #include <bcos-boostssl/network/SocketFace.h>     // for Socket...
-#include <bcos-boostssl/utility/TimeUtility.h>
 #include <chrono>
 
 using namespace boostssl;
@@ -101,7 +100,6 @@ void Session::asyncSendMessage(Message::Ptr message, Options options, SessionCal
                 boost::asio::placeholders::error, message->seq()));
 
             handler->timeoutHandler = timeoutHandler;
-            handler->m_startTime = TimeUtility::utcSteadyTime();
         }
         addSeqCallback(message->seq(), handler);
     }
@@ -125,8 +123,9 @@ void Session::send(std::shared_ptr<bytes> _msg)
 
     SESSION_LOG(TRACE) << "send" << LOG_KV("writeQueue size", m_writeQueue.size());
     {
+        uint64_t msgSeq = ++m_msgSeq;
         std::lock_guard<std::mutex> l(x_writeQueue);
-        m_writeQueue.push(make_pair(_msg, TimeUtility::utcTime()));
+        m_writeQueue.push(make_pair(_msg, msgSeq));
     }
 
     write();

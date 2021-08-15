@@ -22,7 +22,7 @@
 
 #include <bcos-boostssl/network/Common.h>   // for  NodeIP...
 #include <bcos-boostssl/network/Message.h>  // for Message
-#include <bcos-boostssl/utility/ThreadPool.h>
+#include <bcos-boostssl/network/ThreadPool.h>
 #include <openssl/x509.h>
 #include <boost/asio/deadline_timer.hpp>  // for deadline_timer
 #include <boost/system/error_code.hpp>    // for error_code

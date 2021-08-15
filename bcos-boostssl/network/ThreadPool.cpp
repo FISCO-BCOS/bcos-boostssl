@@ -13,42 +13,43 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file TimeUtility.cpp
+ * @file ThreadPool.cpp
  * @author: octopus
- * @date 2021-05-06
+ * @date 2021-06-11
  */
 
-#include <bcos-boostssl/utility/TimeUtility.h>
-#include <sys/time.h>
-#include <chrono>
+#include <bcos-boostssl/network/ThreadPool.h>
 
 using namespace boostssl;
 using namespace boostssl::utility;
 
-/// get utc time(ms)
-uint64_t TimeUtility::utcTime()
+ThreadPool::ThreadPool(const std::string& threadName, size_t size) : m_work(_ioService)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    _threadName = threadName;
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        _workers.create_thread([this, i] {
+            setThreadName(_threadName + "_" + std::to_string(i));
+            _ioService.run();
+        });
+    }
 }
 
-// getSteadyTime(ms)
-uint64_t TimeUtility::utcSteadyTime()
+void ThreadPool::stop()
 {
-    // trans (ns) into (ms)
-    return std::chrono::steady_clock::now().time_since_epoch().count() / 1000000;
+    _ioService.stop();
+    if (!_workers.is_this_thread_in())
+    {
+        _workers.join_all();
+    }
 }
 
-/// get utc time(us)
-uint64_t TimeUtility::utcTimeUs()
+void ThreadPool::setThreadName(std::string const& _n)
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000000 + tv.tv_usec;
-}
-
-uint64_t TimeUtility::utcSteadyTimeUs()
-{
-    return std::chrono::steady_clock::now().time_since_epoch().count() / 1000;
+#if defined(__GLIBC__)
+    pthread_setname_np(pthread_self(), _n.c_str());
+#elif defined(__APPLE__)
+    pthread_setname_np(_n.c_str());
+#endif
 }

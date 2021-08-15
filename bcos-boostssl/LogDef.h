@@ -20,7 +20,7 @@
 
 #pragma once
 
-#ifndef LOG  // #define LOG(level)  should be defined
+#ifndef BCOS_LOG  // #define LOG(level)  should be defined
 
 #include <iostream>
 
@@ -31,7 +31,7 @@
 #define DEBUG 2
 #define TRACE 1
 
-#define LOG(l) std::cout << l
+#define BCOS_LOG(l) std::cout << l
 #define LOG_BADGE(_NAME) "[" << (_NAME) << "]"
 #define LOG_DESC(_DESCRIPTION) (_DESCRIPTION)
 #define LOG_KV(_K, _V) "," << (_K) << "=" << (_V)

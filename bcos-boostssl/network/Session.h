@@ -150,6 +150,8 @@ private:
         }
     };
 
+    // topicSeq
+    std::atomic<uint64_t> m_msgSeq{0};
     boost::heap::priority_queue<std::pair<std::shared_ptr<bytes>, uint64_t>,
         boost::heap::compare<QueueCompare>, boost::heap::stable<true>>
         m_writeQueue;

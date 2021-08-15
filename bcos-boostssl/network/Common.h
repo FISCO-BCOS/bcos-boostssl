@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include <bcos-boostssl/Common.h>
+#include <bcos-boostssl/LogDef.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <chrono>
@@ -35,9 +35,9 @@
 namespace ba = boost::asio;
 namespace bi = boost::asio::ip;
 
-#define HOST_LOG(LEVEL) LOG(LEVEL) << "[BOOSTSSL][Host]"
-#define SESSION_LOG(LEVEL) LOG(LEVEL) << "[BOOSTSSL][Session]"
-#define ASIO_LOG(LEVEL) LOG(LEVEL) << "[BOOSTSSL][ASIO]"
+#define HOST_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][Host]"
+#define SESSION_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][Session]"
+#define ASIO_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][ASIO]"
 
 namespace boostssl
 {
