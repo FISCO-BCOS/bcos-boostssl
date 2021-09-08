@@ -44,14 +44,14 @@ EOF
     exit 0
 }
 
-ssl_type="tassl"
+ssl_type="ssl"
 config_file_name="boostssl.ini"
 output_dir=${dirpath}
 
 parse_params() {
     while getopts "sh" option; do
         case $option in
-        s) ssl_type="tassl_sm" ;;
+        s) ssl_type="sm_ssl" ;;
         h) help ;;
         *) help ;;
         esac
@@ -69,8 +69,8 @@ generate_config_ini() {
 
     cat <<EOF >"${output}"
 [common]
-    ; tassl or tassl_sm
-    ssl_type=tassl
+    ; ssl or sm_ssl
+    ssl_type=ssl
 
 [cert]
     ; directory the certificates located in
@@ -89,8 +89,8 @@ generate_sm_config_ini() {
 
     cat <<EOF >"${output}"
 [common]
-    ; tassl or tassl_sm
-    ssl_type=tassl_sm
+    ; ssl or sm_ssl
+    ssl_type=sm_ssl
 
 [cert]
     ; directory the certificates located in
@@ -111,7 +111,7 @@ EOF
 parse_params "$@"
 file_must_not_exists "${output_dir}/${config_file_name}"
 
-if [ "${ssl_type}" == "tassl" ]; then
+if [ "${ssl_type}" == "ssl" ]; then
     generate_config_ini "${output_dir}/${config_file_name}"
 else
     generate_sm_config_ini "${output_dir}/${config_file_name}"

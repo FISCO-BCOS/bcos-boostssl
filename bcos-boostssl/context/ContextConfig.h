@@ -76,7 +76,7 @@ public:
     SMCertConfig smCertConfig() const { return m_smCertConfig; }
 
 private:
-    // ssl type, support ssl && tassl_sm
+    // ssl type, support ssl && sm_ssl
     std::string m_sslType;
     // cert config for ssl
     CertConfig m_certConfig;

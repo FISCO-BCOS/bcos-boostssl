@@ -61,7 +61,7 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
 {
     auto config = std::make_shared<ContextConfig>();
     config->initConfig(_configPath);
-    if (config->sslType() == "tassl_sm")
+    if (config->sslType() == "sm_ssl")
     {
         return buildSslContext(config->smCertConfig());
     }
