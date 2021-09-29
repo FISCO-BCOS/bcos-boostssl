@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include <bcos-boostssl/LogDef.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <chrono>

@@ -11,14 +11,28 @@
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  m_limitations under the License.
  *
- * @file Common.h
+ * @file WsVersion.h
  * @author: octopus
- * @date 2021-06-14
+ * @date 2021-07-30
  */
-
 #pragma once
-#include <bcos-framework/libutilities/Log.h>
 
-#define CONTEXT_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][CTX]"
+#include <cstdint>
+namespace bcos
+{
+namespace boostssl
+{
+namespace ws
+{
+enum WsProtocolVersion : uint32_t
+{
+    None = 0,
+    v1 = 1,
+    // Focus: update current when websocket protocol upgrade
+    current = v1
+};
+}
+}  // namespace boostssl
+}  // namespace bcos

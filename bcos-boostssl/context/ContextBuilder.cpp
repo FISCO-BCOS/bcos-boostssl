@@ -18,15 +18,15 @@
  * @date 2021-06-14
  */
 
-#include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/context/ContextConfig.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <exception>
 #include <iostream>
 
-using namespace boostssl;
-using namespace boostssl::context;
+using namespace bcos;
+using namespace bcos::boostssl;
+using namespace bcos::boostssl::context;
 
 // default config
 static const std::string DEFAULT_CONFIG = "./boostssl.ini";

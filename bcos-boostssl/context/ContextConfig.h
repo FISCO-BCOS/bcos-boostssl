@@ -20,11 +20,12 @@
  */
 
 #pragma once
-#include <bcos-boostssl/context/Common.h>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <memory>
 
+namespace bcos
+{
 namespace boostssl
 {
 namespace context
@@ -33,6 +34,7 @@ class ContextConfig
 {
 public:
     using Ptr = std::shared_ptr<ContextConfig>;
+    using ConstPtr = std::shared_ptr<const ContextConfig>;
 
     ContextConfig() = default;
     ~ContextConfig() = default;
@@ -85,3 +87,4 @@ private:
 
 }  // namespace context
 }  // namespace boostssl
+}  // namespace bcos

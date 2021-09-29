@@ -18,12 +18,12 @@
  * @date 2021-06-14
  */
 #pragma once
-#include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/context/ContextConfig.h>
 #include <boost/asio/ssl.hpp>
 #include <boost/filesystem.hpp>
-#include <memory>
 
+namespace bcos
+{
 namespace boostssl
 {
 namespace context
@@ -32,6 +32,7 @@ class ContextBuilder
 {
 public:
     using Ptr = std::shared_ptr<ContextBuilder>;
+    using ConstPtr = std::shared_ptr<const ContextBuilder>;
 
 private:
     std::shared_ptr<std::string> readFileContent(boost::filesystem::path const& _file);
@@ -48,3 +49,4 @@ public:
 
 }  // namespace context
 }  // namespace boostssl
+}  // namespace bcos
