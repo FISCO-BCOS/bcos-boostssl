@@ -25,7 +25,7 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::http;
 
 // start http server
-void HttpServer::startListen()
+void HttpServer::start()
 {
     if (m_acceptor && m_acceptor->is_open())
     {
@@ -116,10 +116,10 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
                           << LOG_KV("local_endpoint", socket.local_endpoint())
                           << LOG_KV("remote_endpoint", socket.remote_endpoint());
 
-        auto session = m_sessionFactory->createSession(std::move(socket), m_ctx);
-        session->setRequestHandler(m_httpReqHandler);
-        session->setWsUpgradeHandler(m_wsUpgradeHandler);
-        session->run();
+        auto httpSession = m_httpSessionFactory->createSession(std::move(socket));
+        httpSession->setRequestHandler(m_httpReqHandler);
+        httpSession->setWsUpgradeHandler(m_wsUpgradeHandler);
+        httpSession->run();
     }
 
     // Accept another connection
@@ -132,12 +132,10 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
  * @param _listenPort: listen port
  * @param _threadCount: thread count
  * @param _ioc: io_context
- * @param _ioc: ssl context
  * @return HttpServer::Ptr:
  */
 HttpServer::Ptr HttpServerFactory::buildHttpServer(const std::string& _listenIP,
-    uint16_t _listenPort, std::shared_ptr<boost::asio::io_context> _ioc,
-    std::shared_ptr<boost::asio::ssl::context> _ctx)
+    uint16_t _listenPort, std::shared_ptr<boost::asio::io_context> _ioc)
 {
     // create httpserver and launch a listening port
     auto server = std::make_shared<HttpServer>(_listenIP, _listenPort);
@@ -147,9 +145,8 @@ HttpServer::Ptr HttpServerFactory::buildHttpServer(const std::string& _listenIP,
     auto sessionFactory = std::make_shared<HttpSessionFactory>();
 
     server->setIoc(_ioc);
-    server->setCtx(_ctx);
     server->setAcceptor(acceptor);
-    server->setSessionFactory(sessionFactory);
+    server->setHttpSessionFactory(sessionFactory);
 
     HTTP_SERVER(INFO) << LOG_BADGE("buildHttpServer") << LOG_KV("listenIP", _listenIP)
                       << LOG_KV("listenPort", _listenPort);

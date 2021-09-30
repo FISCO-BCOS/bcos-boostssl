@@ -63,8 +63,58 @@ void WsSession::disconnect()
         WEBSOCKET_SESSION(WARNING) << LOG_BADGE("disconnect") << LOG_KV("e", e.what());
     }
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("disconnect") << LOG_KV("endpoint", m_endPoint)
-                            << LOG_KV("session", this);
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("disconnect") << LOG_DESC("disconnect the session")
+                            << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
+}
+
+void WsSession::doAccept(bcos::boostssl::http::HttpRequest _req)
+{
+    // how to set the timeout , now 30s
+    // m_wsStream.set_option(
+    //     boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
+    m_wsStream.set_option(boost::beast::websocket::stream_base::decorator(
+        [](boost::beast::websocket::response_type& res) {
+            res.set(boost::beast::http::field::server,
+                std::string(BOOST_BEAST_VERSION_STRING) + " FISCO BCOS Websocket Server");
+        }));
+
+    m_wsStream.control_callback([](auto&& _kind, auto&& _payload) {
+        // boost::beast::websocket::frame_type ft;
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("websocket") << LOG_DESC("control_callback")
+                                << LOG_KV("_kind", (uint32_t)_kind) << LOG_KV("payload", _payload);
+    });
+
+    auto remoteEndPoint = m_wsStream.next_layer().socket().remote_endpoint();
+    m_endPoint = remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
+
+    // accept the websocket handshake
+    m_wsStream.async_accept(
+        _req, boost::beast::bind_front_handler(&WsSession::onAccept, shared_from_this()));
+
+    setClient(false);
+
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("doAccept") << LOG_DESC("start websocket handshake")
+                            << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
+}
+
+void WsSession::onAccept(boost::beast::error_code _ec)
+{
+    if (_ec)
+    {
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onAccept") << LOG_KV("error", _ec);
+        return drop();
+    }
+
+    auto session = shared_from_this();
+    if (m_connectHandler)
+    {
+        m_connectHandler(nullptr, session);
+    }
+
+    asyncRead();
+
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("onAccept") << LOG_DESC("websocket handshake successfully")
+                            << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 }
 
 void WsSession::onRead(boost::beast::error_code _ec, std::size_t _size)
@@ -298,18 +348,14 @@ void WsSession::asyncSendMessage(
         addRespCallback(seq, callback);
     }
 
+
     std::unique_lock lock(x_queue);
-    auto size = m_queue.size();
-
-    // WEBSOCKET_SESSION(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
-    //                          << LOG_KV("timeout", _options.timeout) << LOG_KV("queue size",
-    //                          size);
-
+    auto isEmpty = m_queue.empty();
     // data to be sent is always enqueue first
     m_queue.push_back(buffer);
 
     // no writing, send it
-    if (0 == size)
+    if (isEmpty)
     {
         // we are not currently writing, so send this immediately
         asyncWrite();

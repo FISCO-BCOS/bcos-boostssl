@@ -18,6 +18,7 @@
  * @date 2021-07-28
  */
 #pragma once
+#include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsVersion.h>
@@ -63,12 +64,17 @@ public:
     void disconnect();
 
 public:
-    // start WsSession
-    void run()
+    // start WsSession as server
+    void doRun()
     {
+        setClient(false);
         startHandshake();
         asyncRead();
     }
+
+    // start WsSession as client
+    void doAccept(bcos::boostssl::http::HttpRequest _req);
+    void onAccept(boost::beast::error_code _ec);
     // async read
     void onRead(boost::beast::error_code _ec, std::size_t);
     void asyncRead();
@@ -137,6 +143,15 @@ public:
     void setVersion(uint16_t _version) { m_version.store(_version); }
     uint16_t version() const { return m_version.load(); }
 
+    std::size_t queueSize()
+    {
+        std::shared_lock lock(x_queue);
+        return m_queue.size();
+    }
+
+    bool client() { return m_client; }
+    void setClient(bool _client) { m_client = _client; }
+
     struct CallBack
     {
         using Ptr = std::shared_ptr<CallBack>;
@@ -148,6 +163,9 @@ public:
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
 private:
+    // server or client session
+    bool m_client = false;
+
     // websocket protocol version
     std::atomic<uint16_t> m_version = WsProtocolVersion::None;
 

@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file Config.h
+ * @file WsConfig.h
  * @author: octopus
  * @date 2021-08-23
  */
@@ -57,7 +57,7 @@ public:
 
 private:
     // ws work model, as server or as client or server & client
-    WsModel m_model;
+    WsModel m_model = WsModel::Mixed;
 
     // the listen ip when ws work as server
     std::string m_listenIP;

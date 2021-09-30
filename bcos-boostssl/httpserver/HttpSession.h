@@ -40,9 +40,16 @@ public:
     using Ptr = std::shared_ptr<HttpSession>;
 
 public:
+    /*
     HttpSession(
         boost::asio::ip::tcp::socket&& socket, std::shared_ptr<boost::asio::ssl::context> ctx)
       : m_stream(std::move(socket), *ctx)
+    {
+        HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this);
+    }
+    */
+
+    HttpSession(boost::asio::ip::tcp::socket&& socket) : m_stream(std::move(socket))
     {
         HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this);
     }
@@ -59,8 +66,11 @@ public:
         // boost::beast::get_lowest_layer(m_stream).expires_after(std::chrono::seconds(30));
 
         // ssl handshake
-        m_stream.async_handshake(boost::asio::ssl::stream_base::server,
-            boost::beast::bind_front_handler(&HttpSession::onHandshake, shared_from_this()));
+        // m_stream.async_handshake(boost::asio::ssl::stream_base::server,
+        //     boost::beast::bind_front_handler(&HttpSession::onHandshake, shared_from_this()));
+
+        boost::asio::dispatch(m_stream.get_executor(),
+            boost::beast::bind_front_handler(&HttpSession::doRead, shared_from_this()));
     }
 
     void onHandshake(boost::beast::error_code ec)
@@ -111,7 +121,7 @@ public:
             HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
             if (m_wsUpgradeHandler)
             {
-                m_wsUpgradeHandler(std::move(m_stream.next_layer()), m_parser->release());
+                m_wsUpgradeHandler(std::move(m_stream.socket()), m_parser->release());
             }
             else
             {
@@ -169,7 +179,7 @@ public:
     void doClose()
     {
         boost::beast::error_code ec;
-        m_stream.lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+        m_stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
 
         // at this point the connection is closed gracefully
     }
@@ -219,6 +229,9 @@ public:
             auto resp =
                 buildHttpResp(boost::beast::http::status::http_version_not_supported, version, "");
             send(resp);
+            HTTP_SESSION(ERROR) << LOG_BADGE("handleRequest")
+                                << LOG_DESC("unsupported http service")
+                                << LOG_KV("body", resp->body());
         }
     }
 
@@ -251,10 +264,12 @@ public:
     std::shared_ptr<Queue> queue() { return m_queue; }
     void setQueue(std::shared_ptr<Queue> _queue) { m_queue = _queue; }
 
-    boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& stream() { return m_stream; }
+    boost::beast::tcp_stream& stream() { return m_stream; }
+    // boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& stream() { return m_stream; }
 
 private:
-    boost::asio::ssl::stream<boost::asio::ip::tcp::socket> m_stream;
+    // boost::asio::ssl::stream<boost::asio::ip::tcp::socket> m_stream;
+    boost::beast::tcp_stream m_stream;
 
     boost::beast::flat_buffer m_buffer;
 
@@ -279,10 +294,9 @@ public:
      * @param ctx: ssl context
      * @return HttpSession::Ptr:
      */
-    HttpSession::Ptr createSession(
-        boost::asio::ip::tcp::socket&& socket, std::shared_ptr<boost::asio::ssl::context> ctx)
+    HttpSession::Ptr createSession(boost::asio::ip::tcp::socket&& socket)
     {
-        auto session = std::make_shared<HttpSession>(std::move(socket), ctx);
+        auto session = std::make_shared<HttpSession>(std::move(socket));
         auto queue = std::make_shared<Queue>();
         auto self = std::weak_ptr<HttpSession>(session);
         queue->setSender([self](HttpResponsePtr resp) {

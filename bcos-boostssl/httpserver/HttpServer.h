@@ -43,7 +43,7 @@ public:
 
 public:
     // start http server
-    void startListen();
+    void start();
     void stop();
 
     // accept connection
@@ -54,10 +54,10 @@ public:
 public:
     HttpReqHandler httpReqHandler() const { return m_httpReqHandler; }
     void setHttpReqHandler(HttpReqHandler _httpReqHandler) { m_httpReqHandler = _httpReqHandler; }
-    HttpSessionFactory::Ptr sessionFactory() const { return m_sessionFactory; }
-    void setSessionFactory(HttpSessionFactory::Ptr sessionFactory)
+    HttpSessionFactory::Ptr httpSessionFactory() const { return m_httpSessionFactory; }
+    void setHttpSessionFactory(HttpSessionFactory::Ptr _httpSessionFactory)
     {
-        m_sessionFactory = sessionFactory;
+        m_httpSessionFactory = _httpSessionFactory;
     }
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
@@ -79,10 +79,11 @@ public:
 private:
     std::string m_listenIP;
     uint16_t m_listenPort;
+
     HttpReqHandler m_httpReqHandler;
     WsUpgradeHandler m_wsUpgradeHandler;
 
-    std::shared_ptr<HttpSessionFactory> m_sessionFactory;
+    std::shared_ptr<HttpSessionFactory> m_httpSessionFactory;
     std::shared_ptr<boost::asio::ip::tcp::acceptor> m_acceptor;
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ssl::context> m_ctx;
@@ -100,12 +101,10 @@ public:
      * @param _listenIP: listen ip
      * @param _listenPort: listen port
      * @param _ioc: io_context
-     * @param _ctx: ssl context
      * @return HttpServer::Ptr:
      */
     HttpServer::Ptr buildHttpServer(const std::string& _listenIP, uint16_t _listenPort,
-        std::shared_ptr<boost::asio::io_context> _ioc,
-        std::shared_ptr<boost::asio::ssl::context> _ctx);
+        std::shared_ptr<boost::asio::io_context> _ioc);
 };
 
 }  // namespace http

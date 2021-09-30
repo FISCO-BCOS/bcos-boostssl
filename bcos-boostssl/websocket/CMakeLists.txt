@@ -5,4 +5,4 @@ file(GLOB SRC_LIST "*.cpp")
 file(GLOB HEADERS "*.h")
 
 add_library(${BOOSTSSL_WEBSOCKET_TARGET} ${SRC_LIST} ${HEADERS})
-target_link_libraries(${BOOSTSSL_WEBSOCKET_TARGET} PUBLIC bcos-framework::utilities)
+target_link_libraries(${BOOSTSSL_WEBSOCKET_TARGET} PUBLIC  OpenSSL::SSL OpenSSL::Crypto bcos-framework::utilities)

@@ -47,10 +47,26 @@ void WsService::start()
         return;
     }
     m_running = true;
-    reconnect();
+
+    // start ioc thread
+    startIocThread();
+
+    // start as server
+    if (m_config->asServer())
+    {
+        m_httpServer->start();
+    }
+
+    // start as client
+    if (m_config->asClient() && m_config->connectedPeers() && !m_config->connectedPeers()->empty())
+    {
+        reconnect();
+    }
+
+    // TODO: add heartbeat
 
     // TODO: block until connect to server successfully(at least one)
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start")
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start") << LOG_KV("model", m_config->model())
                             << LOG_DESC("start websocket service successfully");
 }
 
@@ -64,12 +80,42 @@ void WsService::stop()
     }
     m_running = false;
 
+    // stop ioc thread
+    if (m_ioc && !m_ioc->stopped())
+    {
+        m_ioc->stop();
+    }
+
+    // cancel reconnect task
     if (m_reconnect)
     {
         m_reconnect->cancel();
     }
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
+}
+
+void WsService::startIocThread()
+{
+    /// if the network has been stoped, then stop related service
+    m_iocThread = std::make_shared<std::thread>([&] {
+        while (m_running)
+        {
+            try
+            {
+                m_ioc->run();
+            }
+            catch (const std::exception& e)
+            {
+                WEBSOCKET_SERVICE(WARNING)
+                    << LOG_DESC("Exception in IOC Thread:") << boost::diagnostic_information(e);
+            }
+
+            m_ioc->reset();
+        }
+
+        WEBSOCKET_SERVICE(INFO) << "IOC thread exit";
+    });
 }
 
 void WsService::reconnect()
@@ -82,7 +128,6 @@ void WsService::reconnect()
         auto session = getSession(connectedEndPoint);
         if (session)
         {
-            // TODO: add heartbeat logic, ping/pong message to be send
             continue;
         }
 
@@ -104,13 +149,12 @@ void WsService::reconnect()
 
                 if (_ec)
                 {
-                    // WEBSOCKET_CONNECTOR(ERROR)
-                    //     << LOG_BADGE("connectToWsServer") << LOG_KV("error", _ec.message());
                     return;
                 }
 
                 auto session = service->newSession(_stream);
                 session->setConnectedEndPoint(connectedEndPoint);
+                session->doRun();
             });
     }
 
@@ -190,7 +234,6 @@ std::shared_ptr<WsSession> WsService::newSession(
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("newSession") << LOG_DESC("start the session")
                             << LOG_KV("endPoint", endPoint);
-    wsSession->run();
     return wsSession;
 }
 

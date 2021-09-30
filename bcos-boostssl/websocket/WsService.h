@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <bcos-boostssl/httpserver/HttpServer.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -65,6 +66,9 @@ public:
     virtual void start();
     virtual void stop();
     virtual void reconnect();
+
+public:
+    void startIocThread();
 
 public:
     std::shared_ptr<WsSession> newSession(
@@ -122,6 +126,12 @@ public:
     std::shared_ptr<WsConfig> config() const { return m_config; }
     void setConfig(std::shared_ptr<WsConfig> _config) { m_config = _config; }
 
+    std::shared_ptr<bcos::boostssl::http::HttpServer> httpServer() const { return m_httpServer; }
+    void setHttpServer(std::shared_ptr<bcos::boostssl::http::HttpServer> _httpServer)
+    {
+        m_httpServer = _httpServer;
+    }
+
     bool registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler);
 
     void registerConnectHandler(ConnectHandler _connectHandler)
@@ -146,8 +156,12 @@ private:
     std::shared_ptr<WsConnector> m_connector;
     // io context
     std::shared_ptr<boost::asio::io_context> m_ioc;
+    // thread for ioc
+    std::shared_ptr<std::thread> m_iocThread;
     // reconnect timer
     std::shared_ptr<boost::asio::deadline_timer> m_reconnect;
+    // http server
+    std::shared_ptr<bcos::boostssl::http::HttpServer> m_httpServer;
 
 private:
     // mutex for m_sessions
