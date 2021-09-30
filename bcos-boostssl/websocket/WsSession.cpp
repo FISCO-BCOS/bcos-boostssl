@@ -24,6 +24,7 @@
 #include <bcos-framework/libutilities/DataConvertUtility.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
+#include <boost/beast/websocket/rfc6455.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <exception>
@@ -35,6 +36,16 @@
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
+
+WsSession::WsSession(boost::beast::websocket::stream<boost::beast::tcp_stream>&& _wsStream)
+  : m_wsStream(std::move(_wsStream))
+{
+    auto remoteEndPoint = m_wsStream.next_layer().socket().remote_endpoint();
+    m_endPoint = remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
+
+    WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this)
+                            << LOG_KV("endPoint", m_endPoint);
+}
 
 void WsSession::drop()
 {
@@ -67,31 +78,97 @@ void WsSession::disconnect()
                             << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
 }
 
-void WsSession::doAccept(bcos::boostssl::http::HttpRequest _req)
+void WsSession::ping()
 {
-    // how to set the timeout , now 30s
-    // m_wsStream.set_option(
-    //     boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
-    m_wsStream.set_option(boost::beast::websocket::stream_base::decorator(
-        [](boost::beast::websocket::response_type& res) {
-            res.set(boost::beast::http::field::server,
-                std::string(BOOST_BEAST_VERSION_STRING) + " FISCO BCOS Websocket Server");
-        }));
+    try
+    {
+        boost::system::error_code error;
+        m_wsStream.ping(boost::beast::websocket::ping_data(), error);
+    }
+    catch (const std::exception& _e)
+    {
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("ping") << LOG_KV("endpoint", endPoint())
+                                 << LOG_KV("what", std::string(_e.what()));
+        disconnect();
+    }
+}
 
-    m_wsStream.control_callback([](auto&& _kind, auto&& _payload) {
-        // boost::beast::websocket::frame_type ft;
-        WEBSOCKET_SESSION(INFO) << LOG_BADGE("websocket") << LOG_DESC("control_callback")
-                                << LOG_KV("_kind", (uint32_t)_kind) << LOG_KV("payload", _payload);
+void WsSession::pong()
+{
+    try
+    {
+        boost::system::error_code error;
+        m_wsStream.ping(boost::beast::websocket::ping_data(), error);
+    }
+    catch (const std::exception& _e)
+    {
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("pong") << LOG_KV("endpoint", endPoint())
+                                 << LOG_KV("what", std::string(_e.what()));
+        disconnect();
+    }
+}
+
+void WsSession::initWsStream(bool _client)
+{
+    setClient(_client);
+
+    auto self = std::weak_ptr<WsSession>(shared_from_this());
+    auto endPoint = m_endPoint;
+    // callback for ping/pong
+    m_wsStream.control_callback([self, endPoint](auto&& _kind, auto&& _payload) {
+        auto session = self.lock();
+        if (!session)
+        {
+            return;
+        }
+
+        if (_kind == boost::beast::websocket::frame_type::ping)
+        {  // ping message
+            session->pong();
+            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive ping framework")
+                                    << LOG_KV("endPoint", endPoint) << LOG_KV("payload", _payload);
+        }
+        else if (_kind == boost::beast::websocket::frame_type::pong)
+        {  // pong message
+            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive pong framework")
+                                    << LOG_KV("endPoint", endPoint) << LOG_KV("payload", _payload);
+        }
     });
 
-    auto remoteEndPoint = m_wsStream.next_layer().socket().remote_endpoint();
-    m_endPoint = remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
+    if (client())
+    {
+        m_wsStream.set_option(boost::beast::websocket::stream_base::timeout::suggested(
+            boost::beast::role_type::client));
+    }
+    else
+    {
+        m_wsStream.set_option(boost::beast::websocket::stream_base::timeout::suggested(
+            boost::beast::role_type::server));
+        m_wsStream.set_option(boost::beast::websocket::stream_base::decorator(
+            [](boost::beast::websocket::response_type& res) {
+                res.set(boost::beast::http::field::server,
+                    std::string(BOOST_BEAST_VERSION_STRING) + " FISCO-BCOS 3.0");
+            }));
+    }
+}
+
+// start WsSession as client
+void WsSession::doRun()
+{
+    initWsStream(true);
+
+    startHandshake();
+    asyncRead();
+}
+
+// start WsSession as server
+void WsSession::doAccept(bcos::boostssl::http::HttpRequest _req)
+{
+    initWsStream(false);
 
     // accept the websocket handshake
     m_wsStream.async_accept(
         _req, boost::beast::bind_front_handler(&WsSession::onAccept, shared_from_this()));
-
-    setClient(false);
 
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("doAccept") << LOG_DESC("start websocket handshake")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);

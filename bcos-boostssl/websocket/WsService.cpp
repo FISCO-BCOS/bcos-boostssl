@@ -63,7 +63,8 @@ void WsService::start()
         reconnect();
     }
 
-    // TODO: add heartbeat
+    // heartbeat
+    heartbeat();
 
     // TODO: block until connect to server successfully(at least one)
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start") << LOG_KV("model", m_config->model())
@@ -92,6 +93,12 @@ void WsService::stop()
         m_reconnect->cancel();
     }
 
+    // cancel heartbeat task
+    if (m_heartbeat)
+    {
+        m_heartbeat->cancel();
+    }
+
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
 }
 
@@ -118,9 +125,32 @@ void WsService::startIocThread()
     });
 }
 
-void WsService::reconnect()
+void WsService::heartbeat()
 {
     auto ss = sessions();
+    for (auto const& s : ss)
+    {
+        s->ping();
+    }
+
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("heartbeat") << LOG_DESC("connected nodes")
+                            << LOG_KV("count", ss.size());
+
+    m_heartbeat = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
+        boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
+    auto self = std::weak_ptr<WsService>(shared_from_this());
+    m_heartbeat->async_wait([self](const boost::system::error_code&) {
+        auto service = self.lock();
+        if (!service)
+        {
+            return;
+        }
+        service->heartbeat();
+    });
+}
+
+void WsService::reconnect()
+{
     auto peers = m_config->connectedPeers();
     for (auto const& peer : *peers)
     {
@@ -157,9 +187,6 @@ void WsService::reconnect()
                 session->doRun();
             });
     }
-
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("reconnect") << LOG_DESC("connected ")
-                            << LOG_KV("count", ss.size());
 
     m_reconnect = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
         boost::posix_time::milliseconds(m_config->reconnectPeriod()));
@@ -350,6 +377,28 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onDisconnect") << LOG_KV("endpoint", endpoint)
                             << LOG_KV("connectedEndPoint", connectedEndPoint);
+}
+
+void WsService::onHandshake(
+    Error::Ptr _error, std::shared_ptr<WsSession> _session, std::shared_ptr<WsMessage> _msg)
+{
+    if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+    {
+        WEBSOCKET_VERSION(ERROR) << LOG_BADGE("onHandshake") << LOG_DESC("callback")
+                                 << LOG_KV("endpoint", _session->endPoint())
+                                 << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
+                                 << LOG_KV("errorMessage",
+                                        _error ? _error->errorMessage() : std::string(""));
+
+        return;
+    }
+
+    for (auto& handshakeHandler : m_handshakeHandlers)
+    {
+        handshakeHandler(_error, _msg, _session);
+    }
+
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onHandshake") << LOG_KV("endpoint", _session->endPoint());
 }
 
 void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)

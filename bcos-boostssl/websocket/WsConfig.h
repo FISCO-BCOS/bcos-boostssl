@@ -75,6 +75,9 @@ private:
     // time interval for reconnection
     uint32_t m_reconnectPeriod{10000};
 
+    // time interval for heartbeat
+    uint32_t m_heartbeatPeriod{10000};
+
 
 public:
     void setModel(WsModel _model) { m_model = _model; }
@@ -91,6 +94,9 @@ public:
 
     uint32_t reconnectPeriod() const { return m_reconnectPeriod; }
     void setReconnectPeriod(uint32_t _reconnectPeriod) { m_reconnectPeriod = _reconnectPeriod; }
+
+    uint32_t heartbeatPeriod() const { return m_heartbeatPeriod; }
+    void setHeartbeatPeriod(uint32_t _heartbeatPeriod) { m_heartbeatPeriod = _heartbeatPeriod; }
 
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
     void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }

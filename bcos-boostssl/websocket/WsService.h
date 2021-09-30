@@ -55,6 +55,9 @@ using WsSessions = std::vector<std::shared_ptr<WsSession>>;
 using MsgHandler = std::function<void(std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
 using ConnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using DisconnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
+using HandshakeHandler =
+    std::function<void(Error::Ptr _error, std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
+
 class WsService : public std::enable_shared_from_this<WsService>
 {
 public:
@@ -66,6 +69,7 @@ public:
     virtual void start();
     virtual void stop();
     virtual void reconnect();
+    virtual void heartbeat();
 
 public:
     void startIocThread();
@@ -79,20 +83,10 @@ public:
     WsSessions sessions();
 
 public:
-    /**
-     * @brief: session connect
-     * @param _error:
-     * @param _session: session
-     * @return void:
-     */
     virtual void onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session);
-    /**
-     * @brief: session disconnect
-     * @param _error: the reason of disconnection
-     * @param _session: session
-     * @return void:
-     */
     virtual void onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _session);
+    virtual void onHandshake(
+        Error::Ptr _error, std::shared_ptr<WsSession> _session, std::shared_ptr<WsMessage> _msg);
 
     virtual void onRecvMessage(
         std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session);
@@ -144,6 +138,11 @@ public:
         m_disconnectHandlers.push_back(_disconnectHandler);
     }
 
+    void registerHandshakeHandler(HandshakeHandler _handshakeHandler)
+    {
+        m_handshakeHandlers.push_back(_handshakeHandler);
+    }
+
 private:
     bool m_running{false};
     // WsMessageFactory
@@ -160,6 +159,8 @@ private:
     std::shared_ptr<std::thread> m_iocThread;
     // reconnect timer
     std::shared_ptr<boost::asio::deadline_timer> m_reconnect;
+    // heartbeat timer
+    std::shared_ptr<boost::asio::deadline_timer> m_heartbeat;
     // http server
     std::shared_ptr<bcos::boostssl::http::HttpServer> m_httpServer;
 
@@ -174,6 +175,8 @@ private:
     std::vector<ConnectHandler> m_connectHandlers;
     // disconnected handlers, the handers will be called when ws session disconnected
     std::vector<DisconnectHandler> m_disconnectHandlers;
+    // disconnected handlers, the handers will be called when ws session disconnected
+    std::vector<HandshakeHandler> m_handshakeHandlers;
 };
 
 }  // namespace ws

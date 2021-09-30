@@ -48,11 +48,7 @@ public:
     using Ptr = std::shared_ptr<WsSession>;
 
 public:
-    WsSession(boost::beast::websocket::stream<boost::beast::tcp_stream>&& _wsStream)
-      : m_wsStream(std::move(_wsStream))
-    {
-        WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
-    }
+    WsSession(boost::beast::websocket::stream<boost::beast::tcp_stream>&& _wsStream);
 
     virtual ~WsSession()
     {
@@ -64,14 +60,9 @@ public:
     void disconnect();
 
 public:
+    void initWsStream(bool _client);
     // start WsSession as server
-    void doRun()
-    {
-        setClient(false);
-        startHandshake();
-        asyncRead();
-    }
-
+    void doRun();
     // start WsSession as client
     void doAccept(bcos::boostssl::http::HttpRequest _req);
     void onAccept(boost::beast::error_code _ec);
@@ -81,6 +72,9 @@ public:
     // async write
     void onWrite(boost::beast::error_code _ec, std::size_t);
     void asyncWrite();
+
+    void ping();
+    void pong();
 
 public:
     virtual void startHandshake();
