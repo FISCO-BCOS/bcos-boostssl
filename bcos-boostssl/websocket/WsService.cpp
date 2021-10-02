@@ -461,7 +461,8 @@ void WsService::asyncSendMessage(
             if (ss.empty())
             {
                 // TODO: error code define
-                auto error = std::make_shared<Error>(-1, "send message to server failed");
+                auto error =
+                    std::make_shared<Error>(-1, "there has no active connection available");
                 respFunc(error, nullptr, nullptr);
                 return;
             }
@@ -507,10 +508,17 @@ void WsService::asyncSendMessage(
 
 void WsService::broadcastMessage(std::shared_ptr<WsMessage> _msg)
 {
-    auto ss = sessions();
-    for (auto& session : ss)
+    broadcastMessage(sessions(), _msg);
+}
+
+void WsService::broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsMessage> _msg)
+{
+    for (auto& session : _ss)
     {
-        session->asyncSendMessage(_msg);
+        if (session->isConnected())
+        {
+            session->asyncSendMessage(_msg);
+        }
     }
 
     WEBSOCKET_VERSION(DEBUG) << LOG_BADGE("broadcastMessage");

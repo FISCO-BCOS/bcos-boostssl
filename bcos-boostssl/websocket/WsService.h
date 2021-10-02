@@ -23,6 +23,8 @@
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
+#include <bcos-boostssl/websocket/WsMessage.h>
+#include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
@@ -45,12 +47,6 @@ namespace boostssl
 class ThreadPool;
 namespace ws
 {
-class WsSession;
-class WsMessage;
-class AMOPRequestFactory;
-class WsMessageFactory;
-
-
 using WsSessions = std::vector<std::shared_ptr<WsSession>>;
 using MsgHandler = std::function<void(std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
 using ConnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
@@ -93,10 +89,14 @@ public:
 
     virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
         RespCallBack _respFunc = RespCallBack());
+    virtual void asyncSendMessage(const WsSession::Ptrs& _sessions, std::shared_ptr<WsMessage> _msg,
+        Options _options = Options(-1), RespCallBack _respFunc = RespCallBack());
     virtual void asyncSendMessageByEndPoint(const std::string& _endPoint,
         std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
         RespCallBack _respFunc = RespCallBack());
+
     virtual void broadcastMessage(std::shared_ptr<WsMessage> _msg);
+    virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsMessage> _msg);
 
 public:
     std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
