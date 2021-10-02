@@ -46,6 +46,7 @@ class WsSession : public std::enable_shared_from_this<WsSession>
 {
 public:
     using Ptr = std::shared_ptr<WsSession>;
+    using Ptrs = std::vector<std::shared_ptr<WsSession>>;
 
 public:
     WsSession(boost::beast::websocket::stream<boost::beast::tcp_stream>&& _wsStream);
@@ -56,7 +57,7 @@ public:
         WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this);
     }
 
-    void drop();
+    void drop(uint32_t _reason);
     void disconnect();
 
 public:
@@ -77,9 +78,6 @@ public:
     void pong();
 
 public:
-    virtual void startHandshake();
-    virtual bool checkHandshakeDone();
-
     virtual bool isConnected() { return !m_isDrop && m_wsStream.next_layer().socket().is_open(); }
     /**
      * @brief: async send message
