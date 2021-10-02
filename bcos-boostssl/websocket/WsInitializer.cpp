@@ -17,14 +17,16 @@
  * @author: octopus
  * @date 2021-09-29
  */
+#include "libutilities/Log.h"
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
-#include <bcos-boostssl/websocket/WsFactory.h>
+#include <bcos-boostssl/websocket/WsInitializer.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
+#include <cstddef>
 #include <memory>
 
 using namespace bcos;
@@ -32,29 +34,33 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 
-std::shared_ptr<WsService> WsFactory::buildWsService()
+void WsInitializer::initWsService(
+    std::shared_ptr<bcos::boostssl::ws::WsConfig> _config, WsService::Ptr _wsService)
 {
-    // TODO: check if m_config valid
+    auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
+
     auto ioc = std::make_shared<boost::asio::io_context>();
     auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(*ioc);
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
     auto messageFactory = std::make_shared<WsMessageFactory>();
-    auto threadPool = std::make_shared<bcos::ThreadPool>("t_ws", m_config->threadPoolSize());
-    auto wsService = std::make_shared<WsService>();
-    auto wsServiceWeakPtr = std::weak_ptr<WsService>(wsService);
+    auto threadPool = std::make_shared<bcos::ThreadPool>("t_ws", _config->threadPoolSize());
+    std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
 
-    if (m_config->asServer())
+    // TODO: ssl impl
+    if (1)
     {
-        // TODO: ssl impl
         /*
         auto contextBuilder = std::make_shared<bcos::boostssl::context::ContextBuilder>();
-        std::shared_ptr<boost::asio::ssl::context> ctx =
-            contextBuilder->buildSslContext("conf/boostssl.ini");
+        ctx = contextBuilder->buildSslContext("conf/boostssl.ini");
         */
+    }
+
+    if (_config->asServer())
+    {
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
         auto httpServer =
-            httpServerFactory->buildHttpServer(m_config->listenIP(), m_config->listenPort(), ioc);
-        wsService->setHttpServer(httpServer);
+            httpServerFactory->buildHttpServer(_config->listenIP(), _config->listenPort(), ioc);
+        _wsService->setHttpServer(httpServer);
 
         httpServer->setWsUpgradeHandler(
             [wsServiceWeakPtr](boost::asio::ip::tcp::socket&& _stream, HttpRequest&& _req) {
@@ -70,23 +76,23 @@ std::shared_ptr<WsService> WsFactory::buildWsService()
             });
     }
 
-    if (m_config->asClient())
+    if (_config->asClient())
     {
     }
 
-    wsService->setConfig(m_config);
-    wsService->setThreadPool(threadPool);
-    wsService->setIoc(ioc);
-    wsService->setConnector(connector);
-    wsService->setMessageFactory(messageFactory);
+    _wsService->setConfig(_config);
+    _wsService->setThreadPool(threadPool);
+    _wsService->setIoc(ioc);
+    _wsService->setConnector(connector);
+    _wsService->setMessageFactory(messageFactory);
 
-    WEBSOCKET_FACTORY(INFO) << LOG_DESC("construct websocket service object")
-                            << LOG_KV("server", m_config->asServer())
-                            << LOG_KV("listenIP", m_config->listenIP())
-                            << LOG_KV("listenPort", m_config->listenPort())
-                            << LOG_KV("client", m_config->asClient())
-                            << LOG_KV("connected peers count", m_config->connectedPeers()->size())
-                            << LOG_KV("thread pool size", m_config->threadPoolSize());
-
-    return wsService;
+    WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
+                                << LOG_DESC("initializer for websocket service")
+                                << LOG_KV("server", _config->asServer())
+                                << LOG_KV("listenIP", _config->listenIP())
+                                << LOG_KV("listenPort", _config->listenPort())
+                                << LOG_KV("client", _config->asClient())
+                                << LOG_KV(
+                                       "connected peers count", _config->connectedPeers()->size())
+                                << LOG_KV("thread pool size", _config->threadPoolSize());
 }

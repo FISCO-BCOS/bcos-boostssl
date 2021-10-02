@@ -13,12 +13,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file WsFactory.h
+ * @file WsInitializer.h
  * @author: octopus
  * @date 2021-09-29
  */
 #pragma once
 
+#include "bcos-boostssl/websocket/WsSession.h"
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsService.h>
 
@@ -28,21 +29,15 @@ namespace boostssl
 {
 namespace ws
 {
-class WsFactory
+class WsInitializer
 {
 public:
-    using Ptr = std::shared_ptr<WsFactory>;
-    using ConstPtr = std::shared_ptr<const WsFactory>;
+    using Ptr = std::shared_ptr<WsInitializer>;
+    using ConstPtr = std::shared_ptr<const WsInitializer>;
 
 public:
-    std::shared_ptr<bcos::boostssl::ws::WsService> buildWsService();
-
-public:
-    std::shared_ptr<bcos::boostssl::ws::WsConfig> config() const { return m_config; }
-    void setConfig(std::shared_ptr<bcos::boostssl::ws::WsConfig> _config) { m_config = _config; }
-
-private:
-    std::shared_ptr<bcos::boostssl::ws::WsConfig> m_config;
+    void initWsService(
+        std::shared_ptr<bcos::boostssl::ws::WsConfig> _config, WsService::Ptr _wsService);
 };
 }  // namespace ws
 }  // namespace boostssl
