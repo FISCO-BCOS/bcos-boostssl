@@ -19,7 +19,6 @@
  */
 
 #include <bcos-boostssl/websocket/WsError.h>
-#include <bcos-boostssl/websocket/WsMessageType.h>
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-framework/interfaces/protocol/CommonError.h>
 #include <bcos-framework/libutilities/DataConvertUtility.h>

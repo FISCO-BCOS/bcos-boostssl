@@ -19,7 +19,6 @@
  */
 #pragma once
 
-#include <bcos-boostssl/websocket/WsMessageType.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>

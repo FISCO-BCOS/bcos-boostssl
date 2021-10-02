@@ -18,7 +18,6 @@
  * @date 2021-07-28
  */
 #include <bcos-boostssl/websocket/Common.h>
-#include <bcos-boostssl/websocket/WsMessageType.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-framework/interfaces/crypto/KeyInterface.h>
