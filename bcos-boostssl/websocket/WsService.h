@@ -89,8 +89,6 @@ public:
 
     virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
         RespCallBack _respFunc = RespCallBack());
-    virtual void asyncSendMessage(const WsSession::Ptrs& _sessions, std::shared_ptr<WsMessage> _msg,
-        Options _options = Options(-1), RespCallBack _respFunc = RespCallBack());
     virtual void asyncSendMessageByEndPoint(const std::string& _endPoint,
         std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
         RespCallBack _respFunc = RespCallBack());
