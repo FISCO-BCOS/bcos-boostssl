@@ -17,7 +17,6 @@
  * @author: octopus
  * @date 2021-09-29
  */
-#include "libutilities/Log.h"
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
@@ -26,6 +25,7 @@
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
+#include <bcos-framework/libutilities/Log.h>
 #include <cstddef>
 #include <memory>
 
@@ -34,15 +34,20 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 
-void WsInitializer::initWsService(
-    std::shared_ptr<bcos::boostssl::ws::WsConfig> _config, WsService::Ptr _wsService)
+void WsInitializer::initWsService(WsService::Ptr _wsService)
 {
-    auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
+    std::shared_ptr<bcos::boostssl::ws::WsConfig> _config = m_config;
+    auto messageFactory = m_messageFactory;
+    if (messageFactory == nullptr)
+    {
+        messageFactory = std::make_shared<bcos::boostssl::ws::WsMessageFactory>();
+    }
 
+    auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
     auto ioc = std::make_shared<boost::asio::io_context>();
     auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(*ioc);
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
-    auto messageFactory = std::make_shared<WsMessageFactory>();
+
     auto threadPool = std::make_shared<bcos::ThreadPool>("t_ws", _config->threadPoolSize());
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
 

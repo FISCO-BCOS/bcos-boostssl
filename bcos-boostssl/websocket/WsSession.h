@@ -21,7 +21,6 @@
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
-#include <bcos-boostssl/websocket/WsVersion.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
 #include <boost/asio/deadline_timer.hpp>
@@ -159,7 +158,7 @@ private:
     bool m_client = false;
 
     // websocket protocol version
-    std::atomic<uint16_t> m_version = WsProtocolVersion::None;
+    std::atomic<uint16_t> m_version;
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;

@@ -34,7 +34,7 @@ enum WsError
     AcceptError = 4004,
     PacketError = 4005,
     SessionDisconnect = 4006,
-    UserDisconnect = 4006
+    UserDisconnect = 4007
 };
 
 // TODO: define ws error

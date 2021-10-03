@@ -19,9 +19,9 @@
  */
 #pragma once
 
-#include "bcos-boostssl/websocket/WsSession.h"
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsService.h>
+#include <bcos-boostssl/websocket/WsSession.h>
 
 namespace bcos
 {
@@ -36,8 +36,26 @@ public:
     using ConstPtr = std::shared_ptr<const WsInitializer>;
 
 public:
-    void initWsService(
-        std::shared_ptr<bcos::boostssl::ws::WsConfig> _config, WsService::Ptr _wsService);
+    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> messageFactory() const
+    {
+        return m_messageFactory;
+    }
+    std::shared_ptr<bcos::boostssl::ws::WsConfig> config() const { return m_config; }
+
+    void setMessageFactory(std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> _messageFactory)
+    {
+        m_messageFactory = _messageFactory;
+    }
+
+    void setConfig(std::shared_ptr<bcos::boostssl::ws::WsConfig> _config) { m_config = _config; }
+
+public:
+    void initWsService(WsService::Ptr _wsService);
+
+
+private:
+    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_messageFactory;
+    std::shared_ptr<bcos::boostssl::ws::WsConfig> m_config;
 };
 }  // namespace ws
 }  // namespace boostssl
