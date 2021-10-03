@@ -62,6 +62,20 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     if (_config->asServer())
     {
+        if (!WsConfig::validIP(_config->listenIP()))
+        {
+            BOOST_THROW_EXCEPTION(
+                InvalidParameter()
+                << errinfo_comment("initWsService: invalid listen ip, ip=" + _config->listenIP()));
+        }
+
+        if (!WsConfig::validPort(_config->listenPort()))
+        {
+            BOOST_THROW_EXCEPTION(
+                InvalidParameter() << errinfo_comment("initWsService: invalid listen port, port=" +
+                                                      std::to_string(_config->listenPort())));
+        }
+
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
         auto httpServer =
             httpServerFactory->buildHttpServer(_config->listenIP(), _config->listenPort(), ioc);
@@ -83,6 +97,31 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     if (_config->asClient())
     {
+        auto connectedPeers = _config->connectedPeers();
+        if (connectedPeers)
+        {
+            for (auto const& peer : *connectedPeers)
+            {
+                if (!WsConfig::validIP(peer.host))
+                {
+                    BOOST_THROW_EXCEPTION(
+                        InvalidParameter() << errinfo_comment(
+                            "initWsService: invalid connect host, host=" + peer.host));
+                }
+
+                if (!WsConfig::validPort(peer.port))
+                {
+                    BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
+                                              "initWsService: invalid connect port, port=" +
+                                              std::to_string(peer.port)));
+                }
+            }
+        }
+        else
+        {
+            WEBSOCKET_INITIALIZER(WARNING)
+                << LOG_BADGE("initWsService") << LOG_DESC("there has no connected host config");
+        }
     }
 
     _wsService->setConfig(_config);
