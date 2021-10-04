@@ -78,6 +78,8 @@ private:
     // time interval for heartbeat
     uint32_t m_heartbeatPeriod{10000};
 
+    std::string m_boostsslConfig;
+
 public:
     static bool validIP(const std::string& _ip)
     {
@@ -120,6 +122,12 @@ public:
     void setConnectedPeers(EndPointsConstPtr _connectedPeers)
     {
         m_connectedPeers = _connectedPeers;
+    }
+
+    std::string boostsslConfig() const { return m_boostsslConfig; }
+    void setBoostsslConfig(const std::string& _boostsslConfig)
+    {
+        m_boostsslConfig = _boostsslConfig;
     }
 };
 }  // namespace ws

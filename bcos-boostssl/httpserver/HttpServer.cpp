@@ -132,10 +132,12 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
  * @param _listenPort: listen port
  * @param _threadCount: thread count
  * @param _ioc: io_context
+ * @param _ctx: ssl context
  * @return HttpServer::Ptr:
  */
 HttpServer::Ptr HttpServerFactory::buildHttpServer(const std::string& _listenIP,
-    uint16_t _listenPort, std::shared_ptr<boost::asio::io_context> _ioc)
+    uint16_t _listenPort, std::shared_ptr<boost::asio::io_context> _ioc,
+    std::shared_ptr<boost::asio::ssl::context> _ctx)
 {
     // create httpserver and launch a listening port
     auto server = std::make_shared<HttpServer>(_listenIP, _listenPort);
@@ -147,6 +149,7 @@ HttpServer::Ptr HttpServerFactory::buildHttpServer(const std::string& _listenIP,
     server->setIoc(_ioc);
     server->setAcceptor(acceptor);
     server->setHttpSessionFactory(sessionFactory);
+    server->setCtx(_ctx);
 
     HTTP_SERVER(INFO) << LOG_BADGE("buildHttpServer") << LOG_KV("listenIP", _listenIP)
                       << LOG_KV("listenPort", _listenPort);

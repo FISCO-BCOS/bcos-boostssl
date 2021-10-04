@@ -48,16 +48,14 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(*ioc);
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
 
-    auto threadPool = std::make_shared<bcos::ThreadPool>("t_ws", _config->threadPoolSize());
-    std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
+    auto threadPool = std::make_shared<bcos::ThreadPool>(
+        "t_ws", _config->threadPoolSize() > 0 ? _config->threadPoolSize() : 4);
 
-    // TODO: ssl impl
-    if (1)
+    std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
+    if (!m_config->boostsslConfig().empty())
     {
-        /*
         auto contextBuilder = std::make_shared<bcos::boostssl::context::ContextBuilder>();
-        ctx = contextBuilder->buildSslContext("conf/boostssl.ini");
-        */
+        ctx = contextBuilder->buildSslContext(m_config->boostsslConfig());
     }
 
     if (_config->asServer())
@@ -77,10 +75,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
-        auto httpServer =
-            httpServerFactory->buildHttpServer(_config->listenIP(), _config->listenPort(), ioc);
-        _wsService->setHttpServer(httpServer);
-
+        auto httpServer = httpServerFactory->buildHttpServer(
+            _config->listenIP(), _config->listenPort(), ioc, ctx);
         httpServer->setWsUpgradeHandler(
             [wsServiceWeakPtr](boost::asio::ip::tcp::socket&& _stream, HttpRequest&& _req) {
                 auto service = wsServiceWeakPtr.lock();
@@ -93,6 +89,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                     session->doAccept(_req);
                 }
             });
+
+        _wsService->setHttpServer(httpServer);
     }
 
     if (_config->asClient())
@@ -120,7 +118,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         else
         {
             WEBSOCKET_INITIALIZER(WARNING)
-                << LOG_BADGE("initWsService") << LOG_DESC("there has no connected host config");
+                << LOG_BADGE("initWsService") << LOG_DESC("there has no connected server config");
         }
     }
 
@@ -132,11 +130,11 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
                                 << LOG_DESC("initializer for websocket service")
+                                << LOG_KV("boostssl config", _config->boostsslConfig())
+                                << LOG_KV("thread pool size", _config->threadPoolSize())
                                 << LOG_KV("server", _config->asServer())
                                 << LOG_KV("listenIP", _config->listenIP())
                                 << LOG_KV("listenPort", _config->listenPort())
                                 << LOG_KV("client", _config->asClient())
-                                << LOG_KV(
-                                       "connected peers count", _config->connectedPeers()->size())
-                                << LOG_KV("thread pool size", _config->threadPoolSize());
+                                << LOG_KV("connected peers", _config->connectedPeers()->size());
 }

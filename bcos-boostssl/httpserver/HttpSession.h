@@ -206,8 +206,6 @@ public:
         if (m_httpReqHandler)
         {
             std::string request = req.body();
-
-
             m_httpReqHandler(request, [this, req, version, send, start](
                                           const std::string& _content) {
                 std::chrono::high_resolution_clock::time_point end =

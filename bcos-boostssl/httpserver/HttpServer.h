@@ -101,10 +101,12 @@ public:
      * @param _listenIP: listen ip
      * @param _listenPort: listen port
      * @param _ioc: io_context
+     * @param _ctx: ssl context
      * @return HttpServer::Ptr:
      */
     HttpServer::Ptr buildHttpServer(const std::string& _listenIP, uint16_t _listenPort,
-        std::shared_ptr<boost::asio::io_context> _ioc);
+        std::shared_ptr<boost::asio::io_context> _ioc,
+        std::shared_ptr<boost::asio::ssl::context> _ctx);
 };
 
 }  // namespace http
