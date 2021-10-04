@@ -109,7 +109,7 @@ void WsSession::pong()
     }
 }
 
-void WsSession::initWsStream(bool _client)
+void WsSession::initialize(bool _client)
 {
     setClient(_client);
 
@@ -156,15 +156,14 @@ void WsSession::initWsStream(bool _client)
 // start WsSession as client
 void WsSession::doRun()
 {
-    initWsStream(true);
+    initialize(true);
     asyncRead();
 }
 
 // start WsSession as server
 void WsSession::doAccept(bcos::boostssl::http::HttpRequest _req)
 {
-    initWsStream(false);
-
+    initialize(false);
     // accept the websocket handshake
     m_wsStream.async_accept(
         _req, boost::beast::bind_front_handler(&WsSession::onAccept, shared_from_this()));

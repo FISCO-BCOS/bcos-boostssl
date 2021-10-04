@@ -60,7 +60,7 @@ public:
     void disconnect();
 
 public:
-    void initWsStream(bool _client);
+    void initialize(bool _client);
     // start WsSession as server
     void doRun();
     // start WsSession as client

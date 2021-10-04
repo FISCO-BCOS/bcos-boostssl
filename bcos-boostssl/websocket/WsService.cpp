@@ -57,9 +57,12 @@ void WsService::start()
     }
 
     // start as client
-    if (m_config->asClient() && m_config->connectedPeers() && !m_config->connectedPeers()->empty())
+    if (m_config->asClient())
     {
-        reconnect();
+        if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
+        {
+            reconnect();
+        }
     }
 
     // heartbeat
@@ -182,6 +185,7 @@ void WsService::reconnect()
                 }
 
                 auto session = service->newSession(_stream);
+                // reset connected endpoint
                 session->setConnectedEndPoint(connectedEndPoint);
                 session->doRun();
             });
@@ -222,6 +226,7 @@ std::shared_ptr<WsSession> WsService::newSession(
     wsSession->setThreadPool(threadPool());
     wsSession->setMessageFactory(messageFactory());
     wsSession->setEndPoint(endPoint);
+    wsSession->setConnectedEndPoint(endPoint);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
 
@@ -259,7 +264,8 @@ std::shared_ptr<WsSession> WsService::newSession(
         });
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("newSession") << LOG_DESC("start the session")
-                            << LOG_KV("endPoint", endPoint);
+                            << LOG_KV("endPoint", endPoint)
+                            << LOG_KV("client", wsSession->client());
     return wsSession;
 }
 
