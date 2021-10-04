@@ -20,6 +20,7 @@
 
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
+#include <boost/asio/error.hpp>
 #include <memory>
 #include <utility>
 
@@ -39,10 +40,28 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
         std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>>)>
         _callback)
 {
+    std::string endpoint = _host + ":" + std::to_string(_port);
+    if (!insertPendingConns(endpoint))
+    {
+        WEBSOCKET_CONNECTOR(ERROR)
+            << LOG_BADGE("connectToWsServer") << LOG_DESC("insertPendingConns")
+            << LOG_KV("endpoint", endpoint);
+        _callback(boost::beast::error_code(boost::asio::error::would_block), nullptr);
+        return;
+    }
+
+    auto connector = shared_from_this();
+    auto innerCallback =
+        [endpoint, connector, _callback](boost::beast::error_code _ec,
+            std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>> _stream) {
+            connector->erasePendingConns(endpoint);
+            _callback(_ec, _stream);
+        };
+
     auto ioc = m_ioc;
     // resolve host
     m_resolver->async_resolve(_host.c_str(), std::to_string(_port).c_str(),
-        [_host, _port, _callback, ioc](
+        [_host, _port, ioc, innerCallback](
             boost::beast::error_code _ec, boost::asio::ip::tcp::resolver::results_type _results) {
             if (_ec)
             {
@@ -50,7 +69,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_resolve")
                     << LOG_KV("error", _ec) << LOG_KV("errorMessage", _ec.message())
                     << LOG_KV("host", _host);
-                _callback(_ec, nullptr);
+                innerCallback(_ec, nullptr);
                 return;
             }
 
@@ -64,7 +83,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
 
             // async connect
             boost::beast::get_lowest_layer(*stream).async_connect(_results,
-                [stream, _host, _port, _callback](boost::beast::error_code _ec,
+                [stream, _host, _port, innerCallback](boost::beast::error_code _ec,
                     boost::asio::ip::tcp::resolver::results_type::endpoint_type _ep) mutable {
                     if (_ec)
                     {
@@ -72,7 +91,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                             << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect")
                             << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                             << LOG_KV("port", _port);
-                        _callback(_ec, nullptr);
+                        innerCallback(_ec, nullptr);
                         return;
                     }
 
@@ -99,14 +118,15 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
 
                     // async handshake
                     stream->async_handshake(tmpHost, "/",
-                        [_host, _port, stream, _callback](boost::beast::error_code _ec) mutable {
+                        [_host, _port, stream, innerCallback](
+                            boost::beast::error_code _ec) mutable {
                             if (_ec)
                             {
                                 WEBSOCKET_CONNECTOR(ERROR)
                                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_handshake")
                                     << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                                     << LOG_KV("port", _port);
-                                _callback(_ec, nullptr);
+                                innerCallback(_ec, nullptr);
                                 return;
                             }
 
@@ -114,7 +134,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                                 << LOG_BADGE("connectToWsServer")
                                 << LOG_DESC("websocket handshake successfully")
                                 << LOG_KV("host", _host) << LOG_KV("port", _port);
-                            _callback(_ec, stream);
+                            innerCallback(_ec, stream);
                         });
                 });
         });

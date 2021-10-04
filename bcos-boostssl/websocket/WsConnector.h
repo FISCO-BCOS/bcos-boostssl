@@ -24,6 +24,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <type_traits>
 
 namespace bcos
 {
@@ -31,7 +32,7 @@ namespace boostssl
 {
 namespace ws
 {
-class WsConnector
+class WsConnector : public std::enable_shared_from_this<WsConnector>
 {
 public:
     using Ptr = WsConnector;
@@ -54,18 +55,17 @@ public:
             _callback);
 
 public:
-    void erasePendingConns(const std::string& _nodeIPEndpoint)
+    bool erasePendingConns(const std::string& _nodeIPEndpoint)
     {
         std::lock_guard<std::mutex> l(x_pendingConns);
-        if (m_pendingConns.count(_nodeIPEndpoint))
-            m_pendingConns.erase(_nodeIPEndpoint);
+        return m_pendingConns.erase(_nodeIPEndpoint);
     }
 
-    void insertPendingConns(const std::string& _nodeIPEndpoint)
+    bool insertPendingConns(const std::string& _nodeIPEndpoint)
     {
         std::lock_guard<std::mutex> l(x_pendingConns);
-        if (!m_pendingConns.count(_nodeIPEndpoint))
-            m_pendingConns.insert(_nodeIPEndpoint);
+        auto p = m_pendingConns.insert(_nodeIPEndpoint);
+        return p.second;
     }
 
 public:
