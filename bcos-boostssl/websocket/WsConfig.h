@@ -44,6 +44,7 @@ using EndPointsConstPtr = std::shared_ptr<const std::vector<EndPoint>>;
 
 enum WsModel : uint16_t
 {
+    None = 0,
     Client = 0x01,
     Server = 0x10,
     Mixed = Client | Server
@@ -57,7 +58,7 @@ public:
 
 private:
     // ws work model, as server or as client or server & client
-    WsModel m_model = WsModel::Mixed;
+    WsModel m_model = WsModel::None;
 
     // the listen ip when ws work as server
     std::string m_listenIP;

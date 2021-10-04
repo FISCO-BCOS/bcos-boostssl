@@ -111,7 +111,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                     stream->set_option(boost::beast::websocket::stream_base::decorator(
                         [](boost::beast::websocket::request_type& req) {
                             req.set(boost::beast::http::field::user_agent,
-                                std::string(BOOST_BEAST_VERSION_STRING) + " fisco-cppsdk-client");
+                                std::string(BOOST_BEAST_VERSION_STRING) + " fisco-bcos-client");
                         }));
 
                     std::string tmpHost = _host + ':' + std::to_string(_ep.port());
