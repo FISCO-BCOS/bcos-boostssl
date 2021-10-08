@@ -68,10 +68,11 @@ private:
     // list of connected server nodes when ws work as client
     EndPointsConstPtr m_connectedPeers;
 
-    // time out for send message
-    int32_t m_sendMsgTimeout{-1};
     // thread pool size
     uint32_t m_threadPoolSize{4};
+
+    // time out for send message
+    int32_t m_sendMsgTimeout{-1};
 
     // time interval for reconnection
     uint32_t m_reconnectPeriod{10000};
@@ -79,6 +80,7 @@ private:
     // time interval for heartbeat
     uint32_t m_heartbeatPeriod{10000};
 
+    // config path for boostssl
     std::string m_boostsslConfig;
 
 public:

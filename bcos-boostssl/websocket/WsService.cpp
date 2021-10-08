@@ -62,6 +62,7 @@ void WsService::start()
     {
         if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
         {
+            // TODO: block until connect to server successfully(at least one)???
             reconnect();
         }
     }
@@ -69,7 +70,6 @@ void WsService::start()
     // heartbeat
     heartbeat();
 
-    // TODO: block until connect to server successfully(at least one)
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start") << LOG_KV("model", m_config->model())
                             << LOG_DESC("start websocket service successfully");
 }
@@ -107,7 +107,7 @@ void WsService::stop()
 
 void WsService::startIocThread()
 {
-    /// if the network has been stoped, then stop related service
+    // TODO: if multi-thread needed???
     m_iocThread = std::make_shared<std::thread>([&] {
         while (m_running)
         {
@@ -118,13 +118,14 @@ void WsService::startIocThread()
             catch (const std::exception& e)
             {
                 WEBSOCKET_SERVICE(WARNING)
-                    << LOG_DESC("Exception in IOC Thread:") << boost::diagnostic_information(e);
+                    << LOG_BADGE("startIocThread") << LOG_DESC("Exception in IOC Thread:")
+                    << boost::diagnostic_information(e);
             }
 
             m_ioc->reset();
         }
 
-        WEBSOCKET_SERVICE(INFO) << "IOC thread exit";
+        WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread") << "IOC thread exit";
     });
 }
 

@@ -40,11 +40,18 @@ using namespace bcos::boostssl::ws;
 WsSession::WsSession(boost::beast::websocket::stream<boost::beast::tcp_stream>&& _wsStream)
   : m_wsStream(std::move(_wsStream))
 {
-    auto remoteEndPoint = m_wsStream.next_layer().socket().remote_endpoint();
-    m_endPoint = remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
-
-    WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this)
-                            << LOG_KV("endPoint", m_endPoint);
+    try
+    {
+        auto remoteEndPoint = m_wsStream.next_layer().socket().remote_endpoint();
+        m_endPoint =
+            remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
+        WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this)
+                                << LOG_KV("endPoint", m_endPoint);
+    }
+    catch (const std::exception& e)
+    {
+        WEBSOCKET_SESSION(ERROR) << LOG_KV("[NEWOBJ][WSSESSION]", this) << LOG_KV("e", e.what());
+    }
 }
 
 void WsSession::drop(uint32_t _reason)
