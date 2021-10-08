@@ -105,7 +105,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                 {
                     BOOST_THROW_EXCEPTION(
                         InvalidParameter() << errinfo_comment(
-                            "initWsService: invalid connect host, host=" + peer.host));
+                            "initWsService: invalid connect peer, peer=" + peer.host));
                 }
 
                 if (!WsTools::validPort(peer.port))

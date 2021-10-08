@@ -27,17 +27,18 @@ namespace ws
 {
 enum WsError
 {
-    ReadError = 4000,
-    WriteError = 4001,
-    PingError = 4002,
-    PongError = 4003,
-    AcceptError = 4004,
-    PacketError = 4005,
-    SessionDisconnect = 4006,
-    UserDisconnect = 4007
+    ReadError = -4000,
+    WriteError = -4001,
+    PingError = -4002,
+    PongError = -4003,
+    AcceptError = -4004,
+    PacketError = -4005,
+    SessionDisconnect = -4006,
+    UserDisconnect = -4007,
+    TimeOut = -4008,
+    NoActiveCons = -4009,
+    EndPointNotExist = -4010
 };
-
-// TODO: define ws error
 
 }  // namespace ws
 }  // namespace boostssl

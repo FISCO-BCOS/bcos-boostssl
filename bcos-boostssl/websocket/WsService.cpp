@@ -18,6 +18,7 @@
  * @date 2021-07-28
  */
 #include <bcos-boostssl/websocket/Common.h>
+#include <bcos-boostssl/websocket/WsError.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-framework/interfaces/crypto/KeyInterface.h>
@@ -438,8 +439,8 @@ void WsService::asyncSendMessageByEndPoint(const std::string& _endPoint,
     std::shared_ptr<WsSession> session = getSession(_endPoint);
     if (!session)
     {
-        // TODO: error code define
-        auto error = std::make_shared<Error>(-1, "the remote endpoint not exist");
+        auto error = std::make_shared<Error>(
+            WsError::EndPointNotExist, "there has no connection of the endpoint exist");
         _respFunc(error, nullptr, nullptr);
         return;
     }
@@ -465,9 +466,8 @@ void WsService::asyncSendMessage(
         {
             if (ss.empty())
             {
-                // TODO: error code define
-                auto error =
-                    std::make_shared<Error>(-1, "there has no active connection available");
+                auto error = std::make_shared<Error>(
+                    WsError::NoActiveCons, "there has no active connection available");
                 respFunc(error, nullptr, nullptr);
                 return;
             }
