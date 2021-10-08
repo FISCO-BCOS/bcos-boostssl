@@ -25,6 +25,7 @@
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
+#include <bcos-boostssl/websocket/WsTools.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <cstddef>
 #include <memory>
@@ -60,14 +61,14 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     if (_config->asServer())
     {
-        if (!WsConfig::validIP(_config->listenIP()))
+        if (!WsTools::validIP(_config->listenIP()))
         {
             BOOST_THROW_EXCEPTION(
                 InvalidParameter()
                 << errinfo_comment("initWsService: invalid listen ip, ip=" + _config->listenIP()));
         }
 
-        if (!WsConfig::validPort(_config->listenPort()))
+        if (!WsTools::validPort(_config->listenPort()))
         {
             BOOST_THROW_EXCEPTION(
                 InvalidParameter() << errinfo_comment("initWsService: invalid listen port, port=" +
@@ -100,14 +101,14 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         {
             for (auto const& peer : *connectedPeers)
             {
-                if (!WsConfig::validIP(peer.host))
+                if (!WsTools::validIP(peer.host))
                 {
                     BOOST_THROW_EXCEPTION(
                         InvalidParameter() << errinfo_comment(
                             "initWsService: invalid connect host, host=" + peer.host));
                 }
 
-                if (!WsConfig::validPort(peer.port))
+                if (!WsTools::validPort(peer.port))
                 {
                     BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
                                               "initWsService: invalid connect port, port=" +

@@ -82,19 +82,6 @@ private:
     std::string m_boostsslConfig;
 
 public:
-    static bool validIP(const std::string& _ip)
-    {
-        boost::system::error_code ec;
-        boost::asio::ip::address::from_string(_ip, ec);
-        if (ec)
-        {
-            return false;
-        }
-        return true;
-    }
-    static bool validPort(uint16_t _port) { return (_port <= 65535 && _port > 1024); }
-
-public:
     void setModel(WsModel _model) { m_model = _model; }
     WsModel model() const { return m_model; }
 

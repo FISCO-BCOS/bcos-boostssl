@@ -22,6 +22,7 @@
 #define BOOST_TEST_MAIN
 
 #include <bcos-boostssl/websocket/WsConfig.h>
+#include <bcos-boostssl/websocket/WsTools.h>
 #include <bcos-framework/testutils/TestPromptFixture.h>
 #include <boost/test/unit_test.hpp>
 #include <memory>
@@ -32,7 +33,7 @@ using namespace bcos::test;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
-BOOST_FIXTURE_TEST_SUITE(WsConfigTest, TestPromptFixture)
+BOOST_FIXTURE_TEST_SUITE(WsToolsTest, TestPromptFixture)
 
 BOOST_AUTO_TEST_CASE(test_WsConfigTest)
 {
@@ -74,19 +75,20 @@ BOOST_AUTO_TEST_CASE(test_WsConfigTest)
         config->setConnectedPeers(peers);
         BOOST_CHECK_EQUAL(config->connectedPeers()->size(), 0);
     }
+}
 
-    {
-        BOOST_CHECK_EQUAL(WsConfig::validIP("0.0.0.0"), true);
-        BOOST_CHECK_EQUAL(WsConfig::validIP("123"), false);
-        BOOST_CHECK_EQUAL(WsConfig::validIP("127.0.0.1"), true);
-        BOOST_CHECK_EQUAL(WsConfig::validIP("2001:0db8:3c4d:0015:0000:0000:1a2f:1a2b"), true);
-        BOOST_CHECK_EQUAL(WsConfig::validIP("0:0:0:0:0:0:0:1"), true);
-        BOOST_CHECK_EQUAL(WsConfig::validIP("::1"), true);
+BOOST_AUTO_TEST_CASE(test_WsToolsTest)
+{
+    BOOST_CHECK_EQUAL(WsTools::validIP("0.0.0.0"), true);
+    BOOST_CHECK_EQUAL(WsTools::validIP("123"), false);
+    BOOST_CHECK_EQUAL(WsTools::validIP("127.0.0.1"), true);
+    BOOST_CHECK_EQUAL(WsTools::validIP("2001:0db8:3c4d:0015:0000:0000:1a2f:1a2b"), true);
+    BOOST_CHECK_EQUAL(WsTools::validIP("0:0:0:0:0:0:0:1"), true);
+    BOOST_CHECK_EQUAL(WsTools::validIP("::1"), true);
 
-        BOOST_CHECK_EQUAL(WsConfig::validPort(1111), true);
-        BOOST_CHECK_EQUAL(WsConfig::validPort(10), false);
-        BOOST_CHECK_EQUAL(WsConfig::validPort(65535), true);
-    }
+    BOOST_CHECK_EQUAL(WsTools::validPort(1111), true);
+    BOOST_CHECK_EQUAL(WsTools::validPort(10), false);
+    BOOST_CHECK_EQUAL(WsTools::validPort(65535), true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
