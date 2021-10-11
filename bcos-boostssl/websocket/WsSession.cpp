@@ -106,7 +106,7 @@ void WsSession::pong()
     try
     {
         boost::system::error_code error;
-        m_wsStream.ping(boost::beast::websocket::ping_data(), error);
+        m_wsStream.pong(boost::beast::websocket::ping_data(), error);
     }
     catch (const std::exception& _e)
     {
@@ -133,13 +133,13 @@ void WsSession::initialize(bool _client)
         if (_kind == boost::beast::websocket::frame_type::ping)
         {  // ping message
             session->pong();
-            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive ping framework")
-                                    << LOG_KV("endPoint", endPoint) << LOG_KV("payload", _payload);
+            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive ping") << LOG_KV("endPoint", endPoint)
+                                    << LOG_KV("payload", _payload);
         }
         else if (_kind == boost::beast::websocket::frame_type::pong)
         {  // pong message
-            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive pong framework")
-                                    << LOG_KV("endPoint", endPoint) << LOG_KV("payload", _payload);
+            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive pong") << LOG_KV("endPoint", endPoint)
+                                    << LOG_KV("payload", _payload);
         }
     });
 
