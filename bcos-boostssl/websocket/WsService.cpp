@@ -70,8 +70,9 @@ void WsService::start()
     // heartbeat
     heartbeat();
 
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start") << LOG_KV("model", m_config->model())
-                            << LOG_DESC("start websocket service successfully");
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start")
+                            << LOG_DESC("start websocket service successfully")
+                            << LOG_KV("model", m_config->model());
 }
 
 void WsService::stop()
@@ -256,14 +257,6 @@ std::shared_ptr<WsSession> WsService::newSession(
                 wsService->onRecvMessage(_msg, _session);
             }
         });
-    wsSession->setHandlshakeHandler(
-        [self](bcos::Error::Ptr, std::shared_ptr<ws::WsSession> _session) {
-            auto wsService = self.lock();
-            if (wsService)
-            {
-                wsService->addSession(_session);
-            }
-        });
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("newSession") << LOG_DESC("start the session")
                             << LOG_KV("endPoint", endPoint)
@@ -353,6 +346,8 @@ void WsService::onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session
         connectedEndPoint = _session->connectedEndPoint();
     }
 
+    addSession(_session);
+
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onConnect") << LOG_KV("endpoint", endpoint)
                             << LOG_KV("connectedEndPoint", connectedEndPoint);
 }
@@ -384,28 +379,6 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onDisconnect") << LOG_KV("endpoint", endpoint)
                             << LOG_KV("connectedEndPoint", connectedEndPoint);
-}
-
-void WsService::onHandshake(
-    Error::Ptr _error, std::shared_ptr<WsSession> _session, std::shared_ptr<WsMessage> _msg)
-{
-    if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
-    {
-        WEBSOCKET_VERSION(ERROR) << LOG_BADGE("onHandshake") << LOG_DESC("callback")
-                                 << LOG_KV("endpoint", _session->endPoint())
-                                 << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
-                                 << LOG_KV("errorMessage",
-                                        _error ? _error->errorMessage() : std::string(""));
-
-        return;
-    }
-
-    for (auto& handshakeHandler : m_handshakeHandlers)
-    {
-        handshakeHandler(_error, _msg, _session);
-    }
-
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onHandshake") << LOG_KV("endpoint", _session->endPoint());
 }
 
 void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)

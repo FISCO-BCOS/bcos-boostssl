@@ -44,7 +44,7 @@ using RespCallBack =
 
 using WsConnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
 using WsDisconnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
-using WsHandshakeHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
+// using WsHandshakeHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
 using WsRecvMessageHandler =
     std::function<void(std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
 

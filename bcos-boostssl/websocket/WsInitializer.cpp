@@ -39,7 +39,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 {
     std::shared_ptr<bcos::boostssl::ws::WsConfig> _config = m_config;
     auto messageFactory = m_messageFactory;
-    if (messageFactory == nullptr)
+    if (!messageFactory)
     {
         messageFactory = std::make_shared<bcos::boostssl::ws::WsMessageFactory>();
     }
@@ -61,6 +61,9 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     if (_config->asServer())
     {
+        WEBSOCKET_INITIALIZER(INFO)
+            << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as server");
+
         if (!WsTools::validIP(_config->listenIP()))
         {
             BOOST_THROW_EXCEPTION(
@@ -97,6 +100,10 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     if (_config->asClient())
     {
         auto connectedPeers = _config->connectedPeers();
+        WEBSOCKET_INITIALIZER(INFO)
+            << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as client")
+            << LOG_KV("connected size", connectedPeers ? connectedPeers->size() : 0);
+
         if (connectedPeers)
         {
             for (auto const& peer : *connectedPeers)
@@ -137,5 +144,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                                 << LOG_KV("listenIP", _config->listenIP())
                                 << LOG_KV("listenPort", _config->listenPort())
                                 << LOG_KV("client", _config->asClient())
-                                << LOG_KV("connected peers", _config->connectedPeers()->size());
+                                << LOG_KV("connected peers", _config->connectedPeers() ?
+                                                                 _config->connectedPeers()->size() :
+                                                                 0);
 }

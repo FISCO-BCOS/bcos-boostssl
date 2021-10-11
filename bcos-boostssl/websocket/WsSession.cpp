@@ -163,8 +163,16 @@ void WsSession::initialize(bool _client)
 // start WsSession as client
 void WsSession::doRun()
 {
+    if (m_connectHandler)
+    {
+        auto session = shared_from_this();
+        m_connectHandler(nullptr, session);
+    }
     initialize(true);
     asyncRead();
+
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("doRun") << LOG_DESC("websocket handshake successfully")
+                            << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 }
 
 // start WsSession as server
@@ -187,9 +195,10 @@ void WsSession::onAccept(boost::beast::error_code _ec)
         return drop(WsError::AcceptError);
     }
 
-    auto session = shared_from_this();
+
     if (m_connectHandler)
     {
+        auto session = shared_from_this();
         m_connectHandler(nullptr, session);
     }
 

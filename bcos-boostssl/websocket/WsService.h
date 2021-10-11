@@ -81,8 +81,6 @@ public:
 public:
     virtual void onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session);
     virtual void onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _session);
-    virtual void onHandshake(
-        Error::Ptr _error, std::shared_ptr<WsSession> _session, std::shared_ptr<WsMessage> _msg);
 
     virtual void onRecvMessage(
         std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session);

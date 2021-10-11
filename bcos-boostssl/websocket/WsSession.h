@@ -113,12 +113,6 @@ public:
     }
     WsRecvMessageHandler recvMessageHandler() { return m_recvMessageHandler; }
 
-    void setHandlshakeHandler(WsHandshakeHandler _handlshakeHandler)
-    {
-        m_handlshakeHandler = _handlshakeHandler;
-    }
-    WsHandshakeHandler handlshakeHandler() { return m_handlshakeHandler; }
-
     std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
     void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
     {
@@ -177,7 +171,6 @@ private:
     WsConnectHandler m_connectHandler;
     WsDisconnectHandler m_disconnectHandler;
     WsRecvMessageHandler m_recvMessageHandler;
-    WsHandshakeHandler m_handlshakeHandler;
 
     // message factory
     std::shared_ptr<WsMessageFactory> m_messageFactory;
