@@ -51,7 +51,7 @@ public:
         return true;
     }
 
-    static bool validPort(uint16_t _port) { return (_port <= 65535 && _port > 1024); }
+    static bool validPort(uint16_t _port) { return _port > 1024; }
 };
 }  // namespace ws
 }  // namespace boostssl
