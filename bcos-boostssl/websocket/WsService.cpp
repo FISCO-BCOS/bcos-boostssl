@@ -39,6 +39,17 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
+WsService::WsService()
+{
+    WEBSOCKET_SERVICE(INFO) << LOG_KV("[NEWOBJ][WsService]", this);
+}
+
+WsService::~WsService()
+{
+    stop();
+    WEBSOCKET_SERVICE(INFO) << LOG_KV("[DELOBJ][WsService]", this);
+}
+
 void WsService::start()
 {
     if (m_running)

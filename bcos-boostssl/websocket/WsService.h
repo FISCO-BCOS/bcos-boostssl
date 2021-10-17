@@ -58,8 +58,8 @@ class WsService : public std::enable_shared_from_this<WsService>
 {
 public:
     using Ptr = std::shared_ptr<WsService>;
-    WsService() = default;
-    virtual ~WsService() { stop(); }
+    WsService();
+    virtual ~WsService();
 
 public:
     virtual void start();
