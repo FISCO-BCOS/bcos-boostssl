@@ -26,6 +26,11 @@
 #include <vector>
 
 #include <bcos-boostssl/network/Common.h>
+
+#define MIN_HEART_BEAT_PERIOD_MS (10000)
+#define MIN_RECONNECT_PERIOD_MS (10000)
+#define DEFAULT_MESSAGE_TIMEOUT_MS (-1)
+
 namespace bcos
 {
 namespace boostssl
@@ -72,13 +77,13 @@ private:
     uint32_t m_threadPoolSize{4};
 
     // time out for send message
-    int32_t m_sendMsgTimeout{-1};
+    int32_t m_sendMsgTimeout{DEFAULT_MESSAGE_TIMEOUT_MS};
 
     // time interval for reconnection
-    uint32_t m_reconnectPeriod{10000};
+    uint32_t m_reconnectPeriod{MIN_RECONNECT_PERIOD_MS};
 
     // time interval for heartbeat
-    uint32_t m_heartbeatPeriod{10000};
+    uint32_t m_heartbeatPeriod{MIN_HEART_BEAT_PERIOD_MS};
 
     // config path for boostssl
     std::string m_boostsslConfig;
@@ -96,10 +101,18 @@ public:
     void setListenPort(uint16_t _listenPort) { m_listenPort = _listenPort; }
     uint16_t listenPort() const { return m_listenPort; }
 
-    uint32_t reconnectPeriod() const { return m_reconnectPeriod; }
+    uint32_t reconnectPeriod() const
+    {
+        return m_reconnectPeriod > MIN_RECONNECT_PERIOD_MS ? m_reconnectPeriod :
+                                                             MIN_RECONNECT_PERIOD_MS;
+    }
     void setReconnectPeriod(uint32_t _reconnectPeriod) { m_reconnectPeriod = _reconnectPeriod; }
 
-    uint32_t heartbeatPeriod() const { return m_heartbeatPeriod; }
+    uint32_t heartbeatPeriod() const
+    {
+        return m_heartbeatPeriod > MIN_HEART_BEAT_PERIOD_MS ? m_heartbeatPeriod :
+                                                              MIN_HEART_BEAT_PERIOD_MS;
+    }
     void setHeartbeatPeriod(uint32_t _heartbeatPeriod) { m_heartbeatPeriod = _heartbeatPeriod; }
 
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }

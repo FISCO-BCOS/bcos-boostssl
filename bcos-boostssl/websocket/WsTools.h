@@ -20,6 +20,7 @@
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
+#include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
@@ -52,6 +53,8 @@ public:
     }
 
     static bool validPort(uint16_t _port) { return _port > 1024; }
+
+    static bool stringToEndPoint(const std::string& peer, EndPoint& _endpoint);
 };
 }  // namespace ws
 }  // namespace boostssl
