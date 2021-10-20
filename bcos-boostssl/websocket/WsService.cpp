@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace bcos;
@@ -71,10 +72,43 @@ void WsService::start()
     // start as client
     if (m_config->asClient())
     {
-        if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
+        if (m_config->connectedPeers())
         {
-            // TODO: block until connect to server successfully(at least one)???
             reconnect();
+        }
+
+        // Note: block until at least one connection establish
+        if (!m_config->connectedPeers()->empty() && m_waitConnectFinish)
+        {
+            auto start = std::chrono::high_resolution_clock::now();
+            auto end = start + std::chrono::milliseconds(m_waitConnectFinishTimeout);
+
+            while (true)
+            {
+                // sleep for network connection establish
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                auto ss = sessions();
+                if (!ss.empty())
+                {
+                    break;
+                }
+
+                if (std::chrono::high_resolution_clock::now() < end)
+                {
+                    continue;
+                }
+                else
+                {
+                    // timeout
+                    stop();
+                    WEBSOCKET_SERVICE(ERROR)
+                        << LOG_BADGE("start") << LOG_DESC("connect to peers timeout")
+                        << LOG_KV("timeout", m_waitConnectFinishTimeout);
+                    BOOST_THROW_EXCEPTION(std::runtime_error("connect to peers timeout"));
+                    return;
+                }
+            }
         }
     }
 

@@ -107,6 +107,12 @@ public:
         m_threadPool = _threadPool;
     }
 
+    bool waitConnectFinish() const { return m_waitConnectFinish; }
+    void setWaitConnectFinish(bool _b) { m_waitConnectFinish = _b; }
+
+    int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
+    void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
+
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
 
@@ -141,6 +147,11 @@ public:
 
 private:
     bool m_running{false};
+
+    bool m_waitConnectFinish{false};
+    // default timeout , 30s
+    int32_t m_waitConnectFinishTimeout = 30000;
+
     // WsMessageFactory
     std::shared_ptr<WsMessageFactory> m_messageFactory;
     // ThreadPool

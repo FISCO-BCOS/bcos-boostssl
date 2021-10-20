@@ -30,6 +30,7 @@
 #define MIN_HEART_BEAT_PERIOD_MS (10000)
 #define MIN_RECONNECT_PERIOD_MS (10000)
 #define DEFAULT_MESSAGE_TIMEOUT_MS (-1)
+#define MIN_THREAD_POOL_SIZE (1)
 
 namespace bcos
 {
@@ -118,7 +119,10 @@ public:
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
     void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
 
-    uint32_t threadPoolSize() const { return m_threadPoolSize; }
+    uint32_t threadPoolSize() const
+    {
+        return m_threadPoolSize ? m_threadPoolSize : MIN_THREAD_POOL_SIZE;
+    }
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
     EndPointsConstPtr connectedPeers() { return m_connectedPeers; }
