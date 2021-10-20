@@ -32,7 +32,7 @@ bool WsTools::stringToEndPoint(const std::string& _peer, EndPoint& _endpoint)
     // ipv6: [0:1]:12345 => EndPoint
 
     std::string ip;
-    uint16_t port;
+    uint16_t port = 0;
     bool valid = false;
 
     std::vector<std::string> s;
