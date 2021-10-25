@@ -144,7 +144,7 @@ public:
         std::shared_ptr<boost::asio::deadline_timer> timer;
     };
     void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
-    CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq);
+    CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true);
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
 private:
@@ -152,7 +152,7 @@ private:
     bool m_client = false;
 
     // websocket protocol version
-    std::atomic<uint16_t> m_version;
+    std::atomic<uint16_t> m_version = 0;
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;

@@ -87,6 +87,12 @@ public:
 
     virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
         RespCallBack _respFunc = RespCallBack());
+    virtual void asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessage> _msg,
+        Options _options = Options(-1), RespCallBack _respFunc = RespCallBack());
+    virtual void asyncSendMessage(const std::set<std::string>& _endPoints,
+        std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
+        RespCallBack _respFunc = RespCallBack());
+
     virtual void asyncSendMessageByEndPoint(const std::string& _endPoint,
         std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
         RespCallBack _respFunc = RespCallBack());
@@ -144,6 +150,9 @@ public:
     {
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
+
+public:
+    void waitForConnectionEstablish();
 
 private:
     bool m_running{false};

@@ -51,6 +51,39 @@ WsService::~WsService()
     WEBSOCKET_SERVICE(INFO) << LOG_KV("[DELOBJ][WsService]", this);
 }
 
+void WsService::waitForConnectionEstablish()
+{
+    auto start = std::chrono::high_resolution_clock::now();
+    auto end = start + std::chrono::milliseconds(m_waitConnectFinishTimeout);
+
+    while (true)
+    {
+        // sleep for connection establish
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        auto ss = sessions();
+        if (!ss.empty())
+        {
+            break;
+        }
+
+        if (std::chrono::high_resolution_clock::now() < end)
+        {
+            continue;
+        }
+        else
+        {
+            stop();
+            WEBSOCKET_SERVICE(ERROR)
+                << LOG_BADGE("waitForConnectionEstablish") << LOG_DESC("connect to peers timeout")
+                << LOG_KV("timeout", m_waitConnectFinishTimeout);
+
+            BOOST_THROW_EXCEPTION(std::runtime_error("The connection to the server timed out"));
+            return;
+        }
+    }
+}
+
 void WsService::start()
 {
     if (m_running)
@@ -80,35 +113,7 @@ void WsService::start()
         // Note: block until at least one connection establish
         if (!m_config->connectedPeers()->empty() && m_waitConnectFinish)
         {
-            auto start = std::chrono::high_resolution_clock::now();
-            auto end = start + std::chrono::milliseconds(m_waitConnectFinishTimeout);
-
-            while (true)
-            {
-                // sleep for network connection establish
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-                auto ss = sessions();
-                if (!ss.empty())
-                {
-                    break;
-                }
-
-                if (std::chrono::high_resolution_clock::now() < end)
-                {
-                    continue;
-                }
-                else
-                {
-                    // timeout
-                    stop();
-                    WEBSOCKET_SERVICE(ERROR)
-                        << LOG_BADGE("start") << LOG_DESC("connect to peers timeout")
-                        << LOG_KV("timeout", m_waitConnectFinishTimeout);
-                    BOOST_THROW_EXCEPTION(std::runtime_error("connect to peers timeout"));
-                    return;
-                }
-            }
+            waitForConnectionEstablish();
         }
     }
 
@@ -468,10 +473,15 @@ void WsService::asyncSendMessageByEndPoint(const std::string& _endPoint,
 }
 
 void WsService::asyncSendMessage(
-    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
+    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respCallBack)
 {
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
-    auto ss = sessions();
+    return asyncSendMessage(sessions(), _msg, _options, _respCallBack);
+}
+
+void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessage> _msg,
+    Options _options, RespCallBack _respFunc)
+{
     class Retry : public std::enable_shared_from_this<Retry>
     {
     public:
@@ -518,17 +528,42 @@ void WsService::asyncSendMessage(
         }
     };
 
-    std::size_t size = ss.size();
+    std::size_t size = _ss.size();
     auto retry = std::make_shared<Retry>();
-    retry->ss = ss;
+    retry->ss = _ss;
     retry->msg = _msg;
     retry->options = _options;
     retry->respFunc = _respFunc;
     retry->sendMessage();
+    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
 
     WEBSOCKET_VERSION(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
                              << LOG_KV("size", size);
 }
+
+void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,
+    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
+{
+    ws::WsSessions ss;
+    for (const std::string& endPoint : _endPoints)
+    {
+        auto s = getSession(endPoint);
+        if (s)
+        {
+            ss.push_back(s);
+        }
+        else
+        {
+            WEBSOCKET_VERSION(DEBUG)
+                << LOG_BADGE("asyncSendMessage")
+                << LOG_DESC("there has no connection of the endpoint exist, skip")
+                << LOG_KV("endPoint", endPoint);
+        }
+    }
+
+    return asyncSendMessage(ss, _msg, _options, _respFunc);
+}
+
 
 void WsService::broadcastMessage(std::shared_ptr<WsMessage> _msg)
 {

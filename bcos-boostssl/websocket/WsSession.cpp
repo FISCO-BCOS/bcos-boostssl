@@ -395,7 +395,7 @@ void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback
     m_callbacks[_seq] = _callback;
 }
 
-WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& _seq)
+WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& _seq, bool _remove)
 {
     CallBack::Ptr callback = nullptr;
     std::shared_lock lock(x_callback);
@@ -403,7 +403,10 @@ WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& 
     if (it != m_callbacks.end())
     {
         callback = it->second;
-        m_callbacks.erase(it);
+        if (_remove)
+        {
+            m_callbacks.erase(it);
+        }
     }
 
     return callback;
