@@ -133,13 +133,13 @@ void WsSession::initialize(bool _client)
         if (_kind == boost::beast::websocket::frame_type::ping)
         {  // ping message
             session->pong();
-            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive ping") << LOG_KV("endPoint", endPoint)
-                                    << LOG_KV("payload", _payload);
+            WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive ping") << LOG_KV("endPoint", endPoint)
+                                     << LOG_KV("payload", _payload);
         }
         else if (_kind == boost::beast::websocket::frame_type::pong)
         {  // pong message
-            WEBSOCKET_SESSION(INFO) << LOG_DESC("receive pong") << LOG_KV("endPoint", endPoint)
-                                    << LOG_KV("payload", _payload);
+            WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive pong") << LOG_KV("endPoint", endPoint)
+                                     << LOG_KV("payload", _payload);
         }
     });
 
