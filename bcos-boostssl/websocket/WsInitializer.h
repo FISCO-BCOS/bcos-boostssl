@@ -52,7 +52,6 @@ public:
 public:
     void initWsService(WsService::Ptr _wsService);
 
-
 private:
     std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_messageFactory;
     std::shared_ptr<bcos::boostssl::ws::WsConfig> m_config;

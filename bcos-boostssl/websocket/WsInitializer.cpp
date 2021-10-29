@@ -90,7 +90,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                         std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
                             std::move(_stream)));
                     // accept websocket handshake
-                    session->doAccept(_req);
+                    session->startAsServer(_req);
                 }
             });
 

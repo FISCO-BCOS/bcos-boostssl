@@ -240,7 +240,7 @@ void WsService::reconnect()
                 auto session = service->newSession(_stream);
                 // reset connected endpoint
                 session->setConnectedEndPoint(connectedEndPoint);
-                session->doRun();
+                session->startAsClient();
             });
     }
 

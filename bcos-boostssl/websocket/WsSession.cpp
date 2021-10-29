@@ -161,7 +161,7 @@ void WsSession::initialize(bool _client)
 }
 
 // start WsSession as client
-void WsSession::doRun()
+void WsSession::startAsClient()
 {
     if (m_connectHandler)
     {
@@ -171,19 +171,20 @@ void WsSession::doRun()
     initialize(true);
     asyncRead();
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("doRun") << LOG_DESC("websocket handshake successfully")
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsClient")
+                            << LOG_DESC("websocket handshake successfully")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 }
 
 // start WsSession as server
-void WsSession::doAccept(bcos::boostssl::http::HttpRequest _req)
+void WsSession::startAsServer(bcos::boostssl::http::HttpRequest _req)
 {
     initialize(false);
     // accept the websocket handshake
     m_wsStream.async_accept(
         _req, boost::beast::bind_front_handler(&WsSession::onAccept, shared_from_this()));
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("doAccept") << LOG_DESC("start websocket handshake")
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsServer") << LOG_DESC("start websocket handshake")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 }
 

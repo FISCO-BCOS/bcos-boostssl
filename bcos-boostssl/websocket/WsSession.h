@@ -60,11 +60,14 @@ public:
     void disconnect();
 
 public:
-    void initialize(bool _client);
-    // start WsSession as server
-    void doRun();
     // start WsSession as client
-    void doAccept(bcos::boostssl::http::HttpRequest _req);
+    void startAsClient();
+    // start WsSession as server
+    void startAsServer(bcos::boostssl::http::HttpRequest _req);
+
+public:
+    void initialize(bool _client);
+
     void onAccept(boost::beast::error_code _ec);
     // async read
     void onRead(boost::beast::error_code _ec, std::size_t);
