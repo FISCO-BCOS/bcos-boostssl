@@ -18,12 +18,8 @@
  * @date 2021-10-10
  */
 #pragma once
-#include <bcos-boostssl/httpserver/Common.h>
-#include <bcos-boostssl/websocket/Common.h>
-#include <bcos-boostssl/websocket/WsConfig.h>
-#include <bcos-boostssl/websocket/WsMessage.h>
+#include "bcos-boostssl/websocket/WsConfig.h"
 #include <bcos-framework/libutilities/Common.h>
-#include <bcos-framework/libutilities/ThreadPool.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>

@@ -20,11 +20,15 @@
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/httpserver/HttpQueue.h>
+#include <bcos-boostssl/httpserver/HttpStream.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket.hpp>
+#include <exception>
+#include <memory>
+#include <mutex>
 #include <utility>
 
 namespace bcos
@@ -40,19 +44,7 @@ public:
     using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-    /*
-    HttpSession(
-        boost::asio::ip::tcp::socket&& socket, std::shared_ptr<boost::asio::ssl::context> ctx)
-      : m_stream(std::move(socket), *ctx)
-    {
-        HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this);
-    }
-    */
-
-    HttpSession(boost::asio::ip::tcp::socket&& socket) : m_stream(std::move(socket))
-    {
-        HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this);
-    }
+    HttpSession() { HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this); }
 
     virtual ~HttpSession()
     {
@@ -63,39 +55,21 @@ public:
     // start the HttpSession
     void run()
     {
-        // boost::beast::get_lowest_layer(m_stream).expires_after(std::chrono::seconds(30));
-
-        // ssl handshake
-        // m_stream.async_handshake(boost::asio::ssl::stream_base::server,
-        //     boost::beast::bind_front_handler(&HttpSession::onHandshake, shared_from_this()));
-
-        boost::asio::dispatch(m_stream.get_executor(),
+        boost::asio::dispatch(m_httpStream->stream().get_executor(),
             boost::beast::bind_front_handler(&HttpSession::doRead, shared_from_this()));
     }
-
-    void onHandshake(boost::beast::error_code ec)
-    {
-        if (ec)
-        {
-            HTTP_SESSION(ERROR) << LOG_BADGE("onHandshake") << LOG_KV("error", ec)
-                                << LOG_KV("message", ec.message());
-            return doClose();
-        }
-
-        // handshake successfully, begin to read data
-
-        doRead();
-    }
-
 
     void doRead()
     {
         m_parser.emplace();
-        // set limit to http request size, 10m
-        // m_parser->body_limit(10 * 1024 * 1024);
-        // read the coming http request
-        boost::beast::http::async_read(m_stream, m_buffer, *m_parser,
-            boost::beast::bind_front_handler(&HttpSession::onRead, shared_from_this()));
+        // set limit to http request size, 100m
+        m_parser->body_limit(100 * 1024 * 1024);
+
+        auto session = shared_from_this();
+        m_httpStream->asyncRead(m_buffer, m_parser,
+            [session](boost::system::error_code _ec, std::size_t bytes_transferred) {
+                session->onRead(_ec, bytes_transferred);
+            });
     }
 
     void onRead(boost::beast::error_code ec, std::size_t bytes_transferred)
@@ -106,14 +80,16 @@ public:
         if (ec == boost::beast::http::error::end_of_stream)
         {
             HTTP_SESSION(TRACE) << LOG_BADGE("onRead") << LOG_DESC("end of stream");
-            return doClose();
+            // return doClose();
+            return;
         }
 
         if (ec)
         {
             HTTP_SESSION(ERROR) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
                                 << LOG_KV("error", ec);
-            return doClose();
+            // return doClose();
+            return;
         }
 
         if (boost::beast::websocket::is_upgrade(m_parser->get()))
@@ -121,17 +97,20 @@ public:
             HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
             if (m_wsUpgradeHandler)
             {
-                m_wsUpgradeHandler(std::move(m_stream.socket()), m_parser->release());
+                m_wsUpgradeHandler(m_httpStream, m_parser->release());
             }
             else
             {
                 HTTP_SESSION(ERROR)
                     << LOG_BADGE("onRead")
                     << LOG_DESC("the session will be closed for unsupported websocket upgrade");
-                doClose();
+                // doClose();
+                return;
             }
             return;
         }
+
+        HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("receive http request");
 
         auto self = std::weak_ptr<HttpSession>(shared_from_this());
         handleRequest(m_parser->release(), [self](auto&& msg) {
@@ -159,14 +138,16 @@ public:
         {
             HTTP_SESSION(ERROR) << LOG_BADGE("onWrite") << LOG_DESC("close the connection")
                                 << LOG_KV("error", ec);
-            return doClose();
+            // return doClose();
+            return;
         }
 
         if (close)
         {
             // we should close the connection, usually because
             // the response indicated the "Connection: close" semantic.
-            return doClose();
+            // return doClose();
+            return;
         }
 
         if (m_queue->onWrite())
@@ -178,10 +159,10 @@ public:
 
     void doClose()
     {
-        boost::beast::error_code ec;
-        m_stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
-
-        // at this point the connection is closed gracefully
+        if (m_httpStream)
+        {
+            m_httpStream->close();
+        }
     }
 
     /**
@@ -191,22 +172,23 @@ public:
      * @return void:
      */
     template <class Send>
-    void handleRequest(HttpRequest&& req, Send&& send)
+    void handleRequest(HttpRequest&& _httpRequest, Send&& send)
     {
         HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("request")
-                            << LOG_KV("method", req.method_string())
-                            << LOG_KV("target", req.target()) << LOG_KV("body", req.body())
-                            << LOG_KV("keep_alive", req.keep_alive())
-                            << LOG_KV("need_eof", req.need_eof());
+                            << LOG_KV("method", _httpRequest.method_string())
+                            << LOG_KV("target", _httpRequest.target())
+                            << LOG_KV("body", _httpRequest.body())
+                            << LOG_KV("keep_alive", _httpRequest.keep_alive())
+                            << LOG_KV("need_eof", _httpRequest.need_eof());
 
         std::chrono::high_resolution_clock::time_point start =
             std::chrono::high_resolution_clock::now();
 
-        unsigned version = req.version();
+        unsigned version = _httpRequest.version();
         if (m_httpReqHandler)
         {
-            std::string request = req.body();
-            m_httpReqHandler(request, [this, req, version, send, start](
+            std::string request = _httpRequest.body();
+            m_httpReqHandler(request, [this, _httpRequest, version, send, start](
                                           const std::string& _content) {
                 std::chrono::high_resolution_clock::time_point end =
                     std::chrono::high_resolution_clock::now();
@@ -262,12 +244,11 @@ public:
     std::shared_ptr<Queue> queue() { return m_queue; }
     void setQueue(std::shared_ptr<Queue> _queue) { m_queue = _queue; }
 
-    boost::beast::tcp_stream& stream() { return m_stream; }
-    // boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& stream() { return m_stream; }
+    HttpStream::Ptr httpStream() { return m_httpStream; }
+    void setHttpStream(HttpStream::Ptr _httpStream) { m_httpStream = _httpStream; }
 
 private:
-    // boost::asio::ssl::stream<boost::asio::ip::tcp::socket> m_stream;
-    boost::beast::tcp_stream m_stream;
+    HttpStream::Ptr m_httpStream;
 
     boost::beast::flat_buffer m_buffer;
 
@@ -280,41 +261,6 @@ private:
     boost::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> m_parser;
 };
 
-class HttpSessionFactory : public std::enable_shared_from_this<HttpSessionFactory>
-{
-public:
-    using Ptr = std::shared_ptr<HttpSessionFactory>;
-
-public:
-    /**
-     * @brief: create http session
-     * @param socket: socket
-     * @param ctx: ssl context
-     * @return HttpSession::Ptr:
-     */
-    HttpSession::Ptr createSession(boost::asio::ip::tcp::socket&& socket)
-    {
-        auto session = std::make_shared<HttpSession>(std::move(socket));
-        auto queue = std::make_shared<Queue>();
-        auto self = std::weak_ptr<HttpSession>(session);
-        queue->setSender([self](HttpResponsePtr resp) {
-            auto session = self.lock();
-            if (!session)
-            {
-                return;
-            }
-
-            HTTP_SESSION(DEBUG) << LOG_BADGE("Queue::Write") << LOG_KV("resp", resp->body())
-                                << LOG_KV("keep_alive", resp->keep_alive());
-
-            boost::beast::http::async_write(session->stream(), *resp,
-                boost::beast::bind_front_handler(&HttpSession::onWrite, session, resp->need_eof()));
-        });
-
-        session->setQueue(queue);
-        return session;
-    }
-};
 }  // namespace http
 }  // namespace boostssl
 }  // namespace bcos

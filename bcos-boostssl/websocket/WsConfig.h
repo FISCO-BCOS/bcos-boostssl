@@ -86,6 +86,8 @@ private:
     // time interval for heartbeat
     uint32_t m_heartbeatPeriod{MIN_HEART_BEAT_PERIOD_MS};
 
+    bool m_disableSsl{false};
+
     // config path for boostssl
     std::string m_boostsslConfig;
 
@@ -136,6 +138,9 @@ public:
     {
         m_boostsslConfig = _boostsslConfig;
     }
+
+    bool disableSsl() const { return m_disableSsl; }
+    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 };
 }  // namespace ws
 }  // namespace boostssl

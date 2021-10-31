@@ -136,7 +136,7 @@ void ContextConfig::initSMCertConfig(const boost::property_tree::ptree& _pt)
 void ContextConfig::checkFileExist(const std::string& _path)
 {
     auto isExist = boost::filesystem::exists(boost::filesystem::path(_path));
-    if (isExist)
+    if (!isExist)
     {
         BOOST_THROW_EXCEPTION(std::runtime_error("file not exist: " + _path));
     }

@@ -52,15 +52,15 @@ public:
     void onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);
 
 public:
+    HttpSession::Ptr buildHttpSession(HttpStream::Ptr _stream);
+
+public:
     HttpReqHandler httpReqHandler() const { return m_httpReqHandler; }
     void setHttpReqHandler(HttpReqHandler _httpReqHandler) { m_httpReqHandler = _httpReqHandler; }
-    HttpSessionFactory::Ptr httpSessionFactory() const { return m_httpSessionFactory; }
-    void setHttpSessionFactory(HttpSessionFactory::Ptr _httpSessionFactory)
-    {
-        m_httpSessionFactory = _httpSessionFactory;
-    }
+
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+
     std::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor() const { return m_acceptor; }
     void setAcceptor(std::shared_ptr<boost::asio::ip::tcp::acceptor> _acceptor)
     {
@@ -76,17 +76,28 @@ public:
         m_wsUpgradeHandler = _wsUpgradeHandler;
     }
 
+    HttpStreamFactory::Ptr httpStreamFactory() const { return m_httpStreamFactory; }
+    void setHttpStreamFactory(HttpStreamFactory::Ptr _httpStreamFactory)
+    {
+        m_httpStreamFactory = _httpStreamFactory;
+    }
+
+    bool disableSsl() const { return m_disableSsl; }
+    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
+
 private:
     std::string m_listenIP;
     uint16_t m_listenPort;
+    bool m_disableSsl;
 
     HttpReqHandler m_httpReqHandler;
     WsUpgradeHandler m_wsUpgradeHandler;
 
-    std::shared_ptr<HttpSessionFactory> m_httpSessionFactory;
     std::shared_ptr<boost::asio::ip::tcp::acceptor> m_acceptor;
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ssl::context> m_ctx;
+
+    std::shared_ptr<HttpStreamFactory> m_httpStreamFactory;
 };
 
 // The http server factory

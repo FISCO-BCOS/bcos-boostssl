@@ -34,7 +34,9 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
+
 
 using namespace bcos;
 using namespace bcos::boostssl;
@@ -74,9 +76,9 @@ void WsService::waitForConnectionEstablish()
         else
         {
             stop();
-            WEBSOCKET_SERVICE(ERROR)
-                << LOG_BADGE("waitForConnectionEstablish") << LOG_DESC("connect to peers timeout")
-                << LOG_KV("timeout", m_waitConnectFinishTimeout);
+            WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("waitForConnectionEstablish")
+                                     << LOG_DESC("the connection to the server timed out")
+                                     << LOG_KV("timeout", m_waitConnectFinishTimeout);
 
             BOOST_THROW_EXCEPTION(std::runtime_error("The connection to the server timed out"));
             return;
@@ -158,7 +160,6 @@ void WsService::stop()
 
 void WsService::startIocThread()
 {
-    // TODO: if multi-thread needed???
     m_iocThread = std::make_shared<std::thread>([&] {
         while (m_running)
         {
@@ -204,28 +205,22 @@ void WsService::heartbeat()
     });
 }
 
-void WsService::reconnect()
+void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
 {
-    auto peers = m_config->connectedPeers();
-    for (auto const& peer : *peers)
+    for (auto const& peer : *_peers)
     {
         std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
-        auto session = getSession(connectedEndPoint);
-        if (session)
-        {
-            continue;
-        }
 
-        WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("reconnect") << LOG_DESC("try to connect to peer")
-                                 << LOG_KV("connectedEndPoint", connectedEndPoint);
+        WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("connectOnce") << LOG_DESC("try to connect to peer")
+                                 << LOG_KV("endpoint", connectedEndPoint);
 
         std::string host = peer.host;
         uint16_t port = peer.port;
+
         auto self = std::weak_ptr<WsService>(shared_from_this());
-        m_connector->connectToWsServer(host, port,
-            [self, connectedEndPoint](boost::beast::error_code _ec,
-                std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>>
-                    _stream) {
+        m_connector->connectToWsServer(host, port, !disableSsl(),
+            [self, connectedEndPoint](
+                boost::beast::error_code _ec, std::shared_ptr<WsStream> _stream) {
                 auto service = self.lock();
                 if (!service)
                 {
@@ -242,6 +237,30 @@ void WsService::reconnect()
                 session->setConnectedEndPoint(connectedEndPoint);
                 session->startAsClient();
             });
+    }
+}
+
+void WsService::reconnect()
+{
+    auto waitConnectedPeers = std::make_shared<std::vector<EndPoint>>();
+
+    // select all disconnected nodes
+    auto peers = m_config->connectedPeers();
+    for (auto const& peer : *peers)
+    {
+        std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
+        auto session = getSession(connectedEndPoint);
+        if (session)
+        {
+            continue;
+        }
+
+        waitConnectedPeers->push_back(peer);
+    }
+
+    if (!waitConnectedPeers->empty())
+    {
+        asyncConnectOnce(waitConnectedPeers);
     }
 
     m_reconnect = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
@@ -268,21 +287,19 @@ bool WsService::registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler)
     return false;
 }
 
-std::shared_ptr<WsSession> WsService::newSession(
-    std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>> _stream)
+std::shared_ptr<WsSession> WsService::newSession(std::shared_ptr<WsStream> _stream)
 {
-    auto remoteEndPoint = _stream->next_layer().socket().remote_endpoint();
-    std::string endPoint =
-        remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
+    auto wsSession = std::make_shared<WsSession>();
+    std::string endPoint = _stream->remoteEndpoint();
+    wsSession->setStream(_stream);
 
-    auto wsSession = std::make_shared<WsSession>(std::move(*_stream));
+    wsSession->setIoc(ioc());
     wsSession->setThreadPool(threadPool());
     wsSession->setMessageFactory(messageFactory());
     wsSession->setEndPoint(endPoint);
     wsSession->setConnectedEndPoint(endPoint);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
-
     wsSession->setConnectHandler(
         [self](bcos::Error::Ptr _error, std::shared_ptr<WsSession> _session) {
             auto wsService = self.lock();
@@ -309,8 +326,7 @@ std::shared_ptr<WsSession> WsService::newSession(
         });
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("newSession") << LOG_DESC("start the session")
-                            << LOG_KV("endPoint", endPoint)
-                            << LOG_KV("client", wsSession->client());
+                            << LOG_KV("endPoint", endPoint);
     return wsSession;
 }
 

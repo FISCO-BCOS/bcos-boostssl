@@ -26,6 +26,7 @@
 #define HTTP_LISTEN(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][LISTEN]"
 #define HTTP_SESSION(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][SESSION]"
 #define HTTP_SERVER(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][SERVER]"
+#define HTTP_STREAM(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][STREAM]"
 
 namespace bcos
 {
@@ -33,13 +34,14 @@ namespace boostssl
 {
 namespace http
 {
+class HttpStream;
 using HttpRequest = boost::beast::http::request<boost::beast::http::string_body>;
 using HttpResponse = boost::beast::http::response<boost::beast::http::string_body>;
 using HttpRequestPtr = std::shared_ptr<HttpRequest>;
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;
 using HttpReqHandler =
     std::function<void(const std::string& req, std::function<void(const std::string& resp)>)>;
-using WsUpgradeHandler = std::function<void(boost::asio::ip::tcp::socket&&, HttpRequest&&)>;
+using WsUpgradeHandler = std::function<void(std::shared_ptr<HttpStream>, HttpRequest&&)>;
 }  // namespace http
 }  // namespace boostssl
 }  // namespace bcos

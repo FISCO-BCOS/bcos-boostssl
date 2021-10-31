@@ -41,8 +41,6 @@ enum WsError
     UndefinedException = -4099
 };
 
-// TODO: error code => error string
-
 }  // namespace ws
 }  // namespace boostssl
 }  // namespace bcos

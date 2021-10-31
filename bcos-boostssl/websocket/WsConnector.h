@@ -18,7 +18,9 @@
  * @date 2021-08-23
  */
 #pragma once
+#include <bcos-boostssl/websocket/WsStream.h>
 #include <boost/beast/core.hpp>
+#include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
 #include <functional>
 #include <mutex>
@@ -35,7 +37,9 @@ namespace ws
 class WsConnector : public std::enable_shared_from_this<WsConnector>
 {
 public:
-    using Ptr = WsConnector;
+    using Ptr = std::shared_ptr<WsConnector>;
+    using ConstPtr = std::shared_ptr<const WsConnector>;
+
     WsConnector(std::shared_ptr<boost::asio::ip::tcp::resolver> _resolver,
         std::shared_ptr<boost::asio::io_context> _ioc)
       : m_resolver(_resolver), m_ioc(_ioc)
@@ -43,7 +47,18 @@ public:
 
 public:
     /**
-     * @brief:
+     * @brief: connect to the server
+     * @param _host: the remote server host, support ipv4, ipv6, domain name
+     * @param _port: the remote server port
+     * @param _useSsl: the remote server port
+     * @param _callback:
+     * @return void:
+     */
+    void connectToWsServer(const std::string& _host, uint16_t _port, bool _useSsl,
+        std::function<void(boost::beast::error_code, std::shared_ptr<WsStream>)> _callback);
+
+    /**
+     * @brief: connect to the server
      * @param _host: the remote server host, support ipv4, ipv6, domain name
      * @param _port: the remote server port
      * @param _callback:
@@ -52,6 +67,19 @@ public:
     void connectToWsServer(const std::string& _host, uint16_t _port,
         std::function<void(boost::beast::error_code _ec,
             std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>>)>
+            _callback);
+
+    /**
+     * @brief: connect to the server with ssl
+     * @param _host: the remote server host, support ipv4, ipv6, domain name
+     * @param _port: the remote server port
+     * @param _callback:
+     * @return void:
+     */
+    void connectToWsServer(const std::string& _host, uint16_t _port,
+        std::function<void(
+            boost::beast::error_code _ec, std::shared_ptr<boost::beast::websocket::stream<
+                                              boost::beast::ssl_stream<boost::beast::tcp_stream>>>)>
             _callback);
 
 public:
@@ -78,9 +106,21 @@ public:
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
 
+    void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
+    std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
+
+    std::shared_ptr<WsStreamFactory> wsStreamFactory() { return m_wsStreamFactory; }
+    void setWsStreamFactory(std::shared_ptr<WsStreamFactory> _wsStreamFactory)
+    {
+        m_wsStreamFactory = _wsStreamFactory;
+    }
+
 private:
     std::shared_ptr<boost::asio::ip::tcp::resolver> m_resolver;
     std::shared_ptr<boost::asio::io_context> m_ioc;
+    std::shared_ptr<boost::asio::ssl::context> m_ctx;
+    // WsStreamFactory
+    std::shared_ptr<WsStreamFactory> m_wsStreamFactory;
 
     mutable std::mutex x_pendingConns;
     std::set<std::string> m_pendingConns;
