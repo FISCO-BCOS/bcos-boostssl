@@ -19,6 +19,34 @@
  */
 
 #pragma once
-#include <bcos-framework/libutilities/Log.h>
+#include <openssl/bio.h>
+#include <openssl/pem.h>
 
 #define CONTEXT_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][CTX]"
+
+namespace bcos
+{  // namespace bcos
+namespace boostssl
+{
+inline X509* toX509(const char* _pemBuffer)
+{
+    BIO* bio_mem = BIO_new(BIO_s_mem());
+    BIO_puts(bio_mem, _pemBuffer);
+    X509* x509 = PEM_read_bio_X509(bio_mem, NULL, NULL, NULL);
+    BIO_free(bio_mem);
+    // X509_free(x509);
+    return x509;
+}
+
+inline EVP_PKEY* toEvpPkey(const char* _pemBuffer)
+{
+    BIO* bio_mem = BIO_new(BIO_s_file());
+    BIO_puts(bio_mem, _pemBuffer);
+    EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bio_mem, NULL, NULL, NULL);
+    BIO_free(bio_mem);
+    // EVP_PKEY_free(pkey);
+    return pkey;
+}
+
+}  // namespace boostssl
+}  // namespace bcos

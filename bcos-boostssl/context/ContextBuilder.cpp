@@ -18,8 +18,10 @@
  * @date 2021-06-14
  */
 
+#include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/context/ContextConfig.h>
+#include <bcos-framework/libutilities/Log.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <exception>
 #include <iostream>
@@ -28,8 +30,7 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::context;
 
-// default config
-static const std::string DEFAULT_CONFIG = "./boostssl.ini";
+// static const std::string DEFAULT_CONFIG = "./boostssl.ini";
 
 std::shared_ptr<std::string> ContextBuilder::readFileContent(boost::filesystem::path const& _file)
 {
@@ -51,21 +52,21 @@ std::shared_ptr<std::string> ContextBuilder::readFileContent(boost::filesystem::
     return content;
 }
 
-std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext()
-{
-    return buildSslContext(DEFAULT_CONFIG);
-}
-
 std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
     const std::string& _configPath)
 {
     auto config = std::make_shared<ContextConfig>();
     config->initConfig(_configPath);
-    if (config->sslType() == "sm_ssl")
+}
+
+std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
+    const ContextConfig& _contextConfig)
+{
+    if (_contextConfig.sslType() == "ssl")
     {
-        return buildSslContext(config->smCertConfig());
+        return buildSslContext(_contextConfig.certConfig());
     }
-    return buildSslContext(config->certConfig());
+    return buildSslContext(_contextConfig.smCertConfig());
 }
 
 std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
@@ -76,11 +77,6 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
 
     auto keyContent =
         readFileContent(boost::filesystem::path(_certConfig.nodeKey));  // node.key content
-    if (!keyContent || keyContent->empty())
-    {
-        BOOST_THROW_EXCEPTION(std::runtime_error("unable read node key: " + _certConfig.nodeKey));
-    }
-
     boost::asio::const_buffer keyBuffer(keyContent->data(), keyContent->size());
     sslContext->use_private_key(keyBuffer, boost::asio::ssl::context::file_format::pem);
 
@@ -88,10 +84,6 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
     sslContext->use_certificate_chain_file(_certConfig.nodeCert);
 
     auto caCertContent = readFileContent(boost::filesystem::path(_certConfig.caCert));  // ca.crt
-    if (!caCertContent || caCertContent->empty())
-    {
-        BOOST_THROW_EXCEPTION(std::runtime_error("unable read ca: " + _certConfig.caCert));
-    }
     sslContext->add_certificate_authority(
         boost::asio::const_buffer(caCertContent->data(), caCertContent->size()));
 
@@ -121,13 +113,27 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
     boost::asio::const_buffer keyBuffer(keyContent->data(), keyContent->size());
     sslContext->use_private_key(keyBuffer, boost::asio::ssl::context::file_format::pem);
 
-    SSL_CTX_use_enc_certificate_file(
+    int ret = 0;
+    ret = SSL_CTX_use_enc_certificate_file(
         sslContext->native_handle(), _smCertConfig.enNodeCert.c_str(), SSL_FILETYPE_PEM);
-    if (SSL_CTX_use_enc_PrivateKey_file(
-            sslContext->native_handle(), _smCertConfig.enNodeKey.c_str(), SSL_FILETYPE_PEM) <= 0)
+    if (ret <= 0)
     {
-        BOOST_THROW_EXCEPTION(std::runtime_error(
-            "SSL_CTX_use_enc_PrivateKey_file, en nodekey: " + _smCertConfig.enNodeKey));
+        CONTEXT_LOG(ERROR) << LOG_BADGE("buildSslContext")
+                           << LOG_DESC("SSL_CTX_use_enc_certificate_file") << LOG_KV("error", ret);
+
+        BOOST_THROW_EXCEPTION(
+            std::runtime_error("SSL_CTX_use_enc_certificate_file, error: " + std::to_string(ret)));
+    }
+
+    ret = SSL_CTX_use_enc_PrivateKey_file(
+        sslContext->native_handle(), _smCertConfig.enNodeKey.c_str(), SSL_FILETYPE_PEM);
+    if (ret <= 0)
+    {
+        CONTEXT_LOG(ERROR) << LOG_BADGE("buildSslContext")
+                           << LOG_DESC("SSL_CTX_use_enc_PrivateKey_file") << LOG_KV("error", ret);
+
+        BOOST_THROW_EXCEPTION(
+            std::runtime_error("SSL_CTX_use_enc_PrivateKey_file, error: " + std::to_string(ret)));
     }
 
     sslContext->use_certificate_chain_file(_smCertConfig.nodeCert);
@@ -137,6 +143,94 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
 
     sslContext->add_certificate_authority(
         boost::asio::const_buffer(caContent->data(), caContent->size()));
+
+    std::string caPath;
+    if (!caPath.empty())
+    {
+        sslContext->add_verify_path(caPath);
+    }
+
+    sslContext->set_verify_mode(boost::asio::ssl::context_base::verify_peer |
+                                boost::asio::ssl::verify_fail_if_no_peer_cert);
+
+    return sslContext;
+}
+
+std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCertContent(
+    const ContextConfig& _contextConfig)
+{
+    if (_contextConfig.sslType() == "ssl")
+    {
+        return buildSslContextByCertContent(_contextConfig.certConfig());
+    }
+    return buildSslContextByCertContent(_contextConfig.smCertConfig());
+}
+
+std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCertContent(
+    const ContextConfig::CertConfig& _certConfig)
+{
+    std::shared_ptr<boost::asio::ssl::context> sslContext =
+        std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12);
+
+    sslContext->use_private_key(
+        boost::asio::const_buffer(_certConfig.nodeKey.data(), _certConfig.nodeKey.size()),
+        boost::asio::ssl::context::file_format::pem);
+    sslContext->use_certificate_chain(
+        boost::asio::const_buffer(_certConfig.nodeCert.data(), _certConfig.nodeCert.size()));
+
+    sslContext->add_certificate_authority(
+        boost::asio::const_buffer(_certConfig.caCert.data(), _certConfig.caCert.size()));
+
+    std::string caPath;
+    if (!caPath.empty())
+    {
+        sslContext->add_verify_path(caPath);
+    }
+
+    sslContext->set_verify_mode(boost::asio::ssl::context_base::verify_peer |
+                                boost::asio::ssl::verify_fail_if_no_peer_cert);
+
+    return sslContext;
+}
+
+std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCertContent(
+    const ContextConfig::SMCertConfig& _smCertConfig)
+{
+    std::shared_ptr<boost::asio::ssl::context> sslContext =
+        std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12);
+
+    sslContext->set_verify_mode(boost::asio::ssl::context_base::verify_none);
+
+    sslContext->use_private_key(
+        boost::asio::const_buffer(_smCertConfig.nodeKey.data(), _smCertConfig.nodeKey.size()),
+        boost::asio::ssl::context::file_format::pem);  // node.key
+
+    int ret = 0;
+
+    ret = SSL_CTX_use_enc_certificate(
+        sslContext->native_handle(), toX509(_smCertConfig.enNodeCert.c_str()));
+    if (ret <= 0)  // en_node.crt
+    {
+        CONTEXT_LOG(ERROR) << LOG_BADGE("buildSslContext")
+                           << LOG_DESC("SSL_CTX_use_enc_certificate") << LOG_KV("error", ret);
+        BOOST_THROW_EXCEPTION(std::runtime_error(
+            "SSL_CTX_use_enc_certificate failed, error: " + std::to_string(ret)));
+    }
+
+    ret = SSL_CTX_use_enc_PrivateKey(
+        sslContext->native_handle(), toEvpPkey(_smCertConfig.enNodeKey.c_str()));
+    if (ret <= 0)  // en_node.key
+    {
+        CONTEXT_LOG(ERROR) << LOG_BADGE("buildSslContext") << LOG_DESC("SSL_CTX_use_enc_PrivateKey")
+                           << LOG_KV("error", ret);
+        BOOST_THROW_EXCEPTION(
+            std::runtime_error("SSL_CTX_use_enc_PrivateKey, error: " + std::to_string(ret)));
+    }
+
+    sslContext->use_certificate_chain(boost::asio::const_buffer(
+        _smCertConfig.nodeCert.data(), _smCertConfig.nodeCert.size()));  // node.crt
+    sslContext->add_certificate_authority(boost::asio::const_buffer(
+        _smCertConfig.caCert.data(), _smCertConfig.caCert.size()));  // ca.crt
 
     std::string caPath;
     if (!caPath.empty())

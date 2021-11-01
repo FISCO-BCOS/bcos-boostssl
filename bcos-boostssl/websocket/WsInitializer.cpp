@@ -17,8 +17,8 @@
  * @author: octopus
  * @date 2021-09-29
  */
-#include "bcos-boostssl/httpserver/Common.h"
 #include <bcos-boostssl/context/ContextBuilder.h>
+#include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -56,10 +56,10 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         "t_ws", _config->threadPoolSize() > 0 ? _config->threadPoolSize() : 4);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
-    if (!m_config->disableSsl())
+    if (!_config->disableSsl())
     {
         auto contextBuilder = std::make_shared<bcos::boostssl::context::ContextBuilder>();
-        ctx = contextBuilder->buildSslContext(m_config->boostsslConfig());
+        ctx = contextBuilder->buildSslContextByCertContent(*_config->contextConfig());
     }
 
     if (_config->asServer())
@@ -69,16 +69,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         if (!WsTools::validIP(_config->listenIP()))
         {
-            BOOST_THROW_EXCEPTION(
-                InvalidParameter()
-                << errinfo_comment("initWsService: invalid listen ip, ip=" + _config->listenIP()));
+            BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
+                                      "invalid listen ip, value: " + _config->listenIP()));
         }
 
         if (!WsTools::validPort(_config->listenPort()))
         {
             BOOST_THROW_EXCEPTION(
-                InvalidParameter() << errinfo_comment("initWsService: invalid listen port, port=" +
-                                                      std::to_string(_config->listenPort())));
+                InvalidParameter() << errinfo_comment(
+                    "invalid listen port, value: " + std::to_string(_config->listenPort())));
         }
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
@@ -91,7 +90,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                 if (service)
                 {
                     auto session = service->newSession(_httpStream->wsStream());
-                    // accept websocket handshake
                     session->startAsServer(_httpRequest);
                 }
             });
@@ -112,16 +110,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
             {
                 if (!WsTools::validIP(peer.host))
                 {
-                    BOOST_THROW_EXCEPTION(
-                        InvalidParameter() << errinfo_comment(
-                            "initWsService: invalid connect peer, peer=" + peer.host));
+                    BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
+                                              "invalid connected peer, value: " + peer.host));
                 }
 
                 if (!WsTools::validPort(peer.port))
                 {
-                    BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                              "initWsService: invalid connect port, port=" +
-                                              std::to_string(peer.port)));
+                    BOOST_THROW_EXCEPTION(
+                        InvalidParameter() << errinfo_comment(
+                            "invalid connect port, value: " + std::to_string(peer.port)));
                 }
             }
         }
@@ -133,7 +130,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     }
 
     connector->setCtx(ctx);
- 
+
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
     _wsService->setConfig(_config);
@@ -148,7 +145,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                                 << LOG_KV("listenIP", _config->listenIP())
                                 << LOG_KV("listenPort", _config->listenPort())
                                 << LOG_KV("disableSsl", _config->disableSsl())
-                                << LOG_KV("sslConf", _config->boostsslConfig())
                                 << LOG_KV("server", _config->asServer())
                                 << LOG_KV("client", _config->asClient())
                                 << LOG_KV("threadPoolSize", _config->threadPoolSize())
