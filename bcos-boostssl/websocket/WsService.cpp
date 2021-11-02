@@ -218,7 +218,7 @@ void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
         uint16_t port = peer.port;
 
         auto self = std::weak_ptr<WsService>(shared_from_this());
-        m_connector->connectToWsServer(host, port, !disableSsl(),
+        m_connector->connectToWsServer(host, port,
             [self, connectedEndPoint](
                 boost::beast::error_code _ec, std::shared_ptr<WsStream> _stream) {
                 auto service = self.lock();

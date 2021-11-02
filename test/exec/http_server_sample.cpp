@@ -18,12 +18,14 @@
  * @date 2021-10-31
  */
 
-#include "bcos-boostssl/websocket/WsInitializer.h"
+#include <bcos-boostssl/context/ContextConfig.h>
 #include <bcos-boostssl/websocket/Common.h>
+#include <bcos-boostssl/websocket/WsInitializer.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
+#include <memory>
 
 using namespace bcos;
 using namespace bcos::boostssl;
@@ -62,6 +64,7 @@ int main(int argc, char** argv)
     BCOS_LOG(INFO) << LOG_DESC("http-server") << LOG_KV("ip", host) << LOG_KV("port", port)
                    << LOG_KV("disableSsl", disableSsl);
 
+
     auto config = std::make_shared<bcos::boostssl::ws::WsConfig>();
     config->setModel(bcos::boostssl::ws::WsModel::Server);
 
@@ -69,7 +72,12 @@ int main(int argc, char** argv)
     config->setListenPort(port);
     config->setThreadPoolSize(4);
     config->setDisableSsl(0 == disableSsl.compare("true"));
-    config->setBoostsslConfig("./boostssl.ini");
+    if (config->disableSsl())
+    {
+        auto contextConfig = std::make_shared<bcos::boostssl::context::ContextConfig>();
+        contextConfig->initConfig("./boostssl.ini");
+        config->setContextConfig(contextConfig);
+    }
 
     auto wsService = std::make_shared<ws::WsService>();
     auto wsInitializer = std::make_shared<WsInitializer>();

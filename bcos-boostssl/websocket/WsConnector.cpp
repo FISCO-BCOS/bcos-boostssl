@@ -38,11 +38,11 @@ using namespace bcos::boostssl::ws;
  * @param _callback:
  * @return void:
  */
-void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bool _useSsl,
+void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
     std::function<void(boost::beast::error_code, std::shared_ptr<WsStream>)> _callback)
 {
     auto cbWrapper = _callback;
-    if (_useSsl)
+    if (!m_disableSsl)
     {
         connectToWsServer(_host, _port,
             [cbWrapper](boost::beast::error_code _ec,

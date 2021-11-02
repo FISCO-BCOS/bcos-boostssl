@@ -78,7 +78,12 @@ int main(int argc, char** argv)
 
     config->setThreadPoolSize(4);
     config->setDisableSsl(0 == disableSsl.compare("true"));
-    config->setBoostsslConfig("./boostssl.ini");
+    if (!config->disableSsl())
+    {
+        auto contextConfig = std::make_shared<bcos::boostssl::context::ContextConfig>();
+        contextConfig->initConfig("./boostssl.ini");
+        config->setContextConfig(contextConfig);
+    }
 
     auto wsService = std::make_shared<ws::WsService>();
     auto wsInitializer = std::make_shared<WsInitializer>();

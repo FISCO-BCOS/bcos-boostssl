@@ -51,7 +51,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
     auto wsStreamFactory = std::make_shared<WsStreamFactory>();
 
-
     auto threadPool = std::make_shared<bcos::ThreadPool>(
         "t_ws", _config->threadPoolSize() > 0 ? _config->threadPoolSize() : 4);
 
@@ -59,7 +58,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     if (!_config->disableSsl())
     {
         auto contextBuilder = std::make_shared<bcos::boostssl::context::ContextBuilder>();
-        ctx = contextBuilder->buildSslContextByCertContent(*_config->contextConfig());
+        ctx = contextBuilder->buildSslContext(*_config->contextConfig());
     }
 
     if (_config->asServer())
@@ -130,6 +129,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     }
 
     connector->setCtx(ctx);
+    connector->setDisableSsl(_config->disableSsl());
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);

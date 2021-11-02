@@ -50,11 +50,10 @@ public:
      * @brief: connect to the server
      * @param _host: the remote server host, support ipv4, ipv6, domain name
      * @param _port: the remote server port
-     * @param _useSsl: the remote server port
      * @param _callback:
      * @return void:
      */
-    void connectToWsServer(const std::string& _host, uint16_t _port, bool _useSsl,
+    void connectToWsServer(const std::string& _host, uint16_t _port,
         std::function<void(boost::beast::error_code, std::shared_ptr<WsStream>)> _callback);
 
     /**
@@ -115,7 +114,12 @@ public:
         m_wsStreamFactory = _wsStreamFactory;
     }
 
+    bool disableSsl() const { return m_disableSsl; }
+    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
+
 private:
+    bool m_disableSsl;
+
     std::shared_ptr<boost::asio::ip::tcp::resolver> m_resolver;
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ssl::context> m_ctx;
