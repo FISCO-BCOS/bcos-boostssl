@@ -57,16 +57,28 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
 {
     auto config = std::make_shared<ContextConfig>();
     config->initConfig(_configPath);
+    return buildSslContext(*config);
 }
 
 std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
     const ContextConfig& _contextConfig)
 {
-    if (_contextConfig.sslType() == "ssl")
+    if (_contextConfig.isCertPath())
     {
-        return buildSslContext(_contextConfig.certConfig());
+        if (_contextConfig.sslType() != "sm_ssl")
+        {
+            return buildSslContext(_contextConfig.certConfig());
+        }
+        return buildSslContext(_contextConfig.smCertConfig());
     }
-    return buildSslContext(_contextConfig.smCertConfig());
+    else
+    {
+        if (_contextConfig.sslType() != "sm_ssl")
+        {
+            return buildSslContextByCertContent(_contextConfig.certConfig());
+        }
+        return buildSslContextByCertContent(_contextConfig.smCertConfig());
+    }
 }
 
 std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
@@ -154,16 +166,6 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
                                 boost::asio::ssl::verify_fail_if_no_peer_cert);
 
     return sslContext;
-}
-
-std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCertContent(
-    const ContextConfig& _contextConfig)
-{
-    if (_contextConfig.sslType() == "ssl")
-    {
-        return buildSslContextByCertContent(_contextConfig.certConfig());
-    }
-    return buildSslContextByCertContent(_contextConfig.smCertConfig());
 }
 
 std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCertContent(

@@ -73,11 +73,21 @@ public:
     void checkFileExist(const std::string& _path);
 
 public:
+    bool isCertPath() const { return m_isCertPath; }
+    void setIsCertPath(bool _isCertPath) { m_isCertPath = _isCertPath; }
+
     std::string sslType() const { return m_sslType; }
-    CertConfig certConfig() const { return m_certConfig; }
-    SMCertConfig smCertConfig() const { return m_smCertConfig; }
+    void setSslType(const std::string _sslType) { m_sslType = _sslType; }
+
+    CertConfig& certConfig() { return m_certConfig; }
+    const CertConfig& certConfig() const { return m_certConfig; }
+
+    SMCertConfig& smCertConfig() { return m_smCertConfig; }
+    const SMCertConfig& smCertConfig() const { return m_smCertConfig; }
 
 private:
+    // is the cert path or cert file content
+    bool m_isCertPath = true;
     // ssl type, support ssl && sm_ssl
     std::string m_sslType;
     // cert config for ssl

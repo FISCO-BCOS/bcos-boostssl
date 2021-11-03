@@ -41,7 +41,7 @@ void ContextConfig::initConfig(std::string const& _configPath)
         boost::property_tree::ptree pt;
         boost::property_tree::ini_parser::read_ini(_configPath, pt);
         std::string sslType = pt.get<std::string>("common.ssl_type", "ssl");
-        if ("ssl" == sslType)
+        if ("sm_ssl" != sslType)
         {  // SSL
             initCertConfig(pt);
         }
