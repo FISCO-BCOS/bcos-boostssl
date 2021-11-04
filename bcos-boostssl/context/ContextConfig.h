@@ -79,11 +79,11 @@ public:
     std::string sslType() const { return m_sslType; }
     void setSslType(const std::string _sslType) { m_sslType = _sslType; }
 
-    CertConfig& certConfig() { return m_certConfig; }
     const CertConfig& certConfig() const { return m_certConfig; }
+    void setCertConfig(const CertConfig& _certConfig) { m_certConfig = _certConfig; }
 
-    SMCertConfig& smCertConfig() { return m_smCertConfig; }
     const SMCertConfig& smCertConfig() const { return m_smCertConfig; }
+    void setSmCertConfig(const SMCertConfig& _smCertConfig) { m_smCertConfig = _smCertConfig; }
 
 private:
     // is the cert path or cert file content
