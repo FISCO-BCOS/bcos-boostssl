@@ -40,7 +40,6 @@ BOOST_AUTO_TEST_CASE(test_WsConfigTest)
     {
         auto config = std::make_shared<WsConfig>();
         config->setModel(WsModel::Mixed);
-        BOOST_CHECK_EQUAL(config->boostsslConfig(), std::string());
         BOOST_CHECK_EQUAL(config->listenIP(), std::string());
         BOOST_CHECK_EQUAL(config->listenPort(), 0);
         BOOST_CHECK_EQUAL(config->asClient(), true);
@@ -60,12 +59,10 @@ BOOST_AUTO_TEST_CASE(test_WsConfigTest)
         auto threadPoolSize = 123;
 
         config->setModel(model);
-        config->setBoostsslConfig(boostsslConfig);
         config->setListenIP(listenIP);
         config->setListenPort(listenPort);
         config->setThreadPoolSize(threadPoolSize);
 
-        BOOST_CHECK_EQUAL(config->boostsslConfig(), boostsslConfig);
         BOOST_CHECK_EQUAL(config->listenIP(), listenIP);
         BOOST_CHECK_EQUAL(config->listenPort(), listenPort);
         BOOST_CHECK_EQUAL(config->asClient(), false);

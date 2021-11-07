@@ -37,23 +37,6 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
-WsSession::WsSession(boost::beast::websocket::stream<boost::beast::tcp_stream>&& _wsStream)
-  : m_wsStream(std::move(_wsStream))
-{
-    try
-    {
-        auto remoteEndPoint = m_wsStream.next_layer().socket().remote_endpoint();
-        m_endPoint =
-            remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
-        WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this)
-                                << LOG_KV("endPoint", m_endPoint);
-    }
-    catch (const std::exception& e)
-    {
-        WEBSOCKET_SESSION(ERROR) << LOG_KV("[NEWOBJ][WSSESSION]", this) << LOG_KV("e", e.what());
-    }
-}
-
 void WsSession::drop(uint32_t _reason)
 {
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
@@ -72,14 +55,9 @@ void WsSession::drop(uint32_t _reason)
 
 void WsSession::disconnect()
 {
-    try
+    if (m_stream)
     {
-        boost::beast::error_code ec;
-        m_wsStream.next_layer().socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
-    }
-    catch (const std::exception& e)
-    {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("disconnect") << LOG_KV("e", e.what());
+        m_stream->close();
     }
 
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("disconnect") << LOG_DESC("disconnect the session")
@@ -90,12 +68,15 @@ void WsSession::ping()
 {
     try
     {
-        boost::system::error_code error;
-        m_wsStream.ping(boost::beast::websocket::ping_data(), error);
+        if (m_stream)
+        {
+            m_stream->ping();
+        }
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("ping") << LOG_KV("endpoint", endPoint())
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("ping") << LOG_KV("endpoint", m_endPoint)
+                                 << LOG_KV("session", this)
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::PingError);
     }
@@ -105,155 +86,124 @@ void WsSession::pong()
 {
     try
     {
-        boost::system::error_code error;
-        m_wsStream.pong(boost::beast::websocket::ping_data(), error);
+        if (m_stream)
+        {
+            m_stream->pong();
+        }
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("pong") << LOG_KV("endpoint", endPoint())
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("pong") << LOG_KV("endpoint", m_endPoint)
+                                 << LOG_KV("session", this)
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::PongError);
     }
 }
 
-void WsSession::initialize(bool _client)
-{
-    setClient(_client);
+// TODO: init ping/pong
 
-    auto self = std::weak_ptr<WsSession>(shared_from_this());
-    auto endPoint = m_endPoint;
-    // callback for ping/pong
-    m_wsStream.control_callback([self, endPoint](auto&& _kind, auto&& _payload) {
-        auto session = self.lock();
-        if (!session)
-        {
-            return;
-        }
+// void WsSession::initPingPoing()
+// {
+//     auto s = std::weak_ptr<WsSession>(shared_from_this());
+//     auto endPoint = m_endPoint;
+//     // callback for ping/pong
+//     m_wsStream.control_callback([s, endPoint](auto&& _kind, auto&& _payload) {
+//         auto session = s.lock();
+//         if (!session)
+//         {
+//             return;
+//         }
 
-        if (_kind == boost::beast::websocket::frame_type::ping)
-        {  // ping message
-            session->pong();
-            WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive ping") << LOG_KV("endPoint", endPoint)
-                                     << LOG_KV("payload", _payload);
-        }
-        else if (_kind == boost::beast::websocket::frame_type::pong)
-        {  // pong message
-            WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive pong") << LOG_KV("endPoint", endPoint)
-                                     << LOG_KV("payload", _payload);
-        }
-    });
-
-    if (client())
-    {
-        m_wsStream.set_option(boost::beast::websocket::stream_base::timeout::suggested(
-            boost::beast::role_type::client));
-    }
-    else
-    {
-        m_wsStream.set_option(boost::beast::websocket::stream_base::timeout::suggested(
-            boost::beast::role_type::server));
-        m_wsStream.set_option(boost::beast::websocket::stream_base::decorator(
-            [](boost::beast::websocket::response_type& res) {
-                res.set(boost::beast::http::field::server,
-                    std::string(BOOST_BEAST_VERSION_STRING) + " FISCO-BCOS 3.0");
-            }));
-    }
-}
+//         if (_kind == boost::beast::websocket::frame_type::ping)
+//         {  // ping message
+//             session->pong();
+//             WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive ping") << LOG_KV("endPoint", endPoint)
+//                                      << LOG_KV("payload", _payload);
+//         }
+//         else if (_kind == boost::beast::websocket::frame_type::pong)
+//         {  // pong message
+//             WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive pong") << LOG_KV("endPoint", endPoint)
+//                                      << LOG_KV("payload", _payload);
+//         }
+//     });
+// }
 
 // start WsSession as client
-void WsSession::doRun()
+void WsSession::startAsClient()
 {
     if (m_connectHandler)
     {
         auto session = shared_from_this();
         m_connectHandler(nullptr, session);
     }
-    initialize(true);
+
+    // register ping/pong callback
+    // initPingPoing();
+
+    // read message
     asyncRead();
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("doRun") << LOG_DESC("websocket handshake successfully")
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsClient")
+                            << LOG_DESC("websocket handshake successfully")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 }
 
 // start WsSession as server
-void WsSession::doAccept(bcos::boostssl::http::HttpRequest _req)
+void WsSession::startAsServer(bcos::boostssl::http::HttpRequest _httpRequest)
 {
-    initialize(false);
-    // accept the websocket handshake
-    m_wsStream.async_accept(
-        _req, boost::beast::bind_front_handler(&WsSession::onAccept, shared_from_this()));
+    // register ping/pong callback
+    // initPingPoing();
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("doAccept") << LOG_DESC("start websocket handshake")
+    // // set websocket params
+    // m_wsStream.set_option(
+    //     boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
+
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsServer") << LOG_DESC("start websocket handshake")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
-}
 
-void WsSession::onAccept(boost::beast::error_code _ec)
-{
-    if (_ec)
-    {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onAccept") << LOG_KV("error", _ec);
-        return drop(WsError::AcceptError);
-    }
-
-
-    if (m_connectHandler)
-    {
-        auto session = shared_from_this();
-        m_connectHandler(nullptr, session);
-    }
-
-    asyncRead();
-
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("onAccept") << LOG_DESC("websocket handshake successfully")
-                            << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
-}
-
-void WsSession::onRead(boost::beast::error_code _ec, std::size_t _size)
-{
-    if (_ec)
-    {
-        if (_ec.value() == boost::asio::error::eof)
-        {
-            WEBSOCKET_SESSION(INFO)
-                << LOG_BADGE("onRead") << LOG_DESC(" the peer close the connection");
-        }
-        else
+    auto session = shared_from_this();
+    m_stream->asyncHandshake(_httpRequest, [session](boost::beast::error_code _ec) {
+        if (_ec)
         {
             WEBSOCKET_SESSION(ERROR)
-                << LOG_BADGE("onRead") << LOG_KV("error", _ec) << LOG_KV("message", _ec.message());
+                << LOG_BADGE("startAsServer") << LOG_KV("error", _ec.message());
+            return session->drop(WsError::AcceptError);
         }
 
-        return drop(WsError::ReadError);
-    }
+        if (session->connectHandler())
+        {
+            session->connectHandler()(nullptr, session);
+        }
 
-    auto data = boost::asio::buffer_cast<bcos::byte*>(boost::beast::buffers_front(m_buffer.data()));
+        session->asyncRead();
+
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsServer")
+                                << LOG_DESC("websocket handshake successfully")
+                                << LOG_KV("endPoint", session->endPoint())
+                                << LOG_KV("session", session.get());
+    });
+}
+
+void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
+{
+    auto data = boost::asio::buffer_cast<bcos::byte*>(boost::beast::buffers_front(_buffer.data()));
     auto size = boost::asio::buffer_size(m_buffer.data());
 
     auto message = m_messageFactory->buildMessage();
-    auto decodeSize = message->decode(data, size);
-    if (decodeSize < 0)
+    if (message->decode(data, size) < 0)
     {  // invalid packet, stop this session ?
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onRead")
-                                 << LOG_DESC("invalid packet for unable to decode this packet")
-                                 << LOG_KV("endpoint", endPoint())
-                                 << LOG_KV("data", *toHexString(data, data + size))
-                                 << LOG_KV("size", _size);
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
+                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this)
+                                 << LOG_KV("data", *toHexString(data, data + size));
         return drop(WsError::PacketError);
     }
 
-    m_buffer.consume(m_buffer.size());
+    _buffer.consume(_buffer.size());
 
     auto session = shared_from_this();
     auto seq = std::string(message->seq()->begin(), message->seq()->end());
     auto self = std::weak_ptr<WsSession>(session);
     auto callback = getAndRemoveRespCallback(seq);
-
-    // WEBSOCKET_SESSION(TRACE) << LOG_BADGE("onRead") << LOG_KV("seq", seq)
-    //                          << LOG_KV("type", message->type())
-    //                          << LOG_KV("status", message->status())
-    //                          << LOG_KV("callback", (callback ? true : false))
-    //                          << LOG_KV("size", _size)
-    //                          << LOG_KV("data", *toHexString(data, data + size));
 
     // task enqueue
     m_threadPool->enqueue([message, self, callback]() {
@@ -276,8 +226,6 @@ void WsSession::onRead(boost::beast::error_code _ec, std::size_t _size)
             session->recvMessageHandler()(message, session);
         }
     });
-
-    asyncRead();
 }
 
 void WsSession::asyncRead()
@@ -285,28 +233,32 @@ void WsSession::asyncRead()
     try
     {
         auto session = shared_from_this();
-        // read the next message
-        m_wsStream.async_read(m_buffer,
-            std::bind(&WsSession::onRead, session, std::placeholders::_1, std::placeholders::_2));
+        m_stream->asyncRead(m_buffer, [session](boost::beast::error_code _ec, std::size_t) {
+            if (_ec)
+            {
+                WEBSOCKET_SESSION(ERROR)
+                    << LOG_BADGE("asyncRead") << LOG_KV("endpoint", session->endPoint())
+                    << LOG_KV("session", session.get()) << LOG_KV("error", _ec.message());
+
+                return session->drop(WsError::ReadError);
+            }
+
+            auto& buffer = session->buffer();
+            session->onReadPacket(buffer);
+            session->asyncRead();
+        });
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncRead") << LOG_DESC("async_read error")
-                                 << LOG_KV("endpoint", endPoint())
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncRead") << LOG_DESC("async_read exception occur")
+                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this)
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::ReadError);
     }
 }
 
-void WsSession::onWrite(boost::beast::error_code _ec, std::size_t)
+void WsSession::onWritePacket()
 {
-    if (_ec)
-    {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onWrite") << LOG_KV("error", _ec)
-                                 << LOG_KV("message", _ec.message());
-        return drop(WsError::WriteError);
-    }
-
     std::unique_lock lock(x_queue);
     // remove the front ele from the queue, it has been sent
     m_queue.erase(m_queue.begin());
@@ -322,16 +274,32 @@ void WsSession::asyncWrite()
 {
     try
     {
-        auto session = shared_from_this();
-        m_wsStream.binary(true);
-        // we are not currently writing, so send this immediately
-        m_wsStream.async_write(boost::asio::buffer(*m_queue.front()),
-            std::bind(&WsSession::onWrite, session, std::placeholders::_1, std::placeholders::_2));
+        // Note: add one simple way to monitor message sending latency
+        assert(!m_queue.empty());
+        auto s = std::weak_ptr<WsSession>(shared_from_this());
+        m_stream->asyncWrite(*m_queue.front(), [s](boost::beast::error_code _ec, std::size_t) {
+            auto session = s.lock();
+            if (!session)
+            {
+                return;
+            }
+
+            if (_ec)
+            {
+                WEBSOCKET_SESSION(ERROR)
+                    << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
+                    << LOG_KV("endpoint", session->endPoint()) << LOG_KV("session", session.get());
+                return session->drop(WsError::WriteError);
+            }
+
+            session->onWritePacket();
+        });
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncWrite") << LOG_DESC("async_write error")
-                                 << LOG_KV("endpoint", endPoint())
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncWrite")
+                                 << LOG_DESC("async_write exception occur")
+                                 << LOG_KV("session", this) << LOG_KV("endpoint", endPoint())
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::WriteError);
     }
@@ -359,7 +327,7 @@ void WsSession::asyncSendMessage(
         {
             // create new timer to handle timeout
             auto timer = std::make_shared<boost::asio::deadline_timer>(
-                m_wsStream.get_executor(), boost::posix_time::milliseconds(_options.timeout));
+                *m_ioc, boost::posix_time::milliseconds(_options.timeout));
 
             callback->timer = timer;
             auto self = std::weak_ptr<WsSession>(shared_from_this());
@@ -375,17 +343,18 @@ void WsSession::asyncSendMessage(
         addRespCallback(seq, callback);
     }
 
-
-    std::unique_lock lock(x_queue);
-    auto isEmpty = m_queue.empty();
-    // data to be sent is always enqueue first
-    m_queue.push_back(buffer);
-
-    // no writing, send it
-    if (isEmpty)
     {
-        // we are not currently writing, so send this immediately
-        asyncWrite();
+        std::unique_lock lock(x_queue);
+        auto isEmpty = m_queue.empty();
+        // data to be sent is always enqueue first
+        m_queue.push_back(buffer);
+
+        // no writing, send it
+        if (isEmpty)
+        {
+            // we are not currently writing, so send this immediately
+            asyncWrite();
+        }
     }
 }
 
@@ -398,14 +367,16 @@ void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback
 WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& _seq, bool _remove)
 {
     CallBack::Ptr callback = nullptr;
-    std::shared_lock lock(x_callback);
-    auto it = m_callbacks.find(_seq);
-    if (it != m_callbacks.end())
     {
-        callback = it->second;
-        if (_remove)
+        std::shared_lock lock(x_callback);
+        auto it = m_callbacks.find(_seq);
+        if (it != m_callbacks.end())
         {
-            m_callbacks.erase(it);
+            callback = it->second;
+            if (_remove)
+            {
+                m_callbacks.erase(it);
+            }
         }
     }
 
@@ -427,6 +398,6 @@ void WsSession::onRespTimeout(const boost::system::error_code& _error, const std
 
     WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onRespTimeout") << LOG_KV("seq", _seq);
 
-    auto error = std::make_shared<Error>(bcos::protocol::CommonError::TIMEOUT, "timeout");
+    auto error = std::make_shared<Error>(WsError::TimeOut, "timeout");
     m_threadPool->enqueue([callback, error]() { callback->respCallBack(error, nullptr, nullptr); });
 }

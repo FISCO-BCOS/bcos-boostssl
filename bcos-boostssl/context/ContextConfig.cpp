@@ -21,6 +21,7 @@
 
 #include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/context/ContextConfig.h>
+#include <bcos-framework/libutilities/Log.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/throw_exception.hpp>
@@ -40,7 +41,7 @@ void ContextConfig::initConfig(std::string const& _configPath)
         boost::property_tree::ptree pt;
         boost::property_tree::ini_parser::read_ini(_configPath, pt);
         std::string sslType = pt.get<std::string>("common.ssl_type", "ssl");
-        if ("ssl" == sslType)
+        if ("sm_ssl" != sslType)
         {  // SSL
             initCertConfig(pt);
         }
@@ -136,7 +137,7 @@ void ContextConfig::initSMCertConfig(const boost::property_tree::ptree& _pt)
 void ContextConfig::checkFileExist(const std::string& _path)
 {
     auto isExist = boost::filesystem::exists(boost::filesystem::path(_path));
-    if (isExist)
+    if (!isExist)
     {
         BOOST_THROW_EXCEPTION(std::runtime_error("file not exist: " + _path));
     }

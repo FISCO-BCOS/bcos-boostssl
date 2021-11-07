@@ -21,6 +21,7 @@
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
+#include <bcos-boostssl/websocket/WsStream.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
 #include <boost/asio/deadline_timer.hpp>
@@ -48,7 +49,7 @@ public:
     using Ptrs = std::vector<std::shared_ptr<WsSession>>;
 
 public:
-    WsSession(boost::beast::websocket::stream<boost::beast::tcp_stream>&& _wsStream);
+    WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this); }
 
     virtual ~WsSession()
     {
@@ -60,24 +61,25 @@ public:
     void disconnect();
 
 public:
-    void initialize(bool _client);
-    // start WsSession as server
-    void doRun();
     // start WsSession as client
-    void doAccept(bcos::boostssl::http::HttpRequest _req);
-    void onAccept(boost::beast::error_code _ec);
-    // async read
-    void onRead(boost::beast::error_code _ec, std::size_t);
+    void startAsClient();
+    // start WsSession as server
+    void startAsServer(bcos::boostssl::http::HttpRequest _httpRequest);
+
+public:
     void asyncRead();
-    // async write
-    void onWrite(boost::beast::error_code _ec, std::size_t);
     void asyncWrite();
+
+    // async read
+    void onReadPacket(boost::beast::flat_buffer& _buffer);
+    void onWritePacket();
 
     void ping();
     void pong();
+    // void initPingPoing();
 
 public:
-    virtual bool isConnected() { return !m_isDrop && m_wsStream.next_layer().socket().is_open(); }
+    virtual bool isConnected() { return !m_isDrop && m_stream && m_stream->open(); }
     /**
      * @brief: async send message
      * @param _msg: message
@@ -119,6 +121,9 @@ public:
         m_messageFactory = _messageFactory;
     }
 
+    std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
+    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
     {
@@ -128,15 +133,19 @@ public:
     void setVersion(uint16_t _version) { m_version.store(_version); }
     uint16_t version() const { return m_version.load(); }
 
+    WsStream::Ptr stream() { return m_stream; }
+    void setStream(WsStream::Ptr _stream) { m_stream = _stream; }
+
+    boost::beast::flat_buffer& buffer() { return m_buffer; }
+    void setBuffer(boost::beast::flat_buffer _buffer) { m_buffer = std::move(_buffer); }
+
     std::size_t queueSize()
     {
         std::shared_lock lock(x_queue);
         return m_queue.size();
     }
 
-    bool client() { return m_client; }
-    void setClient(bool _client) { m_client = _client; }
-
+public:
     struct CallBack
     {
         using Ptr = std::shared_ptr<CallBack>;
@@ -148,21 +157,19 @@ public:
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
 private:
-    // server or client session
-    bool m_client = false;
-
+    //
+    std::atomic_bool m_isDrop = false;
     // websocket protocol version
     std::atomic<uint16_t> m_version = 0;
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;
-    //
-    std::atomic_bool m_isDrop = false;
-    // websocket stream
-    boost::beast::websocket::stream<boost::beast::tcp_stream> m_wsStream;
+
     std::string m_endPoint;
     std::string m_connectedEndPoint;
 
+    //
+    WsStream::Ptr m_stream;
     // callbacks
     mutable std::shared_mutex x_callback;
     std::unordered_map<std::string, CallBack::Ptr> m_callbacks;
@@ -176,6 +183,8 @@ private:
     std::shared_ptr<WsMessageFactory> m_messageFactory;
     // thread pool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
+    // ioc
+    std::shared_ptr<boost::asio::io_context> m_ioc;
 
     // send message queue
     mutable std::shared_mutex x_queue;

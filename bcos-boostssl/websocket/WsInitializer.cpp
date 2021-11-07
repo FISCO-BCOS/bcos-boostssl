@@ -18,6 +18,7 @@
  * @date 2021-09-29
  */
 #include <bcos-boostssl/context/ContextBuilder.h>
+#include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -48,15 +49,16 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto ioc = std::make_shared<boost::asio::io_context>();
     auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(*ioc);
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
+    auto wsStreamFactory = std::make_shared<WsStreamFactory>();
 
     auto threadPool = std::make_shared<bcos::ThreadPool>(
         "t_ws", _config->threadPoolSize() > 0 ? _config->threadPoolSize() : 4);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
-    if (!m_config->boostsslConfig().empty())
+    if (!_config->disableSsl())
     {
         auto contextBuilder = std::make_shared<bcos::boostssl::context::ContextBuilder>();
-        ctx = contextBuilder->buildSslContext(m_config->boostsslConfig());
+        ctx = contextBuilder->buildSslContext(*_config->contextConfig());
     }
 
     if (_config->asServer())
@@ -66,31 +68,28 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         if (!WsTools::validIP(_config->listenIP()))
         {
-            BOOST_THROW_EXCEPTION(
-                InvalidParameter()
-                << errinfo_comment("initWsService: invalid listen ip, ip=" + _config->listenIP()));
+            BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
+                                      "invalid listen ip, value: " + _config->listenIP()));
         }
 
         if (!WsTools::validPort(_config->listenPort()))
         {
             BOOST_THROW_EXCEPTION(
-                InvalidParameter() << errinfo_comment("initWsService: invalid listen port, port=" +
-                                                      std::to_string(_config->listenPort())));
+                InvalidParameter() << errinfo_comment(
+                    "invalid listen port, value: " + std::to_string(_config->listenPort())));
         }
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
         auto httpServer = httpServerFactory->buildHttpServer(
             _config->listenIP(), _config->listenPort(), ioc, ctx);
+        httpServer->setDisableSsl(_config->disableSsl());
         httpServer->setWsUpgradeHandler(
-            [wsServiceWeakPtr](boost::asio::ip::tcp::socket&& _stream, HttpRequest&& _req) {
+            [wsServiceWeakPtr](HttpStream::Ptr _httpStream, HttpRequest&& _httpRequest) {
                 auto service = wsServiceWeakPtr.lock();
                 if (service)
                 {
-                    auto session = service->newSession(
-                        std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
-                            std::move(_stream)));
-                    // accept websocket handshake
-                    session->doAccept(_req);
+                    auto session = service->newSession(_httpStream->wsStream());
+                    session->startAsServer(_httpRequest);
                 }
             });
 
@@ -110,16 +109,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
             {
                 if (!WsTools::validIP(peer.host))
                 {
-                    BOOST_THROW_EXCEPTION(
-                        InvalidParameter() << errinfo_comment(
-                            "initWsService: invalid connect peer, peer=" + peer.host));
+                    BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
+                                              "invalid connected peer, value: " + peer.host));
                 }
 
                 if (!WsTools::validPort(peer.port))
                 {
-                    BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                              "initWsService: invalid connect port, port=" +
-                                              std::to_string(peer.port)));
+                    BOOST_THROW_EXCEPTION(
+                        InvalidParameter() << errinfo_comment(
+                            "invalid connect port, value: " + std::to_string(peer.port)));
                 }
             }
         }
@@ -130,20 +128,26 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
     }
 
-    _wsService->setConfig(_config);
-    _wsService->setThreadPool(threadPool);
+    connector->setCtx(ctx);
+    connector->setDisableSsl(_config->disableSsl());
+
     _wsService->setIoc(ioc);
+    _wsService->setCtx(ctx);
+    _wsService->setConfig(_config);
     _wsService->setConnector(connector);
+    _wsService->setThreadPool(threadPool);
+    _wsService->setWsStreamFactory(wsStreamFactory);
     _wsService->setMessageFactory(messageFactory);
+    _wsService->setDisableSsl(_config->disableSsl());
 
     WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
                                 << LOG_DESC("initializer for websocket service")
-                                << LOG_KV("boostssl config", _config->boostsslConfig())
-                                << LOG_KV("thread pool size", _config->threadPoolSize())
-                                << LOG_KV("server", _config->asServer())
                                 << LOG_KV("listenIP", _config->listenIP())
                                 << LOG_KV("listenPort", _config->listenPort())
+                                << LOG_KV("disableSsl", _config->disableSsl())
+                                << LOG_KV("server", _config->asServer())
                                 << LOG_KV("client", _config->asClient())
+                                << LOG_KV("threadPoolSize", _config->threadPoolSize())
                                 << LOG_KV("connected peers", _config->connectedPeers() ?
                                                                  _config->connectedPeers()->size() :
                                                                  0);

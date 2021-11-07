@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <bcos-boostssl/context/ContextConfig.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <cstdint>
@@ -86,8 +87,10 @@ private:
     // time interval for heartbeat
     uint32_t m_heartbeatPeriod{MIN_HEART_BEAT_PERIOD_MS};
 
-    // config path for boostssl
-    std::string m_boostsslConfig;
+    bool m_disableSsl{false};
+
+    // cert config for boostssl
+    std::shared_ptr<context::ContextConfig> m_contextConfig;
 
 public:
     void setModel(WsModel _model) { m_model = _model; }
@@ -131,10 +134,13 @@ public:
         m_connectedPeers = _connectedPeers;
     }
 
-    std::string boostsslConfig() const { return m_boostsslConfig; }
-    void setBoostsslConfig(const std::string& _boostsslConfig)
+    bool disableSsl() const { return m_disableSsl; }
+    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
+
+    std::shared_ptr<context::ContextConfig> contextConfig() const { return m_contextConfig; }
+    void setContextConfig(std::shared_ptr<context::ContextConfig> _contextConfig)
     {
-        m_boostsslConfig = _boostsslConfig;
+        m_contextConfig = _contextConfig;
     }
 };
 }  // namespace ws

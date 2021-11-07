@@ -25,6 +25,7 @@
 #include <bcos-boostssl/websocket/WsConnector.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsSession.h>
+#include <bcos-boostssl/websocket/WsStream.h>
 #include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
@@ -38,6 +39,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace bcos
@@ -67,12 +69,13 @@ public:
     virtual void reconnect();
     virtual void heartbeat();
 
+    void asyncConnectOnce(EndPointsConstPtr _peers);
+
 public:
     void startIocThread();
 
 public:
-    std::shared_ptr<WsSession> newSession(
-        std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>> _stream);
+    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStream> _stream);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -101,6 +104,12 @@ public:
     virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsMessage> _msg);
 
 public:
+    std::shared_ptr<WsStreamFactory> wsStreamFactory() { return m_wsStreamFactory; }
+    void setWsStreamFactory(std::shared_ptr<WsStreamFactory> _wsStreamFactory)
+    {
+        m_wsStreamFactory = _wsStreamFactory;
+    }
+
     std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
     void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
     {
@@ -113,6 +122,9 @@ public:
         m_threadPool = _threadPool;
     }
 
+    bool disableSsl() const { return m_disableSsl; }
+    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
+
     bool waitConnectFinish() const { return m_waitConnectFinish; }
     void setWaitConnectFinish(bool _b) { m_waitConnectFinish = _b; }
 
@@ -121,6 +133,9 @@ public:
 
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+
+    std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
+    void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
 
     std::shared_ptr<WsConnector> connector() const { return m_connector; }
     void setConnector(std::shared_ptr<WsConnector> _connector) { m_connector = _connector; }
@@ -156,13 +171,15 @@ public:
 
 private:
     bool m_running{false};
-
+    bool m_disableSsl{false};
     bool m_waitConnectFinish{false};
     // default timeout , 30s
     int32_t m_waitConnectFinishTimeout = 30000;
 
     // WsMessageFactory
     std::shared_ptr<WsMessageFactory> m_messageFactory;
+    // WsStreamFactory
+    std::shared_ptr<WsStreamFactory> m_wsStreamFactory;
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // Config
@@ -171,6 +188,8 @@ private:
     std::shared_ptr<WsConnector> m_connector;
     // io context
     std::shared_ptr<boost::asio::io_context> m_ioc;
+    // ssl context
+    std::shared_ptr<boost::asio::ssl::context> m_ctx = nullptr;
     // thread for ioc
     std::shared_ptr<std::thread> m_iocThread;
     // reconnect timer

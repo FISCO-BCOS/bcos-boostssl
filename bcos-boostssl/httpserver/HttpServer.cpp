@@ -19,6 +19,7 @@
  */
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
+#include <memory>
 
 using namespace bcos;
 using namespace bcos::boostssl;
@@ -109,21 +110,84 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     {
         HTTP_SERVER(ERROR) << LOG_BADGE("accept") << LOG_KV("error", ec)
                            << LOG_KV("message", ec.message());
-    }
-    else
-    {
-        HTTP_SERVER(INFO) << LOG_BADGE("accept")
-                          << LOG_KV("local_endpoint", socket.local_endpoint())
-                          << LOG_KV("remote_endpoint", socket.remote_endpoint());
-
-        auto httpSession = m_httpSessionFactory->createSession(std::move(socket));
-        httpSession->setRequestHandler(m_httpReqHandler);
-        httpSession->setWsUpgradeHandler(m_wsUpgradeHandler);
-        httpSession->run();
+        return;
     }
 
-    // Accept another connection
-    doAccept();
+    auto localEndpoint = socket.local_endpoint();
+    auto remoteEndpoint = socket.remote_endpoint();
+
+    HTTP_SERVER(INFO) << LOG_BADGE("accept") << LOG_KV("local_endpoint", socket.local_endpoint())
+                      << LOG_KV("remote_endpoint", socket.remote_endpoint());
+
+    bool useSsl = !disableSsl();
+    if (!useSsl)
+    {  // non ssl , start http session
+        auto httpStream = m_httpStreamFactory->buildHttpStream(
+            std::make_shared<boost::beast::tcp_stream>(std::move(socket)));
+        buildHttpSession(httpStream)->run();
+
+        return doAccept();
+    }
+
+    // ssl should be used,  start ssl handshake
+    auto self = std::weak_ptr<HttpServer>(shared_from_this());
+    auto ss = std::make_shared<boost::beast::ssl_stream<boost::beast::tcp_stream>>(
+        boost::beast::tcp_stream(std::move(socket)), *m_ctx);
+    ss->async_handshake(boost::asio::ssl::stream_base::server,
+        [ss, remoteEndpoint, localEndpoint, self](boost::beast::error_code _ec) {
+            if (_ec)
+            {
+                HTTP_SERVER(INFO) << LOG_BADGE("async_handshake")
+                                  << LOG_DESC("ssl handshake failed")
+                                  << LOG_KV("endpoint", remoteEndpoint)
+                                  << LOG_KV("error", _ec.message());
+                // TODO: close the ssl stream
+                return;
+            }
+
+            auto server = self.lock();
+            if (server)
+            {
+                auto httpStream = server->httpStreamFactory()->buildHttpStream(ss);
+                server->buildHttpSession(httpStream)->run();
+            }
+        });
+
+    return doAccept();
+}
+
+
+HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream)
+{
+    auto session = std::make_shared<HttpSession>();
+
+    auto queue = std::make_shared<Queue>();
+    auto self = std::weak_ptr<HttpSession>(session);
+    queue->setSender([self](HttpResponsePtr _httpResp) {
+        auto session = self.lock();
+        if (!session)
+        {
+            return;
+        }
+
+        HTTP_SESSION(TRACE) << LOG_BADGE("Queue::Write") << LOG_KV("resp", _httpResp->body())
+                            << LOG_KV("keep_alive", _httpResp->keep_alive());
+        session->httpStream()->asyncWrite(*_httpResp,
+            [self, _httpResp](boost::beast::error_code ec, std::size_t bytes_transferred) {
+                auto session = self.lock();
+                if (!session)
+                {
+                    return;
+                }
+                session->onWrite(_httpResp->need_eof(), ec, bytes_transferred);
+            });
+    });
+
+    session->setQueue(queue);
+    session->setHttpStream(_httpStream);
+    session->setRequestHandler(m_httpReqHandler);
+    session->setWsUpgradeHandler(m_wsUpgradeHandler);
+    return session;
 }
 
 /**
@@ -143,13 +207,12 @@ HttpServer::Ptr HttpServerFactory::buildHttpServer(const std::string& _listenIP,
     auto server = std::make_shared<HttpServer>(_listenIP, _listenPort);
     auto acceptor =
         std::make_shared<boost::asio::ip::tcp::acceptor>(boost::asio::make_strand(*_ioc));
-
-    auto sessionFactory = std::make_shared<HttpSessionFactory>();
+    auto httpStreamFactory = std::make_shared<HttpStreamFactory>();
 
     server->setIoc(_ioc);
-    server->setAcceptor(acceptor);
-    server->setHttpSessionFactory(sessionFactory);
     server->setCtx(_ctx);
+    server->setAcceptor(acceptor);
+    server->setHttpStreamFactory(httpStreamFactory);
 
     HTTP_SERVER(INFO) << LOG_BADGE("buildHttpServer") << LOG_KV("listenIP", _listenIP)
                       << LOG_KV("listenPort", _listenPort);
