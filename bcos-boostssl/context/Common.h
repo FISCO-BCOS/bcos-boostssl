@@ -40,8 +40,7 @@ inline X509* toX509(const char* _pemBuffer)
 
 inline EVP_PKEY* toEvpPkey(const char* _pemBuffer)
 {
-    BIO* bio_mem = BIO_new(BIO_s_file());
-    BIO_puts(bio_mem, _pemBuffer);
+    BIO* bio_mem = BIO_new_mem_buf(_pemBuffer, -1);
     EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bio_mem, NULL, NULL, NULL);
     BIO_free(bio_mem);
     // EVP_PKEY_free(pkey);
