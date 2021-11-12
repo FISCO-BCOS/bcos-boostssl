@@ -171,7 +171,7 @@ public:
 
     virtual ~HttpStreamSslImpl()
     {
-        HTTP_STREAM(DEBUG) << LOG_KV("[NEWOBJ][HttpStreamSslImpl]", this);
+        HTTP_STREAM(DEBUG) << LOG_KV("[DELOBJ][HttpStreamSslImpl]", this);
         close();
     }
 

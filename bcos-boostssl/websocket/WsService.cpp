@@ -184,10 +184,13 @@ void WsService::startIocThread()
 void WsService::heartbeat()
 {
     auto ss = sessions();
+
+    /*
     for (auto const& s : ss)
     {
         s->ping();
     }
+    */
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("heartbeat") << LOG_DESC("connected nodes")
                             << LOG_KV("count", ss.size());
