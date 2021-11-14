@@ -139,6 +139,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     _wsService->setWsStreamFactory(wsStreamFactory);
     _wsService->setMessageFactory(messageFactory);
     _wsService->setDisableSsl(_config->disableSsl());
+    _wsService->setSendMsgTimeout(_config->sendMsgTimeout());
 
     WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
                                 << LOG_DESC("initializer for websocket service")
@@ -148,6 +149,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                                 << LOG_KV("server", _config->asServer())
                                 << LOG_KV("client", _config->asClient())
                                 << LOG_KV("threadPoolSize", _config->threadPoolSize())
+                                << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
                                 << LOG_KV("connected peers", _config->connectedPeers() ?
                                                                  _config->connectedPeers()->size() :
                                                                  0);

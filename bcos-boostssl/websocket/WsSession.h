@@ -87,7 +87,7 @@ public:
      * @param _respCallback: callback
      * @return void:
      */
-    virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
+    virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(),
         RespCallBack _respCallback = RespCallBack());
 
 public:
@@ -139,6 +139,9 @@ public:
     boost::beast::flat_buffer& buffer() { return m_buffer; }
     void setBuffer(boost::beast::flat_buffer _buffer) { m_buffer = std::move(_buffer); }
 
+    int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
+    void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
+
     std::size_t queueSize()
     {
         std::shared_lock lock(x_queue);
@@ -168,6 +171,8 @@ private:
     std::string m_endPoint;
     std::string m_connectedEndPoint;
 
+    //
+    int32_t m_sendMsgTimeout = -1;
     //
     WsStream::Ptr m_stream;
     // callbacks

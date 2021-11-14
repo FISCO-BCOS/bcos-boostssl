@@ -323,11 +323,12 @@ void WsSession::asyncSendMessage(
     {  // callback
         auto callback = std::make_shared<CallBack>();
         callback->respCallBack = _respFunc;
-        if (_options.timeout > 0)
+        auto timeout = _options.timeout > 0 ? _options.timeout : m_sendMsgTimeout;
+        if (timeout > 0)
         {
             // create new timer to handle timeout
             auto timer = std::make_shared<boost::asio::deadline_timer>(
-                *m_ioc, boost::posix_time::milliseconds(_options.timeout));
+                *m_ioc, boost::posix_time::milliseconds(timeout));
 
             callback->timer = timer;
             auto self = std::weak_ptr<WsSession>(shared_from_this());
@@ -398,6 +399,7 @@ void WsSession::onRespTimeout(const boost::system::error_code& _error, const std
 
     WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onRespTimeout") << LOG_KV("seq", _seq);
 
-    auto error = std::make_shared<Error>(WsError::TimeOut, "timeout");
+    auto error =
+        std::make_shared<Error>(WsError::TimeOut, "waiting for message response timed out");
     m_threadPool->enqueue([callback, error]() { callback->respCallBack(error, nullptr, nullptr); });
 }

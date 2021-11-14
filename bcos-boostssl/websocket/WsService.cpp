@@ -301,6 +301,7 @@ std::shared_ptr<WsSession> WsService::newSession(std::shared_ptr<WsStream> _stre
     wsSession->setMessageFactory(messageFactory());
     wsSession->setEndPoint(endPoint);
     wsSession->setConnectedEndPoint(endPoint);
+    wsSession->setSendMsgTimeout(m_sendMsgTimeout);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
     wsSession->setConnectHandler(
@@ -529,13 +530,13 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
 
             auto self = shared_from_this();
             session->asyncSendMessage(msg, options,
-                [self](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
+                [self, session](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
                     {
                         WEBSOCKET_VERSION(WARNING)
                             << LOG_BADGE("asyncSendMessage") << LOG_DESC("callback error")
-                            << LOG_KV("endpoint", _session->endPoint())
+                            << LOG_KV("endpoint", session->endPoint())
                             << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
                             << LOG_KV("errorMessage",
                                    _error ? _error->errorMessage() : std::string(""));

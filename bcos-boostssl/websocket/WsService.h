@@ -88,16 +88,16 @@ public:
     virtual void onRecvMessage(
         std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session);
 
-    virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
+    virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
     virtual void asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessage> _msg,
-        Options _options = Options(-1), RespCallBack _respFunc = RespCallBack());
+        Options _options = Options(), RespCallBack _respFunc = RespCallBack());
     virtual void asyncSendMessage(const std::set<std::string>& _endPoints,
-        std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
+        std::shared_ptr<WsMessage> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
 
     virtual void asyncSendMessageByEndPoint(const std::string& _endPoint,
-        std::shared_ptr<WsMessage> _msg, Options _options = Options(-1),
+        std::shared_ptr<WsMessage> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
 
     virtual void broadcastMessage(std::shared_ptr<WsMessage> _msg);
@@ -166,6 +166,9 @@ public:
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
 
+    int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
+    void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
+
 public:
     void waitForConnectionEstablish();
 
@@ -173,6 +176,8 @@ private:
     bool m_running{false};
     bool m_disableSsl{false};
     bool m_waitConnectFinish{false};
+    //
+    int32_t m_sendMsgTimeout = -1;
     // default timeout , 30s
     int32_t m_waitConnectFinishTimeout = 30000;
 
