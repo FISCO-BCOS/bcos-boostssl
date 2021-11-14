@@ -419,7 +419,8 @@ void WsService::onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session
     addSession(_session);
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onConnect") << LOG_KV("endpoint", endpoint)
-                            << LOG_KV("connectedEndPoint", connectedEndPoint);
+                            << LOG_KV("connectedEndPoint", connectedEndPoint)
+                            << LOG_KV("refCount", _session.use_count());
 }
 
 /**
@@ -448,18 +449,20 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
     }
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onDisconnect") << LOG_KV("endpoint", endpoint)
-                            << LOG_KV("connectedEndPoint", connectedEndPoint);
+                            << LOG_KV("connectedEndPoint", connectedEndPoint)
+                            << LOG_KV("refCount", _session ? _session.use_count() : -1);
 }
 
 void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
 {
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
 
-    WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
+    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvMessage")
                              << LOG_DESC("receive message from server")
                              << LOG_KV("type", _msg->type()) << LOG_KV("seq", seq)
                              << LOG_KV("endpoint", _session->endPoint())
-                             << LOG_KV("data size", _msg->data()->size());
+                             << LOG_KV("data size", _msg->data()->size())
+                             << LOG_KV("use_count", _session.use_count());
 
     auto it = m_msgType2Method.find(_msg->type());
     if (it != m_msgType2Method.end())
@@ -473,7 +476,8 @@ void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<W
                                  << LOG_DESC("unrecognized message type")
                                  << LOG_KV("type", _msg->type())
                                  << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq)
-                                 << LOG_KV("data size", _msg->data()->size());
+                                 << LOG_KV("data size", _msg->data()->size())
+                                 << LOG_KV("use_count", _session.use_count());
     }
 }
 

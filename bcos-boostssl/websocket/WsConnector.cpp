@@ -167,6 +167,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_handshake")
                                     << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                                     << LOG_KV("port", _port);
+                                ws::WsTools::close(stream->next_layer().socket());
                                 cbWrapper(_ec, nullptr);
                                 return;
                             }
@@ -307,6 +308,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                                             << LOG_DESC("websocket async_handshake failed")
                                             << LOG_KV("error", _ec.message())
                                             << LOG_KV("host", _host) << LOG_KV("port", _port);
+                                        ws::WsTools::close(
+                                            stream->next_layer().next_layer().socket());
                                         cbWrapper(_ec, nullptr);
                                         return;
                                     }

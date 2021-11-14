@@ -20,6 +20,7 @@
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/WsStream.h>
+#include <bcos-boostssl/websocket/WsTools.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <memory>
@@ -122,19 +123,19 @@ public:
         return wsStream;
     }
 
-    virtual bool open() override { return m_stream->socket().is_open(); }
+    virtual bool open() override
+    {
+        if (m_stream)
+        {
+            return m_stream->socket().is_open();
+        }
+        return false;
+    }
     virtual void close() override
     {
-        try
+        if (m_stream)
         {
-            if (m_stream)
-            {
-                boost::beast::error_code ec;
-                m_stream->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
-            }
-        }
-        catch (...)
-        {
+            ws::WsTools::close(m_stream->socket());
         }
     }
 
@@ -189,30 +190,21 @@ public:
         return wsStream;
     }
 
-    virtual bool open() override { return m_stream->next_layer().socket().is_open(); }
+    virtual bool open() override
+    {
+        if (m_stream)
+        {
+            return m_stream->next_layer().socket().is_open();
+        }
+
+        return false;
+    }
+
     virtual void close() override
     {
-        try
+        if (m_stream)
         {
-            if (m_stream)
-            {
-                // boost::beast::error_code ec;
-                // m_stream->next_layer().socket().shutdown(
-                //    boost::asio::ip::tcp::socket::shutdown_send, ec);
-
-                // Perform the SSL shutdown
-                m_stream->async_shutdown(
-                    boost::beast::bind_front_handler([](boost::beast::error_code _ec) {
-                        if (_ec)
-                        {
-                            HTTP_STREAM(WARNING) << LOG_DESC("ssl stream async shutdown error")
-                                                 << LOG_KV("error", _ec.message());
-                        }
-                    }));
-            }
-        }
-        catch (...)
-        {
+            ws::WsTools::close(m_stream->next_layer().socket());
         }
     }
 

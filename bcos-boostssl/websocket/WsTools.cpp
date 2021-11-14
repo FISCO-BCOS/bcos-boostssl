@@ -68,3 +68,19 @@ bool WsTools::stringToEndPoint(const std::string& _peer, EndPoint& _endpoint)
 
     return valid;
 }
+
+void WsTools::close(boost::asio::ip::tcp::socket& skt)
+{
+    try
+    {
+        boost::beast::error_code ec;
+        skt.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        if (skt.is_open())
+        {
+            skt.close();
+        }
+    }
+    catch (...)
+    {
+    }
+}

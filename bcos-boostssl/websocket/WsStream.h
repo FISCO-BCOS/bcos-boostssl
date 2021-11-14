@@ -21,6 +21,7 @@
 
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
+#include <bcos-boostssl/websocket/WsTools.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <boost/asio/buffer.hpp>
@@ -142,19 +143,7 @@ public:
 
     bool open() override { return m_stream && m_stream->next_layer().socket().is_open(); }
 
-    void close() override
-    {
-        try
-        {
-            boost::beast::error_code ec;
-            m_stream->next_layer().socket().shutdown(
-                boost::asio::ip::tcp::socket::shutdown_send, ec);
-        }
-        catch (const std::exception& e)
-        {
-            WEBSOCKET_STREAM(WARNING) << LOG_BADGE("close") << LOG_KV("e", e.what());
-        }
-    }
+    void close() override { ws::WsTools::close(m_stream->next_layer().socket()); }
 
     void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) override
@@ -221,19 +210,7 @@ public:
         return m_stream && m_stream->next_layer().next_layer().socket().is_open();
     }
 
-    void close() override
-    {
-        try
-        {
-            boost::beast::error_code ec;
-            m_stream->next_layer().next_layer().socket().shutdown(
-                boost::asio::ip::tcp::socket::shutdown_send, ec);
-        }
-        catch (const std::exception& e)
-        {
-            WEBSOCKET_SSL_STREAM(WARNING) << LOG_BADGE("close") << LOG_KV("e", e.what());
-        }
-    }
+    void close() override { WsTools::close(m_stream->next_layer().next_layer().socket()); }
 
     void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) override

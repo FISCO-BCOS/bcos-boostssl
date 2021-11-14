@@ -67,8 +67,13 @@ public:
     void startAsServer(bcos::boostssl::http::HttpRequest _httpRequest);
 
 public:
+    void onHandshake(boost::beast::error_code _ec);
+
     void asyncRead();
+    void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
+
     void asyncWrite();
+    void onWrite(boost::beast::error_code _ec, std::size_t);
 
     // async read
     void onReadPacket(boost::beast::flat_buffer& _buffer);

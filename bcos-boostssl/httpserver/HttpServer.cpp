@@ -134,14 +134,15 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     auto ss = std::make_shared<boost::beast::ssl_stream<boost::beast::tcp_stream>>(
         boost::beast::tcp_stream(std::move(socket)), *m_ctx);
     ss->async_handshake(boost::asio::ssl::stream_base::server,
-        [ss, remoteEndpoint, localEndpoint, self](boost::beast::error_code _ec) {
+        [ss, localEndpoint, remoteEndpoint, self](boost::beast::error_code _ec) {
             if (_ec)
             {
                 HTTP_SERVER(INFO) << LOG_BADGE("async_handshake")
                                   << LOG_DESC("ssl handshake failed")
-                                  << LOG_KV("endpoint", remoteEndpoint)
+                                  << LOG_KV("local", localEndpoint)
+                                  << LOG_KV("remote", remoteEndpoint)
                                   << LOG_KV("error", _ec.message());
-                // TODO: close the ssl stream
+                ws::WsTools::close(ss->next_layer().socket());
                 return;
             }
 
