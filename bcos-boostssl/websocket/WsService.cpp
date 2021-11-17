@@ -538,12 +538,11 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
                     {
-                        WEBSOCKET_VERSION(WARNING)
+                        WEBSOCKET_SERVICE(WARNING)
                             << LOG_BADGE("asyncSendMessage") << LOG_DESC("callback error")
                             << LOG_KV("endpoint", session->endPoint())
-                            << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
-                            << LOG_KV("errorMessage",
-                                   _error ? _error->errorMessage() : std::string(""));
+                            << LOG_KV("errorCode", _error->errorCode())
+                            << LOG_KV("errorMessage", _error->errorMessage());
                         return self->sendMessage();
                     }
 
@@ -552,17 +551,20 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
         }
     };
 
-    std::size_t size = _ss.size();
+    auto size = _ss.size();
+
     auto retry = std::make_shared<Retry>();
     retry->ss = _ss;
     retry->msg = _msg;
     retry->options = _options;
     retry->respFunc = _respFunc;
     retry->sendMessage();
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
 
-    WEBSOCKET_VERSION(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
-                             << LOG_KV("size", size);
+    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    int32_t timeout = _options.timeout > 0 ? _options.timeout : m_sendMsgTimeout;
+
+    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
+                             << LOG_KV("size", size) << LOG_KV("timeout", timeout);
 }
 
 void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,
@@ -578,7 +580,7 @@ void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,
         }
         else
         {
-            WEBSOCKET_VERSION(DEBUG)
+            WEBSOCKET_SERVICE(DEBUG)
                 << LOG_BADGE("asyncSendMessage")
                 << LOG_DESC("there has no connection of the endpoint exist, skip")
                 << LOG_KV("endPoint", endPoint);
@@ -604,5 +606,5 @@ void WsService::broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsM
         }
     }
 
-    WEBSOCKET_VERSION(DEBUG) << LOG_BADGE("broadcastMessage");
+    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("broadcastMessage");
 }
