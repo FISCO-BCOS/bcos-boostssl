@@ -73,7 +73,7 @@ public:
     void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
     void asyncWrite();
-    void onWrite(boost::beast::error_code _ec, std::size_t);
+    void onWrite(std::shared_ptr<bcos::bytes> _buffer);
 
     // async read
     void onReadPacket(boost::beast::flat_buffer& _buffer);

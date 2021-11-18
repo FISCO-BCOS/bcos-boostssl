@@ -279,30 +279,44 @@ void WsSession::asyncWrite()
 {
     try
     {
+        auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
-        m_stream->asyncWrite(*m_queue.front(), std::bind(&WsSession::onWrite, shared_from_this(),
-                                                   std::placeholders::_1, std::placeholders::_2));
+        m_stream->asyncWrite(
+            *m_queue.front(), [session](boost::beast::error_code _ec, std::size_t) {
+                if (_ec)
+                {
+                    WEBSOCKET_SESSION(ERROR)
+                        << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
+                        << LOG_KV("endpoint", session->endPoint());
+                    return session->drop(WsError::WriteError);
+                }
+
+                session->onWritePacket();
+            });
     }
     catch (const std::exception& _e)
     {
         WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncWrite")
-                                 << LOG_DESC("async_write exception occur")
+                                 << LOG_DESC("async_write throw exception")
                                  << LOG_KV("session", this) << LOG_KV("endpoint", endPoint())
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::WriteError);
     }
 }
 
-void WsSession::onWrite(boost::beast::error_code _ec, std::size_t)
+void WsSession::onWrite(std::shared_ptr<bcos::bytes> _buffer)
 {
-    if (_ec)
-    {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
-                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
-        return drop(WsError::WriteError);
-    }
+    std::unique_lock lock(x_queue);
+    auto isEmpty = m_queue.empty();
+    // data to be sent is always enqueue first
+    m_queue.push_back(_buffer);
 
-    onWritePacket();
+    // no writing, send it
+    if (isEmpty)
+    {
+        // we are not currently writing, so send this immediately
+        asyncWrite();
+    }
 }
 
 /**
@@ -345,17 +359,8 @@ void WsSession::asyncSendMessage(
     }
 
     {
-        std::unique_lock lock(x_queue);
-        auto isEmpty = m_queue.empty();
-        // data to be sent is always enqueue first
-        m_queue.push_back(buffer);
-
-        // no writing, send it
-        if (isEmpty)
-        {
-            // we are not currently writing, so send this immediately
-            asyncWrite();
-        }
+        boost::asio::post(m_stream->stream().get_executor(),
+            boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), buffer));
     }
 }
 
