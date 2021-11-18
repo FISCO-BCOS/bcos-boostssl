@@ -171,8 +171,9 @@ HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream)
             return;
         }
 
-        HTTP_SESSION(TRACE) << LOG_BADGE("Queue::Write") << LOG_KV("resp", _httpResp->body())
-                            << LOG_KV("keep_alive", _httpResp->keep_alive());
+        // HTTP_SESSION(TRACE) << LOG_BADGE("Queue::Write") << LOG_KV("resp", _httpResp->body())
+        //                     << LOG_KV("keep_alive", _httpResp->keep_alive());
+
         session->httpStream()->asyncWrite(*_httpResp,
             [self, _httpResp](boost::beast::error_code ec, std::size_t bytes_transferred) {
                 auto session = self.lock();

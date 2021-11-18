@@ -43,7 +43,12 @@ void WsSession::drop(uint32_t _reason)
                             << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
 
     m_isDrop = true;
-    disconnect();
+
+    if (m_stream)
+    {
+        m_stream->close();
+    }
+
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     m_threadPool->enqueue([self]() {
         auto session = self.lock();
@@ -52,18 +57,6 @@ void WsSession::drop(uint32_t _reason)
             session->disconnectHandler()(nullptr, session);
         }
     });
-}
-
-void WsSession::disconnect()
-{
-    if (m_stream)
-    {
-        m_stream->close();
-        m_stream = nullptr;
-    }
-
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("disconnect") << LOG_DESC("disconnect the session")
-                            << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
 }
 
 void WsSession::ping()
@@ -234,6 +227,13 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
 
 void WsSession::asyncRead()
 {
+    if (!isConnected())
+    {
+        WEBSOCKET_SESSION(TRACE) << LOG_BADGE("asyncRead")
+                                 << LOG_DESC("session has been disconnected")
+                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+        return;
+    }
     try
     {
         m_stream->asyncRead(m_buffer, std::bind(&WsSession::onRead, shared_from_this(),
@@ -277,6 +277,14 @@ void WsSession::onWritePacket()
 
 void WsSession::asyncWrite()
 {
+    if (!isConnected())
+    {
+        WEBSOCKET_SESSION(TRACE) << LOG_BADGE("asyncWrite")
+                                 << LOG_DESC("session has been disconnected")
+                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+        return;
+    }
+
     try
     {
         auto session = shared_from_this();

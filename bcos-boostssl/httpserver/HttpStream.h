@@ -91,6 +91,9 @@ public:
 
         return std::string("");
     }
+
+protected:
+    std::atomic<bool> m_closed{false};
 };
 
 // The http stream
@@ -118,14 +121,13 @@ public:
         auto wsStream = std::make_shared<ws::WsStreamImpl>(
             std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
                 std::move(*m_stream)));
-        // TODO: thread safe or not???
-        m_stream = nullptr;
+        m_closed.store(true);
         return wsStream;
     }
 
     virtual bool open() override
     {
-        if (m_stream)
+        if (!m_closed.load() && m_stream)
         {
             return m_stream->socket().is_open();
         }
@@ -133,8 +135,16 @@ public:
     }
     virtual void close() override
     {
-        if (m_stream)
+        if (m_closed.load())
         {
+            return;
+        }
+
+        bool trueValue = true;
+        bool falseValue = false;
+        if (m_closed.compare_exchange_strong(falseValue, trueValue))
+        {
+            HTTP_STREAM(INFO) << LOG_DESC("close the stream") << LOG_KV("this", this);
             ws::WsTools::close(m_stream->socket());
         }
     }
@@ -184,15 +194,14 @@ public:
         auto stream = std::make_shared<
             boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
             std::move(*m_stream));
-        // TODO: thread safe or not???
-        m_stream = nullptr;
+        m_closed.store(true);
         auto wsStream = std::make_shared<ws::WsStreamSslImpl>(stream);
         return wsStream;
     }
 
     virtual bool open() override
     {
-        if (m_stream)
+        if (!m_closed.load() && m_stream)
         {
             return m_stream->next_layer().socket().is_open();
         }
@@ -202,8 +211,16 @@ public:
 
     virtual void close() override
     {
-        if (m_stream)
+        if (m_closed.load())
         {
+            return;
+        }
+
+        bool trueValue = true;
+        bool falseValue = false;
+        if (m_closed.compare_exchange_strong(falseValue, trueValue))
+        {
+            HTTP_STREAM(INFO) << LOG_DESC("close the ssl stream") << LOG_KV("this", this);
             ws::WsTools::close(m_stream->next_layer().socket());
         }
     }

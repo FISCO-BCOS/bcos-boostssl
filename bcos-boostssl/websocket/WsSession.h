@@ -51,14 +51,9 @@ public:
 public:
     WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this); }
 
-    virtual ~WsSession()
-    {
-        disconnect();
-        WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this);
-    }
+    virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
 
     void drop(uint32_t _reason);
-    void disconnect();
 
 public:
     // start WsSession as client

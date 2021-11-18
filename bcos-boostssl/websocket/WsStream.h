@@ -106,6 +106,9 @@ public:
 
         return std::string("");
     }
+
+protected:
+    std::atomic<bool> m_closed{false};
 };
 
 class WsStreamImpl : public WsStream
@@ -117,12 +120,12 @@ public:
     WsStreamImpl(std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>> _stream)
       : m_stream(_stream)
     {
-        WEBSOCKET_SSL_STREAM(DEBUG) << LOG_KV("[NEWOBJ][WsStreamImpl]", this);
+        WEBSOCKET_STREAM(INFO) << LOG_KV("[NEWOBJ][WsStreamImpl]", this);
     }
 
     virtual ~WsStreamImpl()
     {
-        WEBSOCKET_SSL_STREAM(DEBUG) << LOG_KV("[DELOBJ][WsStreamImpl]", this);
+        WEBSOCKET_STREAM(INFO) << LOG_KV("[DELOBJ][WsStreamImpl]", this);
         close();
     }
 
@@ -141,9 +144,18 @@ public:
         m_stream->pong(boost::beast::websocket::ping_data(), error);
     }
 
-    bool open() override { return m_stream && m_stream->next_layer().socket().is_open(); }
+    bool open() override { return !m_closed.load() && m_stream->next_layer().socket().is_open(); }
 
-    void close() override { ws::WsTools::close(m_stream->next_layer().socket()); }
+    void close() override
+    {
+        bool trueValue = true;
+        bool falseValue = false;
+        if (m_closed.compare_exchange_strong(falseValue, trueValue))
+        {
+            ws::WsTools::close(m_stream->next_layer().socket());
+            WEBSOCKET_STREAM(INFO) << LOG_DESC("close the stream") << LOG_KV("this", this);
+        }
+    }
 
     void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) override
@@ -178,12 +190,12 @@ public:
             _stream)
       : m_stream(_stream)
     {
-        WEBSOCKET_SSL_STREAM(DEBUG) << LOG_KV("[NEWOBJ][WsStreamSslImpl]", this);
+        WEBSOCKET_SSL_STREAM(INFO) << LOG_KV("[NEWOBJ][WsStreamSslImpl]", this);
     }
 
     virtual ~WsStreamSslImpl()
     {
-        WEBSOCKET_SSL_STREAM(DEBUG) << LOG_KV("[DELOBJ][WsStreamSslImpl]", this);
+        WEBSOCKET_SSL_STREAM(INFO) << LOG_KV("[DELOBJ][WsStreamSslImpl]", this);
         close();
     }
 
@@ -207,10 +219,19 @@ public:
 
     bool open() override
     {
-        return m_stream && m_stream->next_layer().next_layer().socket().is_open();
+        return !m_closed.load() && m_stream->next_layer().next_layer().socket().is_open();
     }
 
-    void close() override { WsTools::close(m_stream->next_layer().next_layer().socket()); }
+    void close() override
+    {
+        bool trueValue = true;
+        bool falseValue = false;
+        if (m_closed.compare_exchange_strong(falseValue, trueValue))
+        {
+            WsTools::close(m_stream->next_layer().next_layer().socket());
+            WEBSOCKET_SSL_STREAM(INFO) << LOG_DESC("close the ssl stream") << LOG_KV("this", this);
+        }
+    }
 
     void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) override
