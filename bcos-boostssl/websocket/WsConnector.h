@@ -23,10 +23,13 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
 #include <functional>
+#include <future>
 #include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 #include <type_traits>
+#include <utility>
 
 namespace bcos
 {
@@ -56,6 +59,17 @@ public:
     void connectToWsServer(const std::string& _host, uint16_t _port,
         std::function<void(boost::beast::error_code, std::shared_ptr<WsStream>)> _callback);
 
+    /**
+     * @brief: connect to the server
+     * @param _host: the remote server host, support ipv4, ipv6, domain name
+     * @param _port: the remote server port
+     * @param _callback:
+     * @return void:
+     */
+    std::future<std::pair<boost::beast::error_code, std::shared_ptr<WsStream>>> connectToWsServer(
+        const std::string& _host, uint16_t _port);
+
+private:
     /**
      * @brief: connect to the server
      * @param _host: the remote server host, support ipv4, ipv6, domain name
