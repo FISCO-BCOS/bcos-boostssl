@@ -43,8 +43,8 @@ list(APPEND CMAKE_MODULE_PATH ${BCOS_BOOSTSSL_CMAKE_DIR})
 #init hunter
 include(HunterGate)
 HunterGate(
-    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/b55a347258b0fc3eda47f4ccd3e2c0db595b4957.tar.gz"
-    SHA1 "9331d1e70cee5498bd59ada13aa68278cbb9a2d6"
+    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/c381ecbe0d8be89800570d0b83d1504f239d6020.tar.gz"
+    SHA1 "98f1d9f96d99263e5dc91485913f3f89a076c8a0"
     FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
 )
 
