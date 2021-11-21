@@ -30,8 +30,11 @@ FetchContent_Declare(bcos-cmake-scripts
     GIT_REPOSITORY https://${URL_BASE}/FISCO-BCOS/bcos-cmake-scripts.git
     GIT_TAG dev
     SOURCE_DIR ${BCOS_CMAKE_SCRIPTS_DIR}
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
 )
-FetchContent_MakeAvailable(bcos-cmake-scripts)
+FetchContent_Populate(bcos-cmake-scripts)
+#FetchContent_MakeAvailable(bcos-cmake-scripts)
 
 set(BCOS_BOOSTSSL_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake" CACHE PATH "The cmake path for the library")
 list(APPEND CMAKE_MODULE_PATH ${BCOS_CMAKE_SCRIPTS_DIR})
