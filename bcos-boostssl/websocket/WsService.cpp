@@ -17,16 +17,13 @@
  * @author: octopus
  * @date 2021-07-28
  */
+#include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-boostssl/utilities/Common.h>
+#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsError.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
-#include <bcos-framework/interfaces/crypto/KeyInterface.h>
-#include <bcos-framework/interfaces/protocol/CommonError.h>
-#include <bcos-framework/libutilities/Common.h>
-#include <bcos-framework/libutilities/DataConvertUtility.h>
-#include <bcos-framework/libutilities/Log.h>
-#include <bcos-framework/libutilities/ThreadPool.h>
 #include <json/json.h>
 #include <boost/core/ignore_unused.hpp>
 #include <algorithm>

@@ -19,8 +19,8 @@
  */
 #pragma once
 
-#include <bcos-framework/libutilities/Error.h>
-#include <bcos-framework/libutilities/Log.h>
+#include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-boostssl/utilities/Error.h>
 #include <boost/beast/websocket.hpp>
 
 #define WEBSOCKET_TOOL(LEVEL) BCOS_LOG(LEVEL) << "[WS][TOOL]"

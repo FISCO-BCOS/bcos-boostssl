@@ -4,5 +4,5 @@ file(GLOB SRC_LIST "*.cpp")
 file(GLOB HEADERS "*.h")
 
 add_library(${BOOSTSSL_CONTEXT_TARGET} ${SRC_LIST} ${HEADERS})
-target_link_libraries(${BOOSTSSL_CONTEXT_TARGET} Boost::system Boost::filesystem bcos-framework::utilities)
+target_link_libraries(${BOOSTSSL_CONTEXT_TARGET} Boost::system Boost::filesystem ${BOOSTSSL_UTILITIES_TARGET})
 target_compile_options(${BOOSTSSL_CONTEXT_TARGET} PRIVATE -Wno-error -Wno-unused-variable)

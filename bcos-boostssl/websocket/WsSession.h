@@ -19,11 +19,11 @@
  */
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
+#include <bcos-boostssl/utilities/Common.h>
+#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsStream.h>
-#include <bcos-framework/libutilities/Common.h>
-#include <bcos-framework/libutilities/ThreadPool.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>

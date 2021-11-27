@@ -18,12 +18,11 @@
  * @date 2021-07-08
  */
 
+#include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-boostssl/utilities/Common.h>
+#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/WsError.h>
 #include <bcos-boostssl/websocket/WsSession.h>
-#include <bcos-framework/interfaces/protocol/CommonError.h>
-#include <bcos-framework/libutilities/DataConvertUtility.h>
-#include <bcos-framework/libutilities/Log.h>
-#include <bcos-framework/libutilities/ThreadPool.h>
 #include <boost/beast/websocket/rfc6455.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/core/ignore_unused.hpp>
@@ -190,8 +189,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     if (message->decode(data, size) < 0)
     {  // invalid packet, stop this session ?
         WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
-                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this)
-                                 << LOG_KV("data", *toHexString(data, data + size));
+                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
         return drop(WsError::PacketError);
     }
 
