@@ -19,6 +19,7 @@
  */
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/httpserver/Common.h>
+#include <bcos-boostssl/utilities/BoostLog.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -27,7 +28,6 @@
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-boostssl/websocket/WsTools.h>
-#include <bcos-framework/libutilities/Log.h>
 #include <cstddef>
 #include <memory>
 

@@ -4,4 +4,4 @@ file(GLOB SRC_LIST "*.cpp")
 file(GLOB HEADERS "*.h")
 
 add_library(${BOOSTSSL_HTTPSERVER_TARGET} ${SRC_LIST})
-target_link_libraries(${BOOSTSSL_HTTPSERVER_TARGET} PUBLIC bcos-framework::utilities)
+target_link_libraries(${BOOSTSSL_HTTPSERVER_TARGET} PUBLIC ${BOOSTSSL_UTILITIES_TARGET})
