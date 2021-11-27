@@ -36,7 +36,10 @@ namespace bcos
 {
 namespace boostssl
 {
+namespace utilities
+{
 class ThreadPool;
+}
 namespace ws
 {
 class WsService;
@@ -68,7 +71,7 @@ public:
     void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
     void asyncWrite();
-    void onWrite(std::shared_ptr<bcos::bytes> _buffer);
+    void onWrite(std::shared_ptr<utilities::bytes> _buffer);
 
     // async read
     void onReadPacket(boost::beast::flat_buffer& _buffer);
@@ -124,8 +127,8 @@ public:
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
 
-    std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
-    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
+    std::shared_ptr<utilities::ThreadPool> threadPool() const { return m_threadPool; }
+    void setThreadPool(std::shared_ptr<utilities::ThreadPool> _threadPool)
     {
         m_threadPool = _threadPool;
     }
@@ -187,13 +190,13 @@ private:
     // message factory
     std::shared_ptr<WsMessageFactory> m_messageFactory;
     // thread pool
-    std::shared_ptr<bcos::ThreadPool> m_threadPool;
+    std::shared_ptr<utilities::ThreadPool> m_threadPool;
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
 
     // send message queue
     mutable std::shared_mutex x_queue;
-    std::vector<std::shared_ptr<bcos::bytes>> m_queue;
+    std::vector<std::shared_ptr<utilities::bytes>> m_queue;
 };
 
 }  // namespace ws

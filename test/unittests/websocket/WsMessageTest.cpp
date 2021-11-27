@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(test_WsMessage)
 {
     auto factory = std::make_shared<WsMessageFactory>();
     auto msg = factory->buildMessage();
-    auto buffer = std::make_shared<bcos::bytes>();
+    auto buffer = std::make_shared<bytes>();
     auto r = msg->encode(*buffer);
     auto seq = std::string(msg->seq()->begin(), msg->seq()->end());
 
@@ -64,9 +64,9 @@ BOOST_AUTO_TEST_CASE(test_buildMessage)
         auto msg = factory->buildMessage();
         msg->setStatus(status);
         msg->setType(type);
-        msg->setData(std::make_shared<bcos::bytes>(data.begin(), data.end()));
+        msg->setData(std::make_shared<bytes>(data.begin(), data.end()));
 
-        auto buffer = std::make_shared<bcos::bytes>();
+        auto buffer = std::make_shared<bytes>();
         auto r = msg->encode(*buffer);
         auto seq = std::string(msg->seq()->begin(), msg->seq()->end());
 
@@ -91,12 +91,11 @@ BOOST_AUTO_TEST_CASE(test_buildMessage)
         uint16_t type = 111;
         std::string data = "HelloWorld.";
         auto factory = std::make_shared<WsMessageFactory>();
-        auto msg =
-            factory->buildMessage(type, std::make_shared<bcos::bytes>(data.begin(), data.end()));
+        auto msg = factory->buildMessage(type, std::make_shared<bytes>(data.begin(), data.end()));
         msg->setStatus(status);
         msg->setType(type);
 
-        auto buffer = std::make_shared<bcos::bytes>();
+        auto buffer = std::make_shared<bytes>();
         auto r = msg->encode(*buffer);
         auto seq = std::string(msg->seq()->begin(), msg->seq()->end());
 

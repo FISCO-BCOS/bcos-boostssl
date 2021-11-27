@@ -27,23 +27,13 @@
 #include <memory>
 #include <string>
 
-#define BCOS_ERROR(errorCode, errorMessage) \
-    ::bcos::Error::buildError(BOOST_CURRENT_FUNCTION, __FILE__, __LINE__, errorCode, errorMessage)
-#define BCOS_ERROR_WITH_PREV(errorCode, errorMessage, prev) \
-    ::bcos::Error::buildError(                              \
-        BOOST_CURRENT_FUNCTION, __FILE__, __LINE__, errorCode, errorMessage, prev)
-
-#define BCOS_ERROR_PTR(code, message) std::make_shared<Error>(BCOS_ERROR(code, message))
-#define BCOS_ERROR_WITH_PREV_PTR(code, message, prev) \
-    std::make_shared<Error>(BCOS_ERROR_WITH_PREV(code, message, prev))
-
-#define BCOS_ERROR_UNIQUE_PTR(code, message) std::make_unique<Error>(BCOS_ERROR(code, message))
-#define BCOS_ERROR_WITH_PREV_UNIQUE_PTR(code, message, prev) \
-    std::make_unique<Error>(BCOS_ERROR_WITH_PREV(code, message, prev))
-
 namespace bcos
 {
-class Error : public bcos::Exception
+namespace boostssl
+{
+namespace utilities
+{
+class Error : public Exception
 {
 public:
     using Ptr = std::shared_ptr<Error>;
@@ -83,9 +73,7 @@ public:
 
     Error() = default;
     Error(int32_t _errorCode, std::string _errorMessage)
-      : bcos::Exception(_errorMessage),
-        m_errorCode(_errorCode),
-        m_errorMessage(std::move(_errorMessage))
+      : Exception(_errorMessage), m_errorCode(_errorCode), m_errorMessage(std::move(_errorMessage))
     {}
 
     virtual ~Error() {}
@@ -103,4 +91,6 @@ private:
     int32_t m_errorCode = 0;
     std::string m_errorMessage;
 };
+}  // namespace utilities
+}  // namespace boostssl
 }  // namespace bcos

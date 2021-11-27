@@ -35,6 +35,8 @@
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
+using namespace bcos::boostssl::http;
+using namespace bcos::boostssl::utilities;
 
 void WsSession::drop(uint32_t _reason)
 {
@@ -143,7 +145,7 @@ void WsSession::startAsClient()
 }
 
 // start WsSession as server
-void WsSession::startAsServer(bcos::boostssl::http::HttpRequest _httpRequest)
+void WsSession::startAsServer(HttpRequest _httpRequest)
 {
     // register ping/pong callback
     // initPingPoing();
@@ -182,7 +184,7 @@ void WsSession::onHandshake(boost::beast::error_code _ec)
 
 void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
 {
-    auto data = boost::asio::buffer_cast<bcos::byte*>(boost::beast::buffers_front(_buffer.data()));
+    auto data = boost::asio::buffer_cast<byte*>(boost::beast::buffers_front(_buffer.data()));
     auto size = boost::asio::buffer_size(m_buffer.data());
 
     auto message = m_messageFactory->buildMessage();
@@ -310,7 +312,7 @@ void WsSession::asyncWrite()
     }
 }
 
-void WsSession::onWrite(std::shared_ptr<bcos::bytes> _buffer)
+void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
 {
     std::unique_lock lock(x_queue);
     auto isEmpty = m_queue.empty();
@@ -336,7 +338,7 @@ void WsSession::asyncSendMessage(
     std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
 {
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
-    auto buffer = std::make_shared<bcos::bytes>();
+    auto buffer = std::make_shared<bytes>();
     _msg->encode(*buffer);
 
     if (_respFunc)

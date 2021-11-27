@@ -35,6 +35,10 @@
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace utilities
+{
 class BoostLogInitializer
 {
 public:
@@ -63,11 +67,11 @@ public:
     virtual ~BoostLogInitializer() { stopLogging(); }
     BoostLogInitializer() {}
 
-    void initLog(boost::property_tree::ptree const& _pt,
-        std::string const& _logger = bcos::FileLogger, std::string const& _logPrefix = "log");
+    void initLog(boost::property_tree::ptree const& _pt, std::string const& _logger = FileLogger,
+        std::string const& _logPrefix = "log");
 
     void initStatLog(boost::property_tree::ptree const& _pt,
-        std::string const& _logger = bcos::StatFileLogger, std::string const& _logPrefix = "stat");
+        std::string const& _logger = StatFileLogger, std::string const& _logPrefix = "stat");
 
     void stopLogging();
 
@@ -90,4 +94,6 @@ private:
     std::string m_logPath;
     std::atomic_bool m_running = {false};
 };
+}  // namespace utilities
+}  // namespace boostssl
 }  // namespace bcos

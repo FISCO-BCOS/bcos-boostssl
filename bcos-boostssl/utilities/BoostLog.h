@@ -34,6 +34,10 @@
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace utilities
+{
 extern std::string const FileLogger;
 /// the file logger
 extern boost::log::sources::severity_channel_logger_mt<boost::log::trivial::severity_level,
@@ -62,13 +66,17 @@ extern LogLevel c_statLogLevel;
 void setFileLogLevel(LogLevel const& _level);
 void setStatLogLevel(LogLevel const& _level);
 
-#define BCOS_LOG(level)                                \
-    if (bcos::LogLevel::level >= bcos::c_fileLogLevel) \
-    BOOST_LOG_SEV(bcos::FileLoggerHandler,             \
-        (boost::log::v2s_mt_posix::trivial::severity_level)(bcos::LogLevel::level))
+#define BCOS_LOG(level)                                                                           \
+    if (bcos::boostssl::utilities::LogLevel::level >= bcos::boostssl::utilities::c_fileLogLevel)  \
+    BOOST_LOG_SEV(bcos::boostssl::utilities::FileLoggerHandler,                                   \
+        (boost::log::v2s_mt_posix::trivial::severity_level)(bcos::boostssl::utilities::LogLevel:: \
+                level))
 
-#define BCOS_STAT_LOG(level)                           \
-    if (bcos::LogLevel::level >= bcos::c_statLogLevel) \
-    BOOST_LOG_SEV(bcos::StatFileLoggerHandler,         \
-        (boost::log::v2s_mt_posix::trivial::severity_level)(bcos::LogLevel::level))
+#define BCOS_STAT_LOG(level)                                                                      \
+    if (bcos::boostssl::utilities::LogLevel::level >= bcos::boostssl::c_statLogLevel)             \
+    BOOST_LOG_SEV(bcos::boostssl::utilities::StatFileLoggerHandler,                               \
+        (boost::log::v2s_mt_posix::trivial::severity_level)(bcos::boostssl::utilities::LogLevel:: \
+                level))
+}  // namespace utilities
+}  // namespace boostssl
 }  // namespace bcos
