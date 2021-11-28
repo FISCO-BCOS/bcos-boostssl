@@ -59,7 +59,7 @@ find_package(Boost CONFIG REQUIRED log chrono system filesystem thread)
 
 # OpenSSL
 hunter_add_package(OpenSSL)
-find_package(OpenSSL REQUIRED REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # JsonCpp
 hunter_add_package(jsoncpp)
