@@ -20,6 +20,7 @@
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -33,16 +34,18 @@
 
 using namespace bcos;
 using namespace bcos::boostssl;
+using namespace bcos::boostssl::utilities;
+using namespace bcos::boostssl::context;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 
 void WsInitializer::initWsService(WsService::Ptr _wsService)
 {
-    std::shared_ptr<bcos::boostssl::ws::WsConfig> _config = m_config;
+    std::shared_ptr<WsConfig> _config = m_config;
     auto messageFactory = m_messageFactory;
     if (!messageFactory)
     {
-        messageFactory = std::make_shared<bcos::boostssl::ws::WsMessageFactory>();
+        messageFactory = std::make_shared<WsMessageFactory>();
     }
 
     auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
@@ -51,13 +54,13 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
     auto wsStreamFactory = std::make_shared<WsStreamFactory>();
 
-    auto threadPool = std::make_shared<bcos::ThreadPool>(
+    auto threadPool = std::make_shared<ThreadPool>(
         "t_ws", _config->threadPoolSize() > 0 ? _config->threadPoolSize() : 4);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
     {
-        auto contextBuilder = std::make_shared<bcos::boostssl::context::ContextBuilder>();
+        auto contextBuilder = std::make_shared<ContextBuilder>();
         ctx = contextBuilder->buildSslContext(*_config->contextConfig());
     }
 

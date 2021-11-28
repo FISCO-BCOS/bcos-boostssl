@@ -31,6 +31,7 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
+using namespace bcos::boostssl::context;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -65,8 +66,8 @@ int main(int argc, char** argv)
                    << LOG_KV("disableSsl", disableSsl);
 
 
-    auto config = std::make_shared<bcos::boostssl::ws::WsConfig>();
-    config->setModel(bcos::boostssl::ws::WsModel::Server);
+    auto config = std::make_shared<WsConfig>();
+    config->setModel(WsModel::Server);
 
     config->setListenIP(host);
     config->setListenPort(port);
@@ -74,7 +75,7 @@ int main(int argc, char** argv)
     config->setDisableSsl(0 == disableSsl.compare("true"));
     if (config->disableSsl())
     {
-        auto contextConfig = std::make_shared<bcos::boostssl::context::ContextConfig>();
+        auto contextConfig = std::make_shared<ContextConfig>();
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }

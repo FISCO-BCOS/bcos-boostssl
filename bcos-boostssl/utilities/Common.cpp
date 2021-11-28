@@ -29,6 +29,10 @@ using namespace std;
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace utilities
+{
 bytes const NullBytes;
 /// get utc time(ms)
 uint64_t utcTime()
@@ -149,13 +153,6 @@ std::string newSeq()
     return ss.str();
 }
 
+}  // namespace utilities
+}  // namespace boostssl
 }  // namespace bcos
-
-void bcos::pthread_setThreadName(std::string const& _n)
-{
-#if defined(__GLIBC__)
-    pthread_setname_np(pthread_self(), _n.c_str());
-#elif defined(__APPLE__)
-    pthread_setname_np(_n.c_str());
-#endif
-}

@@ -29,6 +29,10 @@
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace utilities
+{
 class ThreadPool
 {
 public:
@@ -40,8 +44,12 @@ public:
 
         for (size_t i = 0; i < size; ++i)
         {
-            _workers.create_thread([this] {
-                bcos::pthread_setThreadName(_threadName);
+            _workers.create_thread([threadName, this] {
+#if defined(__GLIBC__)
+                pthread_setname_np(pthread_self(), threadName.c_str());
+#elif defined(__APPLE__)
+                pthread_setname_np(threadName.c_str());
+#endif
                 _ioService.run();
             });
         }
@@ -71,5 +79,6 @@ private:
     // m_work ensures that io_service's run() function will not exit while work is underway
     boost::asio::io_service::work m_work;
 };
-
+}  // namespace utilities
+}  // namespace boostssl
 }  // namespace bcos

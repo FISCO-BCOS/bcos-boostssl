@@ -42,11 +42,13 @@ namespace ws
 class WsMessage;
 class WsSession;
 
-using RespCallBack =
-    std::function<void(bcos::Error::Ptr, std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
+using RespCallBack = std::function<void(
+    bcos::boostssl::utilities::Error::Ptr, std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
 
-using WsConnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
-using WsDisconnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
+using WsConnectHandler =
+    std::function<void(bcos::boostssl::utilities::Error::Ptr, std::shared_ptr<WsSession>)>;
+using WsDisconnectHandler =
+    std::function<void(bcos::boostssl::utilities::Error::Ptr, std::shared_ptr<WsSession>)>;
 using WsRecvMessageHandler =
     std::function<void(std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
 

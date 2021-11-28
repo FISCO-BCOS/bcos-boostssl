@@ -31,6 +31,10 @@
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace utilities
+{
 /**
  * @brief : Base class for all exceptions
  */
@@ -64,4 +68,6 @@ using errinfo_required = boost::error_info<struct tag_required, bigint>;
 using errinfo_got = boost::error_info<struct tag_got, bigint>;
 using RequirementError = boost::tuple<errinfo_required, errinfo_got>;
 using RequirementErrorComment = boost::tuple<errinfo_required, errinfo_got, errinfo_comment>;
+}  // namespace utilities
+}  // namespace boostssl
 }  // namespace bcos

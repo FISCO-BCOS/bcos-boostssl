@@ -43,6 +43,10 @@
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace utilities
+{
 using namespace boost::multiprecision::literals;
 
 // vector of byte data
@@ -250,7 +254,6 @@ private:
 };
 
 std::string newSeq();
-void pthread_setThreadName(std::string const& _n);
 
 namespace protocol
 {
@@ -258,7 +261,8 @@ enum CommonError : int32_t
 {
     SUCCESS = 0
 };
-
 }  // namespace protocol
 
+}  // namespace utilities
+}  // namespace boostssl
 }  // namespace bcos
