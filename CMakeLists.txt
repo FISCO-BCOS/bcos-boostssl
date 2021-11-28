@@ -59,7 +59,7 @@ find_package(Boost CONFIG REQUIRED log chrono system filesystem thread)
 
 # OpenSSL
 hunter_add_package(OpenSSL)
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL REQUIRED REQUIRED)
 
 # JsonCpp
 hunter_add_package(jsoncpp)
@@ -86,6 +86,10 @@ add_subdirectory(bcos-boostssl)
 #    set(CTEST_OUTPUT_ON_FAILURE TRUE)
 #    add_subdirectory(test)
 # endif()
+
+if (BUILD_EXEC_TEST)
+    add_subdirectory(test/exec)
+endif()
 
 include(InstallConfig)
 

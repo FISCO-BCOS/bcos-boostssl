@@ -31,6 +31,7 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 using namespace bcos::boostssl::context;
+using namespace bcos::boostssl::utilities;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
