@@ -18,6 +18,7 @@
 #pragma once
 
 #include "BoostLog.h"
+#include "RefDataContainer.h"
 #include <sys/time.h>
 #include <boost/container/options.hpp>
 #include <chrono>
@@ -54,6 +55,8 @@ using byte = uint8_t;
 using bytes = std::vector<byte>;
 using bytesPointer = std::shared_ptr<std::vector<byte>>;
 using bytesConstPtr = std::shared_ptr<const bytes>;
+using bytesRef = RefDataContainer<byte>;
+using bytesConstRef = RefDataContainer<byte const>;
 
 using smallBytes = boost::container::small_vector<byte, 40>;
 
