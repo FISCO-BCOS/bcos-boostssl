@@ -19,18 +19,19 @@
  */
 
 #include "bcos-boostssl/websocket/WsInitializer.h"
+#include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-boostssl/utilities/Common.h>
+#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsService.h>
-#include <bcos-framework/interfaces/protocol/CommonError.h>
-#include <bcos-framework/libutilities/Common.h>
-#include <bcos-framework/libutilities/Log.h>
-#include <bcos-framework/libutilities/ThreadPool.h>
 #include <string>
 
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
+using namespace bcos::boostssl::context;
+using namespace bcos::boostssl::utilities;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -64,15 +65,15 @@ int main(int argc, char** argv)
     BCOS_LOG(INFO) << LOG_DESC("echo-client-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
                    << LOG_KV("disableSsl", disableSsl);
 
-    auto config = std::make_shared<bcos::boostssl::ws::WsConfig>();
-    config->setModel(bcos::boostssl::ws::WsModel::Client);
+    auto config = std::make_shared<WsConfig>();
+    config->setModel(WsModel::Client);
 
 
-    bcos::boostssl::ws::EndPoint endpoint;
+    EndPoint endpoint;
     endpoint.host = host;
     endpoint.port = port;
 
-    auto peers = std::make_shared<bcos::boostssl::ws::EndPoints>();
+    auto peers = std::make_shared<EndPoints>();
     peers->push_back(endpoint);
     config->setConnectedPeers(peers);
 
@@ -80,7 +81,7 @@ int main(int argc, char** argv)
     config->setDisableSsl(0 == disableSsl.compare("true"));
     if (!config->disableSsl())
     {
-        auto contextConfig = std::make_shared<bcos::boostssl::context::ContextConfig>();
+        auto contextConfig = std::make_shared<ContextConfig>();
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
@@ -99,14 +100,14 @@ int main(int argc, char** argv)
         auto msg = wsService->messageFactory()->buildMessage();
         msg->setType(999);
         auto randStr = wsService->messageFactory()->newSeq();
-        msg->setData(std::make_shared<bcos::bytes>(randStr.begin(), randStr.end()));
+        msg->setData(std::make_shared<bytes>(randStr.begin(), randStr.end()));
         BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
                        << LOG_KV("req", randStr);
         wsService->asyncSendMessage(msg, Options(-1),
-            [](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
+            [](Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
                 std::shared_ptr<WsSession> _session) {
                 (void)_session;
-                if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+                if (_error && _error->errorCode() != protocol::CommonError::SUCCESS)
                 {
                     BCOS_LOG(ERROR)
                         << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("callback response error")

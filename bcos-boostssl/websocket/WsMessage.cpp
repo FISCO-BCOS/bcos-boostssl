@@ -25,6 +25,7 @@
 
 using namespace bcos;
 using namespace bcos::boostssl;
+using namespace bcos::boostssl::utilities;
 using namespace bcos::boostssl::ws;
 
 // seq field length
@@ -32,7 +33,7 @@ const size_t WsMessage::SEQ_LENGTH;
 /// type(2) + error(2) + seq(32) + data(N)
 const size_t WsMessage::MESSAGE_MIN_LENGTH;
 
-bool WsMessage::encode(bcos::bytes& _buffer)
+bool WsMessage::encode(bytes& _buffer)
 {
     /*
         struct Packet {
@@ -60,7 +61,7 @@ bool WsMessage::encode(bcos::bytes& _buffer)
     return true;
 }
 
-ssize_t WsMessage::decode(const bcos::byte* _buffer, std::size_t _size)
+ssize_t WsMessage::decode(const byte* _buffer, std::size_t _size)
 {
     if (_size < MESSAGE_MIN_LENGTH)
     {

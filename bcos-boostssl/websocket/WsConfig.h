@@ -20,7 +20,7 @@
 #pragma once
 
 #include <bcos-boostssl/context/ContextConfig.h>
-#include <bcos-framework/libutilities/Log.h>
+#include <bcos-boostssl/utilities/BoostLog.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <cstdint>
 #include <memory>

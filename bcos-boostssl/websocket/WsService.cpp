@@ -17,16 +17,13 @@
  * @author: octopus
  * @date 2021-07-28
  */
+#include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-boostssl/utilities/Common.h>
+#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsError.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
-#include <bcos-framework/interfaces/crypto/KeyInterface.h>
-#include <bcos-framework/interfaces/protocol/CommonError.h>
-#include <bcos-framework/libutilities/Common.h>
-#include <bcos-framework/libutilities/DataConvertUtility.h>
-#include <bcos-framework/libutilities/Log.h>
-#include <bcos-framework/libutilities/ThreadPool.h>
 #include <json/json.h>
 #include <boost/core/ignore_unused.hpp>
 #include <algorithm>
@@ -40,6 +37,7 @@
 
 using namespace bcos;
 using namespace bcos::boostssl;
+using namespace bcos::boostssl::utilities;
 using namespace bcos::boostssl::ws;
 
 WsService::WsService()
@@ -304,16 +302,15 @@ std::shared_ptr<WsSession> WsService::newSession(std::shared_ptr<WsStream> _stre
     wsSession->setSendMsgTimeout(m_sendMsgTimeout);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
-    wsSession->setConnectHandler(
-        [self](bcos::Error::Ptr _error, std::shared_ptr<WsSession> _session) {
-            auto wsService = self.lock();
-            if (wsService)
-            {
-                wsService->onConnect(_error, _session);
-            }
-        });
+    wsSession->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {
+        auto wsService = self.lock();
+        if (wsService)
+        {
+            wsService->onConnect(_error, _session);
+        }
+    });
     wsSession->setDisconnectHandler(
-        [self](bcos::Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
+        [self](Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
             auto wsService = self.lock();
             if (wsService)
             {
@@ -534,9 +531,9 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
 
             auto self = shared_from_this();
             session->asyncSendMessage(msg, options,
-                [self, session](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
+                [self, session](Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
                     std::shared_ptr<WsSession> _session) {
-                    if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+                    if (_error && _error->errorCode() != protocol::CommonError::SUCCESS)
                     {
                         WEBSOCKET_SERVICE(WARNING)
                             << LOG_BADGE("asyncSendMessage") << LOG_DESC("callback error")

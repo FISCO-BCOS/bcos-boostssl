@@ -19,7 +19,7 @@
  */
 #pragma once
 
-#include <bcos-framework/libutilities/Common.h>
+#include <bcos-boostssl/utilities/Common.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -46,8 +46,8 @@ public:
 public:
     WsMessage()
     {
-        m_seq = std::make_shared<bcos::bytes>(SEQ_LENGTH, 0);
-        m_data = std::make_shared<bcos::bytes>();
+        m_seq = std::make_shared<bcos::boostssl::utilities::bytes>(SEQ_LENGTH, 0);
+        m_data = std::make_shared<bcos::boostssl::utilities::bytes>();
     }
 
     virtual ~WsMessage() {}
@@ -57,20 +57,23 @@ public:
     virtual void setType(uint16_t _type) { m_type = _type; }
     virtual uint16_t status() { return m_status; }
     virtual void setStatus(uint16_t _status) { m_status = _status; }
-    virtual std::shared_ptr<bcos::bytes> seq() { return m_seq; }
-    virtual void setSeq(std::shared_ptr<bcos::bytes> _seq) { m_seq = _seq; }
-    virtual std::shared_ptr<bcos::bytes> data() { return m_data; }
-    virtual void setData(std::shared_ptr<bcos::bytes> _data) { m_data = _data; }
+    virtual std::shared_ptr<bcos::boostssl::utilities::bytes> seq() { return m_seq; }
+    virtual void setSeq(std::shared_ptr<bcos::boostssl::utilities::bytes> _seq) { m_seq = _seq; }
+    virtual std::shared_ptr<bcos::boostssl::utilities::bytes> data() { return m_data; }
+    virtual void setData(std::shared_ptr<bcos::boostssl::utilities::bytes> _data)
+    {
+        m_data = _data;
+    }
 
 public:
-    virtual bool encode(bcos::bytes& _buffer);
-    virtual ssize_t decode(const bcos::byte* _buffer, std::size_t _size);
+    virtual bool encode(bcos::boostssl::utilities::bytes& _buffer);
+    virtual ssize_t decode(const bcos::boostssl::utilities::byte* _buffer, std::size_t _size);
 
 private:
     uint16_t m_type{0};
     uint16_t m_status{0};
-    std::shared_ptr<bcos::bytes> m_seq;
-    std::shared_ptr<bcos::bytes> m_data;
+    std::shared_ptr<bcos::boostssl::utilities::bytes> m_seq;
+    std::shared_ptr<bcos::boostssl::utilities::bytes> m_data;
 };
 
 
@@ -93,18 +96,18 @@ public:
     {
         auto msg = std::make_shared<WsMessage>();
         auto seq = newSeq();
-        msg->setSeq(std::make_shared<bcos::bytes>(seq.begin(), seq.end()));
+        msg->setSeq(std::make_shared<boostssl::utilities::bytes>(seq.begin(), seq.end()));
         return msg;
     }
 
     virtual std::shared_ptr<WsMessage> buildMessage(
-        uint16_t _type, std::shared_ptr<bcos::bytes> _data)
+        uint16_t _type, std::shared_ptr<boostssl::utilities::bytes> _data)
     {
         auto msg = std::make_shared<WsMessage>();
         auto seq = newSeq();
         msg->setType(_type);
         msg->setData(_data);
-        msg->setSeq(std::make_shared<bcos::bytes>(seq.begin(), seq.end()));
+        msg->setSeq(std::make_shared<utilities::bytes>(seq.begin(), seq.end()));
         return msg;
     }
 };

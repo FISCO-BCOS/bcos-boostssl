@@ -5,7 +5,7 @@
 
 #include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/context/ContextConfig.h>
-#include <bcos-framework/libutilities/Log.h>
+#include <bcos-boostssl/utilities/BoostLog.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/throw_exception.hpp>

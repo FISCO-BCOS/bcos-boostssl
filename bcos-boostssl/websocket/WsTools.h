@@ -19,7 +19,7 @@
  */
 #pragma once
 #include "bcos-boostssl/websocket/WsConfig.h"
-#include <bcos-framework/libutilities/Common.h>
+#include <bcos-boostssl/utilities/Common.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>

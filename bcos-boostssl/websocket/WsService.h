@@ -20,15 +20,14 @@
 #pragma once
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
+#include <bcos-boostssl/utilities/Common.h>
+#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-boostssl/websocket/WsStream.h>
-#include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
-#include <bcos-framework/libutilities/Common.h>
-#include <bcos-framework/libutilities/ThreadPool.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/strand.hpp>
@@ -46,15 +45,19 @@ namespace bcos
 {
 namespace boostssl
 {
+namespace utilities
+{
 class ThreadPool;
+}
+
 namespace ws
 {
 using WsSessions = std::vector<std::shared_ptr<WsSession>>;
 using MsgHandler = std::function<void(std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
 using ConnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using DisconnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
-using HandshakeHandler =
-    std::function<void(Error::Ptr _error, std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
+using HandshakeHandler = std::function<void(
+    utilities::Error::Ptr _error, std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
 
 class WsService : public std::enable_shared_from_this<WsService>
 {
@@ -82,8 +85,8 @@ public:
     WsSessions sessions();
 
 public:
-    virtual void onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session);
-    virtual void onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _session);
+    virtual void onConnect(utilities::Error::Ptr _error, std::shared_ptr<WsSession> _session);
+    virtual void onDisconnect(utilities::Error::Ptr _error, std::shared_ptr<WsSession> _session);
 
     virtual void onRecvMessage(
         std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session);
@@ -116,8 +119,8 @@ public:
         m_messageFactory = _messageFactory;
     }
 
-    std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
-    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
+    std::shared_ptr<utilities::ThreadPool> threadPool() const { return m_threadPool; }
+    void setThreadPool(std::shared_ptr<utilities::ThreadPool> _threadPool)
     {
         m_threadPool = _threadPool;
     }
@@ -186,7 +189,7 @@ private:
     // WsStreamFactory
     std::shared_ptr<WsStreamFactory> m_wsStreamFactory;
     // ThreadPool
-    std::shared_ptr<bcos::ThreadPool> m_threadPool;
+    std::shared_ptr<utilities::ThreadPool> m_threadPool;
     // Config
     std::shared_ptr<WsConfig> m_config;
     // ws connector

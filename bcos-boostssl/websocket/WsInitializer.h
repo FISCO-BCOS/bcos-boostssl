@@ -36,25 +36,22 @@ public:
     using ConstPtr = std::shared_ptr<const WsInitializer>;
 
 public:
-    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> messageFactory() const
-    {
-        return m_messageFactory;
-    }
-    std::shared_ptr<bcos::boostssl::ws::WsConfig> config() const { return m_config; }
+    std::shared_ptr<WsMessageFactory> messageFactory() const { return m_messageFactory; }
+    std::shared_ptr<WsConfig> config() const { return m_config; }
 
-    void setMessageFactory(std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> _messageFactory)
+    void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
     {
         m_messageFactory = _messageFactory;
     }
 
-    void setConfig(std::shared_ptr<bcos::boostssl::ws::WsConfig> _config) { m_config = _config; }
+    void setConfig(std::shared_ptr<WsConfig> _config) { m_config = _config; }
 
 public:
     void initWsService(WsService::Ptr _wsService);
 
 private:
-    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_messageFactory;
-    std::shared_ptr<bcos::boostssl::ws::WsConfig> m_config;
+    std::shared_ptr<WsMessageFactory> m_messageFactory;
+    std::shared_ptr<WsConfig> m_config;
 };
 }  // namespace ws
 }  // namespace boostssl
