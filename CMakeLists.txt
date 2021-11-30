@@ -77,6 +77,10 @@ set(BOOSTSSL_CONTEXT_TARGET "boostssl-context")
 set(BOOSTSSL_HTTPSERVER_TARGET "boostssl-httpserver")
 set(BOOSTSSL_WEBSOCKET_TARGET "boostssl-websocket")
 
+include(InstallConfig)
+# install the include files for hash
+include(InstallInclude)
+
 add_subdirectory(bcos-boostssl)
 
 # TODO: remove ut temp for remove bcos-framework deps
@@ -90,51 +94,6 @@ add_subdirectory(bcos-boostssl)
 if (BUILD_EXEC_TEST)
     add_subdirectory(test/exec)
 endif()
-
-include(InstallConfig)
-
-# install utilities target
-install(
-    TARGETS ${BOOSTSSL_UTILITIES_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-# install ssl context target
-install(
-    TARGETS ${BOOSTSSL_CONTEXT_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-# install httpserver target
-install(
-    TARGETS ${BOOSTSSL_HTTPSERVER_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-# install websocket target
-install(
-    TARGETS ${BOOSTSSL_WEBSOCKET_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-# install the include files for hash
-include(InstallInclude)
 
 # for code coverage
 # if (COVERAGE)

@@ -412,7 +412,8 @@ void WsSession::onRespTimeout(const boost::system::error_code& _error, const std
 
     WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onRespTimeout") << LOG_KV("seq", _seq);
 
-    auto error =
-        std::make_shared<Error>(WsError::TimeOut, "waiting for message response timed out");
+    auto error = std::make_shared<Error>(WsError::TimeOut,
+        "waiting for message timeout, the connection disconnected or the peer processing message "
+        "timed out");
     m_threadPool->enqueue([callback, error]() { callback->respCallBack(error, nullptr, nullptr); });
 }
