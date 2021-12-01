@@ -5,4 +5,4 @@ file(GLOB HEADERS "*.h")
 
 add_library(${BOOSTSSL_NETWORK_TARGET} ${SRC_LIST} ${HEADERS})
 target_link_libraries(${BOOSTSSL_NETWORK_TARGET} Boost::system Boost::filesystem)
-target_compile_options(${BOOSTSSL_NETWORK_TARGET} PRIVATE -Wno-error -Wno-unused-variable)
+# target_compile_options(${BOOSTSSL_NETWORK_TARGET} PRIVATE -Wno-error -Wno-unused-variable)

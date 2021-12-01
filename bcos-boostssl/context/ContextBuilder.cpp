@@ -48,7 +48,7 @@ std::shared_ptr<std::string> ContextBuilder::readFileContent(boost::filesystem::
     }
     fileStream.seekg(0, fileStream.beg);
     content->resize(length);
-    fileStream.read(content->data(), length);
+    fileStream.read((char*)content->data(), length);
     return content;
 }
 

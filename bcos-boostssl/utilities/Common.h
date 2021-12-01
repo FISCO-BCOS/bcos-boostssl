@@ -19,28 +19,22 @@
 
 #include "BoostLog.h"
 #include "RefDataContainer.h"
-#include <sys/time.h>
 #include <boost/container/options.hpp>
+#include <boost/container/small_vector.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
+#include <boost/thread.hpp>
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <queue>
 #include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#pragma warning(push)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <boost/multiprecision/cpp_int.hpp>
-#pragma warning(pop)
-#pragma GCC diagnostic pop
-#include <boost/container/small_vector.hpp>
-#include <boost/thread.hpp>
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
 
 namespace bcos
 {
@@ -165,17 +159,6 @@ enum class WithExisting : int
     Rescue,
     Kill
 };
-
-/// Get the current time in seconds since the epoch in UTC(ms)
-uint64_t utcTime();
-uint64_t utcSteadyTime();
-
-/// Get the current time in seconds since the epoch in UTC(us)
-uint64_t utcTimeUs();
-uint64_t utcSteadyTimeUs();
-
-// get the current datatime
-std::string getCurrentDateTime();
 
 struct Exception;
 // callback when throw exceptions

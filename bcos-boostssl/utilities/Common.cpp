@@ -34,43 +34,6 @@ namespace boostssl
 namespace utilities
 {
 bytes const NullBytes;
-/// get utc time(ms)
-uint64_t utcTime()
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-}
-
-// getSteadyTime(ms)
-uint64_t utcSteadyTime()
-{
-    // trans (ns) into (ms)
-    return std::chrono::steady_clock::now().time_since_epoch().count() / 1000000;
-}
-
-
-/// get utc time(us)
-uint64_t utcTimeUs()
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000000 + tv.tv_usec;
-}
-
-uint64_t utcSteadyTimeUs()
-{
-    return std::chrono::steady_clock::now().time_since_epoch().count() / 1000;
-}
-
-std::string getCurrentDateTime()
-{
-    using std::chrono::system_clock;
-    char buffer[40];
-    auto currentTime = system_clock::to_time_t(system_clock::now());
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localtime(&currentTime));
-    return std::string(buffer);
-}
 
 void errorExit(std::stringstream& _exitInfo, Exception const& _exception)
 {
