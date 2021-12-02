@@ -30,3 +30,21 @@
 *.exe
 *.out
 *.app
+
+# certificate files
+*.srl
+*.ini
+*.crt
+*.key
+
+# vscode
+.vscode
+
+# build
+build
+
+# scritps
+scripts/ca*
+scripts/node*
+scripts/*.cnf
+scripts/*.param
