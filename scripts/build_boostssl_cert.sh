@@ -31,6 +31,8 @@ Usage:
 e.g 
     bash $0 -d ./ca
     bash $0 -n -c ./ca -d ./ca/node
+    bash $0 -d ./ca -s
+    bash $0 -n -c ./ca -d ./ca/node -s
 EOF
 
     exit 0
@@ -307,6 +309,7 @@ gen_chain_cert() {
 
     local chaindir="${1}"
 
+    dir_must_not_exists "$chaindir"
     file_must_not_exists "${chaindir}"/ca.key
     file_must_not_exists "${chaindir}"/ca.crt
     file_must_exists 'cert.cnf'
@@ -330,6 +333,7 @@ gen_rsa_node_cert() {
     file_must_exists "$capath/ca.crt"
     check_name node "$node"
 
+    dir_must_not_exists ${ndpath}
     file_must_not_exists "$ndpath"/node.key
     file_must_not_exists "$ndpath"/node.crt
 
@@ -353,14 +357,15 @@ gen_rsa_node_cert() {
 }
 
 gen_sm_chain_cert() {
-    local chaindir="${1}"
+    local chaindir=$1
     name=$(basename "$chaindir")
     check_name chain "$name"
+    dir_must_not_exists "$chaindir"
 
     if [ ! -f "${sm_cert_conf}" ]; then
         generate_sm_cert_conf 'sm_cert.cnf'
-    else
-        cp -f "${sm_cert_conf}" .
+    # else
+        # cp -f "${sm_cert_conf}" .
     fi
 
     generate_sm_sm2_param "${sm2_params}"
@@ -400,6 +405,7 @@ gen_sm_node_cert() {
     local capath="${1}"
     local ndpath="${2}"
 
+    dir_must_not_exists ${ndpath}
     file_must_exists "$capath/sm_ca.key"
     file_must_exists "$capath/sm_ca.crt"
 
@@ -424,10 +430,12 @@ gen_sm_node_cert() {
     cp "$capath/sm_ca.crt" "$ndpath"
 }
 
+parse_params()
+{
 while getopts "c:d:D:nst:h" option; do
     case $option in
-    c) ca_cert_dir="$OPTARG" ;;
-    d) output_dir="$OPTARG" ;;
+    c) ca_cert_dir=$OPTARG ;;
+    d) output_dir=$OPTARG ;;
     n) generate_ca='false' ;;
     s) sm_model='true' ;;
     t)
@@ -437,8 +445,10 @@ while getopts "c:d:D:nst:h" option; do
     *) help ;;
     esac
 done
+}
 
 main() {
+    echo " ca_cert_dir = ${ca_cert_dir}"
     if [[ "${sm_model}" == "false" ]]; then
         if [[ ${generate_ca} == 'true' ]]; then
             gen_chain_cert "${output_dir}" 2>&1
@@ -457,4 +467,5 @@ main() {
 
 check_env
 check_and_install_tassl
+parse_params $@
 main
