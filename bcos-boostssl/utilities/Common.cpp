@@ -37,7 +37,7 @@ bytes const NullBytes;
 
 void errorExit(std::stringstream& _exitInfo, Exception const& _exception)
 {
-    BCOS_LOG(ERROR) << _exitInfo.str();
+    BCOS_LOG(WARNING) << _exitInfo.str();
     std::cerr << _exitInfo.str();
     raise(SIGTERM);
     BOOST_THROW_EXCEPTION(_exception << errinfo_comment(_exitInfo.str()));

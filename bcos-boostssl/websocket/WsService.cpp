@@ -74,7 +74,7 @@ void WsService::waitForConnectionEstablish()
         else
         {
             stop();
-            WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("waitForConnectionEstablish")
+            WEBSOCKET_SERVICE(WARNING) << LOG_BADGE("waitForConnectionEstablish")
                                      << LOG_DESC("the connection to the server timed out")
                                      << LOG_KV("timeout", m_waitConnectFinishTimeout);
 
@@ -337,7 +337,7 @@ void WsService::addSession(std::shared_ptr<WsSession> _session)
     auto endpoint = _session->endPoint();
     bool ok = false;
     {
-        std::unique_lock lock(x_mutex);
+        boost::unique_lock<boost::shared_mutex> lock(x_mutex);
         auto it = m_sessions.find(connectedEndPoint);
         if (it == m_sessions.end())
         {
@@ -360,7 +360,7 @@ void WsService::addSession(std::shared_ptr<WsSession> _session)
 void WsService::removeSession(const std::string& _endPoint)
 {
     {
-        std::unique_lock lock(x_mutex);
+        boost::unique_lock<boost::shared_mutex> lock(x_mutex);
         m_sessions.erase(_endPoint);
     }
 
@@ -369,7 +369,7 @@ void WsService::removeSession(const std::string& _endPoint)
 
 std::shared_ptr<WsSession> WsService::getSession(const std::string& _endPoint)
 {
-    std::shared_lock lock(x_mutex);
+    boost::shared_lock<boost::shared_mutex> lock(x_mutex);
     auto it = m_sessions.find(_endPoint);
     if (it != m_sessions.end())
     {
@@ -382,7 +382,7 @@ WsSessions WsService::sessions()
 {
     WsSessions sessions;
     {
-        std::shared_lock lock(x_mutex);
+        boost::shared_lock<boost::shared_mutex> lock(x_mutex);
         for (const auto& session : m_sessions)
         {
             if (session.second && session.second->isConnected())
@@ -469,7 +469,7 @@ void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<W
     }
     else
     {
-        WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvMessage")
+        WEBSOCKET_SERVICE(WARNING) << LOG_BADGE("onRecvMessage")
                                  << LOG_DESC("unrecognized message type")
                                  << LOG_KV("type", _msg->type())
                                  << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq)

@@ -33,10 +33,10 @@
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/thread/thread.hpp>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -209,7 +209,7 @@ private:
 
 private:
     // mutex for m_sessions
-    mutable std::shared_mutex x_mutex;
+    mutable boost::shared_mutex x_mutex;
     // all active sessions
     std::unordered_map<std::string, std::shared_ptr<WsSession>> m_sessions;
     // type => handler

@@ -1,4 +1,3 @@
-
 /*
  *  Copyright (C) 2021 FISCO BCOS.
  *  SPDX-License-Identifier: Apache-2.0
@@ -14,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file WsMessage.cpp
+ * @file WsMessage.h
  * @author: octopus
  * @date 2021-07-28
  */
@@ -35,13 +34,6 @@ const size_t WsMessage::MESSAGE_MIN_LENGTH;
 
 bool WsMessage::encode(bytes& _buffer)
 {
-    /*
-        struct Packet {
-        1 require short type;
-        2 require short status;
-        3 require char[32] id;
-        4 optional vector<char> data;
-    }；*/
     _buffer.clear();
 
     uint16_t type = boost::asio::detail::socket_ops::host_to_network_short(m_type);
@@ -61,7 +53,7 @@ bool WsMessage::encode(bytes& _buffer)
     return true;
 }
 
-ssize_t WsMessage::decode(const byte* _buffer, std::size_t _size)
+int64_t WsMessage::decode(const byte* _buffer, std::size_t _size)
 {
     if (_size < MESSAGE_MIN_LENGTH)
     {

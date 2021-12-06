@@ -71,7 +71,7 @@ void WsSession::ping()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("ping") << LOG_KV("endpoint", m_endPoint)
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("ping") << LOG_KV("endpoint", m_endPoint)
                                  << LOG_KV("session", this)
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::PingError);
@@ -89,7 +89,7 @@ void WsSession::pong()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("pong") << LOG_KV("endpoint", m_endPoint)
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("pong") << LOG_KV("endpoint", m_endPoint)
                                  << LOG_KV("session", this)
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::PongError);
@@ -166,7 +166,7 @@ void WsSession::onHandshake(boost::beast::error_code _ec)
 {
     if (_ec)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onHandshake") << LOG_KV("error", _ec.message());
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onHandshake") << LOG_KV("error", _ec.message());
         return drop(WsError::AcceptError);
     }
 
@@ -190,7 +190,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     auto message = m_messageFactory->buildMessage();
     if (message->decode(data, size) < 0)
     {  // invalid packet, stop this session ?
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
                                  << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
         return drop(WsError::PacketError);
     }
@@ -241,7 +241,7 @@ void WsSession::asyncRead()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncRead") << LOG_DESC("exception")
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("asyncRead") << LOG_DESC("exception")
                                  << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this)
                                  << LOG_KV("what", std::string(_e.what()));
         drop(WsError::ReadError);
@@ -252,7 +252,7 @@ void WsSession::onRead(boost::system::error_code _ec, std::size_t)
 {
     if (_ec)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncRead") << LOG_KV("error", _ec.message())
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("asyncRead") << LOG_KV("error", _ec.message())
                                  << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
 
         return drop(WsError::ReadError);
@@ -264,7 +264,7 @@ void WsSession::onRead(boost::system::error_code _ec, std::size_t)
 
 void WsSession::onWritePacket()
 {
-    std::unique_lock lock(x_queue);
+    boost::unique_lock<boost::shared_mutex> lock(x_queue);
     // remove the front ele from the queue, it has been sent
     m_queue.erase(m_queue.begin());
 
@@ -293,7 +293,7 @@ void WsSession::asyncWrite()
             *m_queue.front(), [session](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
-                    WEBSOCKET_SESSION(ERROR)
+                    WEBSOCKET_SESSION(WARNING)
                         << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
                         << LOG_KV("endpoint", session->endPoint());
                     return session->drop(WsError::WriteError);
@@ -304,7 +304,7 @@ void WsSession::asyncWrite()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("asyncWrite")
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("asyncWrite")
                                  << LOG_DESC("async_write throw exception")
                                  << LOG_KV("session", this) << LOG_KV("endpoint", endPoint())
                                  << LOG_KV("what", std::string(_e.what()));
@@ -314,7 +314,7 @@ void WsSession::asyncWrite()
 
 void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
 {
-    std::unique_lock lock(x_queue);
+    std::unique_lock<boost::shared_mutex> lock(x_queue);
     auto isEmpty = m_queue.empty();
     // data to be sent is always enqueue first
     m_queue.push_back(_buffer);
@@ -374,7 +374,7 @@ void WsSession::asyncSendMessage(
 
 void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback)
 {
-    std::unique_lock lock(x_callback);
+    std::unique_lock<boost::shared_mutex> lock(x_callback);
     m_callbacks[_seq] = _callback;
 }
 
@@ -382,7 +382,7 @@ WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& 
 {
     CallBack::Ptr callback = nullptr;
     {
-        std::shared_lock lock(x_callback);
+        boost::shared_lock<boost::shared_mutex> lock(x_callback);
         auto it = m_callbacks.find(_seq);
         if (it != m_callbacks.end())
         {

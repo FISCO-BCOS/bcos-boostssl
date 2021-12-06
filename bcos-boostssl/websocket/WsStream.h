@@ -29,9 +29,9 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/websocket/stream.hpp>
+#include <boost/thread/thread.hpp>
 #include <algorithm>
 #include <memory>
-#include <shared_mutex>
 #include <utility>
 
 namespace bcos
@@ -84,7 +84,7 @@ public:
         }
         catch (const std::exception& e)
         {
-            WEBSOCKET_STREAM(ERROR) << LOG_BADGE("localEndpoint") << LOG_KV("e", e.what());
+            WEBSOCKET_STREAM(WARNING) << LOG_BADGE("localEndpoint") << LOG_KV("e", e.what());
         }
 
         return std::string("");
@@ -102,7 +102,7 @@ public:
         }
         catch (const std::exception& e)
         {
-            WEBSOCKET_STREAM(ERROR) << LOG_BADGE("remoteEndpoint") << LOG_KV("e", e.what());
+            WEBSOCKET_STREAM(WARNING) << LOG_BADGE("remoteEndpoint") << LOG_KV("e", e.what());
         }
 
         return std::string("");

@@ -134,10 +134,6 @@ inline u256 s2u(s256 _u)
         return u256(c_end + _u);
 }
 
-inline int stringCmpIgnoreCase(const std::string& lhs, const std::string& rhs)
-{
-    return strcasecmp(lhs.c_str(), rhs.c_str());
-}
 
 inline bool isalNumStr(std::string const& _stringData)
 {

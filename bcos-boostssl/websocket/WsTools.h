@@ -24,8 +24,8 @@
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/thread/thread.hpp>
 #include <atomic>
-#include <shared_mutex>
 #include <unordered_map>
 
 namespace bcos

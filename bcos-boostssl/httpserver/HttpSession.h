@@ -86,7 +86,7 @@ public:
 
         if (ec)
         {
-            HTTP_SESSION(ERROR) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
+            HTTP_SESSION(WARNING) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
                                 << LOG_KV("error", ec);
             // return doClose();
             return;
@@ -101,7 +101,7 @@ public:
             }
             else
             {
-                HTTP_SESSION(ERROR)
+                HTTP_SESSION(WARNING)
                     << LOG_BADGE("onRead")
                     << LOG_DESC("the session will be closed for unsupported websocket upgrade");
                 // doClose();
@@ -136,7 +136,7 @@ public:
 
         if (ec)
         {
-            HTTP_SESSION(ERROR) << LOG_BADGE("onWrite") << LOG_DESC("close the connection")
+            HTTP_SESSION(WARNING) << LOG_BADGE("onWrite") << LOG_DESC("close the connection")
                                 << LOG_KV("error", ec);
             // return doClose();
             return;
@@ -209,7 +209,7 @@ public:
             auto resp =
                 buildHttpResp(boost::beast::http::status::http_version_not_supported, version, "");
             send(resp);
-            HTTP_SESSION(ERROR) << LOG_BADGE("handleRequest")
+            HTTP_SESSION(WARNING) << LOG_BADGE("handleRequest")
                                 << LOG_DESC("unsupported http service")
                                 << LOG_KV("body", resp->body());
         }
