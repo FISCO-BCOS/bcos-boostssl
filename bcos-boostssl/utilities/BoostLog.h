@@ -26,6 +26,10 @@
 #include <boost/log/sources/severity_channel_logger.hpp>
 #include <boost/log/trivial.hpp>
 
+#ifdef ERROR
+#undef ERROR
+#endif
+
 // BCOS log format
 #define LOG_BADGE(_NAME) "[" << (_NAME) << "]"
 #define LOG_TYPE(_TYPE) (_TYPE) << "|"
@@ -66,17 +70,22 @@ extern LogLevel c_statLogLevel;
 void setFileLogLevel(LogLevel const& _level);
 void setStatLogLevel(LogLevel const& _level);
 
+#if defined(WIN32) || defined(WIN64) || defined(_WIN32) || defined(_WIN32_)
+#define BCOS_LOG(level)                                                                          \
+    if (bcos::boostssl::utilities::LogLevel::level >= bcos::boostssl::utilities::c_fileLogLevel) \
+    BOOST_LOG_SEV(bcos::boostssl::utilities::FileLoggerHandler,                                  \
+        (boost::log::v2s_mt_nt6::trivial::severity_level)(bcos::boostssl::utilities::LogLevel::  \
+                level))
+#else
 #define BCOS_LOG(level)                                                                           \
     if (bcos::boostssl::utilities::LogLevel::level >= bcos::boostssl::utilities::c_fileLogLevel)  \
     BOOST_LOG_SEV(bcos::boostssl::utilities::FileLoggerHandler,                                   \
         (boost::log::v2s_mt_posix::trivial::severity_level)(bcos::boostssl::utilities::LogLevel:: \
                 level))
+#endif
+#define CompareLevel(level) \
+    (bcos::boostssl::utilities::LogLevel::level >= bcos::boostssl::utilities::c_fileLogLevel)
 
-#define BCOS_STAT_LOG(level)                                                                      \
-    if (bcos::boostssl::utilities::LogLevel::level >= bcos::boostssl::c_statLogLevel)             \
-    BOOST_LOG_SEV(bcos::boostssl::utilities::StatFileLoggerHandler,                               \
-        (boost::log::v2s_mt_posix::trivial::severity_level)(bcos::boostssl::utilities::LogLevel:: \
-                level))
 }  // namespace utilities
 }  // namespace boostssl
 }  // namespace bcos

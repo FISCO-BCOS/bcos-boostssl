@@ -40,7 +40,7 @@ void ContextConfig::initConfig(std::string const& _configPath)
     {
         boost::filesystem::path currentPath(boost::filesystem::current_path());
 
-        CONTEXT_LOG(ERROR) << LOG_DESC("initConfig failed") << LOG_KV("configPath", _configPath)
+        CONTEXT_LOG(WARNING) << LOG_DESC("initConfig failed") << LOG_KV("configPath", _configPath)
                            << LOG_KV("currentPath", currentPath.string())
                            << LOG_KV("error", boost::diagnostic_information(e));
 

@@ -19,6 +19,7 @@
  * @author: yujiechen
  */
 #include "BoostLogInitializer.h"
+#include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/log/core/core.hpp>
 #include <boost/log/support/date_time.hpp>
@@ -146,15 +147,15 @@ boost::shared_ptr<BoostLogInitializer::sink_t> BoostLogInitializer::initLogSink(
  */
 unsigned BoostLogInitializer::getLogLevel(std::string const& levelStr)
 {
-    if (stringCmpIgnoreCase(levelStr, "trace") == 0)
+    if (boost::iequals(levelStr, "trace") == 0)
         return boost::log::trivial::severity_level::trace;
-    if (stringCmpIgnoreCase(levelStr, "debug") == 0)
+    if (boost::iequals(levelStr, "debug") == 0)
         return boost::log::trivial::severity_level::debug;
-    if (stringCmpIgnoreCase(levelStr, "warning") == 0)
+    if (boost::iequals(levelStr, "warning") == 0)
         return boost::log::trivial::severity_level::warning;
-    if (stringCmpIgnoreCase(levelStr, "error") == 0)
+    if (boost::iequals(levelStr, "error") == 0)
         return boost::log::trivial::severity_level::error;
-    if (stringCmpIgnoreCase(levelStr, "fatal") == 0)
+    if (boost::iequals(levelStr, "fatal") == 0)
         return boost::log::trivial::severity_level::fatal;
     /// default log level is info
     return boost::log::trivial::severity_level::info;

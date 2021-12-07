@@ -67,7 +67,7 @@ public:
 
 public:
     virtual bool encode(bcos::boostssl::utilities::bytes& _buffer);
-    virtual ssize_t decode(const bcos::boostssl::utilities::byte* _buffer, std::size_t _size);
+    virtual int64_t decode(const bcos::boostssl::utilities::byte* _buffer, std::size_t _size);
 
 private:
     uint16_t m_type{0};

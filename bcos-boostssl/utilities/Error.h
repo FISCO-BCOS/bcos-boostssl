@@ -88,7 +88,7 @@ public:
     }
 
 private:
-    int32_t m_errorCode = 0;
+    int64_t m_errorCode = 0;
     std::string m_errorMessage;
 };
 }  // namespace utilities

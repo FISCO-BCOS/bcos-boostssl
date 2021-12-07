@@ -21,8 +21,8 @@
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
 #include <boost/asio/error.hpp>
+#include <boost/thread/thread.hpp>
 #include <memory>
-#include <shared_mutex>
 #include <utility>
 
 using namespace bcos;
@@ -92,7 +92,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
     std::string endpoint = _host + ":" + std::to_string(_port);
     if (!insertPendingConns(endpoint))
     {
-        WEBSOCKET_CONNECTOR(ERROR)
+        WEBSOCKET_CONNECTOR(WARNING)
             << LOG_BADGE("connectToWsServer") << LOG_DESC("insertPendingConns")
             << LOG_KV("endpoint", endpoint);
         _callback(boost::beast::error_code(boost::asio::error::would_block), nullptr);
@@ -114,7 +114,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
             boost::beast::error_code _ec, boost::asio::ip::tcp::resolver::results_type _results) {
             if (_ec)
             {
-                WEBSOCKET_CONNECTOR(ERROR)
+                WEBSOCKET_CONNECTOR(WARNING)
                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_resolve")
                     << LOG_KV("error", _ec) << LOG_KV("errorMessage", _ec.message())
                     << LOG_KV("host", _host);
@@ -136,7 +136,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                     boost::asio::ip::tcp::resolver::results_type::endpoint_type _ep) mutable {
                     if (_ec)
                     {
-                        WEBSOCKET_CONNECTOR(ERROR)
+                        WEBSOCKET_CONNECTOR(WARNING)
                             << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect")
                             << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                             << LOG_KV("port", _port);
@@ -163,7 +163,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                         [_host, _port, stream, cbWrapper](boost::beast::error_code _ec) mutable {
                             if (_ec)
                             {
-                                WEBSOCKET_CONNECTOR(ERROR)
+                                WEBSOCKET_CONNECTOR(WARNING)
                                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_handshake")
                                     << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                                     << LOG_KV("port", _port);
@@ -198,7 +198,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
     std::string endpoint = _host + ":" + std::to_string(_port);
     if (!insertPendingConns(endpoint))
     {
-        WEBSOCKET_CONNECTOR(ERROR)
+        WEBSOCKET_CONNECTOR(WARNING)
             << LOG_BADGE("connectToWsServer") << LOG_DESC("insertPendingConns")
             << LOG_KV("endpoint", endpoint);
         _callback(boost::beast::error_code(boost::asio::error::would_block), nullptr);
@@ -223,7 +223,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
             boost::beast::error_code _ec, boost::asio::ip::tcp::resolver::results_type _results) {
             if (_ec)
             {
-                WEBSOCKET_CONNECTOR(ERROR)
+                WEBSOCKET_CONNECTOR(WARNING)
                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_resolve failed")
                     << LOG_KV("error", _ec) << LOG_KV("errorMessage", _ec.message())
                     << LOG_KV("host", _host);
@@ -246,7 +246,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                     boost::asio::ip::tcp::resolver::results_type::endpoint_type _ep) mutable {
                     if (_ec)
                     {
-                        WEBSOCKET_CONNECTOR(ERROR)
+                        WEBSOCKET_CONNECTOR(WARNING)
                             << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect failed")
                             << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                             << LOG_KV("port", _port);
@@ -272,7 +272,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                         [stream, _host, _port, _ep, cbWrapper](boost::beast::error_code _ec) {
                             if (_ec)
                             {
-                                WEBSOCKET_CONNECTOR(ERROR)
+                                WEBSOCKET_CONNECTOR(WARNING)
                                     << LOG_BADGE("connectToWsServer")
                                     << LOG_DESC("ssl async_handshake failed")
                                     << LOG_KV("host", _host) << LOG_KV("port", _port)
@@ -303,7 +303,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                                     boost::beast::error_code _ec) mutable {
                                     if (_ec)
                                     {
-                                        WEBSOCKET_CONNECTOR(ERROR)
+                                        WEBSOCKET_CONNECTOR(WARNING)
                                             << LOG_BADGE("connectToWsServer")
                                             << LOG_DESC("websocket async_handshake failed")
                                             << LOG_KV("error", _ec.message())

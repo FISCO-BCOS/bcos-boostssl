@@ -28,8 +28,8 @@
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/thread/thread.hpp>
 #include <atomic>
-#include <shared_mutex>
 #include <unordered_map>
 
 namespace bcos
@@ -147,7 +147,7 @@ public:
 
     std::size_t queueSize()
     {
-        std::shared_lock lock(x_queue);
+        boost::shared_lock<boost::shared_mutex> lock(x_queue);
         return m_queue.size();
     }
 
@@ -179,7 +179,7 @@ private:
     //
     WsStream::Ptr m_stream;
     // callbacks
-    mutable std::shared_mutex x_callback;
+    boost::shared_mutex x_callback;
     std::unordered_map<std::string, CallBack::Ptr> m_callbacks;
 
     // callback handler
@@ -195,7 +195,7 @@ private:
     std::shared_ptr<boost::asio::io_context> m_ioc;
 
     // send message queue
-    mutable std::shared_mutex x_queue;
+    mutable boost::shared_mutex x_queue;
     std::vector<std::shared_ptr<utilities::bytes>> m_queue;
 };
 
