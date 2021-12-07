@@ -25,16 +25,24 @@ if (NOT DEFINED URL_BASE)
     # set(URL_BASE "github.com.cnpmjs.org")
 endif()
 
+# set(BCOS_CMAKE_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bcos-cmake-scripts)
+# FetchContent_Declare(bcos-cmake-scripts
+#    GIT_REPOSITORY https://${URL_BASE}/FISCO-BCOS/bcos-cmake-scripts.git
+#    GIT_TAG dev
+#    SOURCE_DIR ${BCOS_CMAKE_SCRIPTS_DIR}
+# )
+# FetchContent_MakeAvailable(bcos-cmake-scripts)
+
 set(BCOS_BOOSTSSL_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake" CACHE PATH "The cmake path for the library")
-list(APPEND CMAKE_MODULE_PATH ${BCOS_CMAKE_SCRIPTS_DIR})
+# list(APPEND CMAKE_MODULE_PATH ${BCOS_CMAKE_SCRIPTS_DIR})
 list(APPEND CMAKE_MODULE_PATH ${BCOS_BOOSTSSL_CMAKE_DIR})
 
 #init hunter
 include(HunterGate)
 HunterGate(
-    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/f864aec833035825be3386db9f58320ec222cc30.tar.gz"
-    SHA1 "54f60da3c8d0fdb3066c4af336b2d8249dd06c2d"
-    # FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
+    URL https://${URL_BASE}/FISCO-BCOS/hunter/archive/71170724ef6bec8370132ebd6c75637669e8e815.tar.gz
+    SHA1 393f5bf902b5b7d0d443b43ac25a58771d4fdec9
+    FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
 )
 
 project(bcos-boostssl VERSION "1.0.0")
@@ -48,49 +56,46 @@ include(CompilerSettings)
 # Boost
 hunter_add_package(Boost COMPONENTS all)
 find_package(Boost CONFIG REQUIRED log chrono system filesystem thread)
+
 # OpenSSL
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
+
+# JsonCpp
+hunter_add_package(jsoncpp)
+find_package(jsoncpp CONFIG REQUIRED)
 
 include_directories(${CMAKE_INSTALL_INCLUDEDIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_INSTALL_INCLUDEDIR}/include)
 
-set(BOOSTSSL_NETWORK_TARGET "boostssl_network")
-set(BOOSTSSL_CONTEXT_TARGET "boostssl_context")
+# install dependencies
+# include(InstallBcosFrameworkDependencies)
+
+set(BOOSTSSL_UTILITIES_TARGET "boostssl-utilities")
+set(BOOSTSSL_CONTEXT_TARGET "boostssl-context")
+set(BOOSTSSL_HTTPSERVER_TARGET "boostssl-httpserver")
+set(BOOSTSSL_WEBSOCKET_TARGET "boostssl-websocket")
+
+include(InstallConfig)
+# install the include files for hash
+include(InstallInclude)
 
 add_subdirectory(bcos-boostssl)
 
+# TODO: remove ut temp for remove bcos-framework deps
 # ut
-if (TESTS)
-    enable_testing()
-    set(CTEST_OUTPUT_ON_FAILURE TRUE)
-    add_subdirectory(test)
+# if (TESTS)
+#    enable_testing()
+#    set(CTEST_OUTPUT_ON_FAILURE TRUE)
+#    add_subdirectory(test)
+# endif()
+
+if (BUILD_EXEC_TEST)
+    add_subdirectory(test/exec)
 endif()
 
-include(InstallConfig)
 
-# install boostssl target
-install(
-    TARGETS ${BOOSTSSL_NETWORK_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-install(
-    TARGETS ${BOOSTSSL_CONTEXT_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-# install the include files for hash
-include(InstallInclude)
 
 # for code coverage
 # if (COVERAGE)

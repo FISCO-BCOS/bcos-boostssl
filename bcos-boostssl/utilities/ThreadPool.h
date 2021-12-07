@@ -21,30 +21,51 @@
  */
 
 #pragma once
-
+#include "Common.h"
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
+#include <iosfwd>
 #include <memory>
 
+namespace bcos
+{
 namespace boostssl
 {
-namespace utility
+namespace utilities
 {
 class ThreadPool
 {
 public:
-    using Ptr = std::shared_ptr<ThreadPool>;
-    // constructor
-    explicit ThreadPool(const std::string& threadName, size_t size);
-    // destructor
+    typedef std::shared_ptr<ThreadPool> Ptr;
+
+    explicit ThreadPool(const std::string& threadName, size_t size) : m_work(_ioService)
+    {
+        _threadName = threadName;
+
+        for (size_t i = 0; i < size; ++i)
+        {
+            _workers.create_thread([threadName, this] {
+#if defined(__GLIBC__)
+                pthread_setname_np(pthread_self(), threadName.c_str());
+#elif defined(__APPLE__)
+                pthread_setname_np(threadName.c_str());
+#endif
+                _ioService.run();
+            });
+        }
+    }
+    void stop()
+    {
+        _ioService.stop();
+        if (!_workers.is_this_thread_in())
+        {
+            _workers.join_all();
+        }
+    }
+
     ~ThreadPool() { stop(); }
 
-public:
-    // stop thread pool
-    void stop();
-    // set thread pool name
-    void setThreadName(std::string const& _n);
-    // add new work item to the pool.
+    // Add new work item to the pool.
     template <class F>
     void enqueue(F f)
     {
@@ -55,10 +76,9 @@ private:
     std::string _threadName;
     boost::thread_group _workers;
     boost::asio::io_service _ioService;
-    // m_work ensures that io_service's run() function will not exit while work is
-    // underway
+    // m_work ensures that io_service's run() function will not exit while work is underway
     boost::asio::io_service::work m_work;
 };
-
-}  // namespace utility
+}  // namespace utilities
 }  // namespace boostssl
+}  // namespace bcos

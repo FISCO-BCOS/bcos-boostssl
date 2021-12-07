@@ -1,31 +1,18 @@
-/*
- * @CopyRight:
- * bcos-boostssl is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * bcos-boostssl is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with bcos-boostssl.  If not, see <http://www.gnu.org/licenses/>
- * (c) 2016-2018 fisco-dev contributors.
- */
 /** @file ContextConfig.cpp
  *  @author octopus
  *  @date 2021-06-14
  */
 
+#include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/context/ContextConfig.h>
+#include <bcos-boostssl/utilities/BoostLog.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/throw_exception.hpp>
 
-using namespace boostssl;
-using namespace boostssl::context;
+using namespace bcos;
+using namespace bcos::boostssl;
+using namespace bcos::boostssl::context;
 /**
  * @brief: loads configuration items from the config.ini
  * @param _configPath: config.ini path
@@ -38,13 +25,13 @@ void ContextConfig::initConfig(std::string const& _configPath)
         boost::property_tree::ptree pt;
         boost::property_tree::ini_parser::read_ini(_configPath, pt);
         std::string sslType = pt.get<std::string>("common.ssl_type", "ssl");
-        if ("tassl_sm" == sslType)
-        {
-            initSMCertConfig(pt);
+        if ("sm_ssl" != sslType)
+        {  // SSL
+            initCertConfig(pt);
         }
         else
-        {  // default
-            initCertConfig(pt);
+        {  // SM SSL
+            initSMCertConfig(pt);
         }
 
         m_sslType = sslType;
@@ -53,9 +40,10 @@ void ContextConfig::initConfig(std::string const& _configPath)
     {
         boost::filesystem::path currentPath(boost::filesystem::current_path());
 
-        CONTEXT_LOG(ERROR) << LOG_DESC("initConfig failed") << LOG_KV("configPath", _configPath)
+        CONTEXT_LOG(WARNING) << LOG_DESC("initConfig failed") << LOG_KV("configPath", _configPath)
                            << LOG_KV("currentPath", currentPath.string())
                            << LOG_KV("error", boost::diagnostic_information(e));
+
 
         BOOST_THROW_EXCEPTION(std::runtime_error("initConfig: currentPath:" + currentPath.string() +
                                                  " ,error:" + boost::diagnostic_information(e)));
@@ -133,7 +121,7 @@ void ContextConfig::initSMCertConfig(const boost::property_tree::ptree& _pt)
 void ContextConfig::checkFileExist(const std::string& _path)
 {
     auto isExist = boost::filesystem::exists(boost::filesystem::path(_path));
-    if (isExist)
+    if (!isExist)
     {
         BOOST_THROW_EXCEPTION(std::runtime_error("file not exist: " + _path));
     }

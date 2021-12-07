@@ -13,27 +13,34 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file Common.h
+ * @file WsError.h
  * @author: octopus
- * @date 2021-06-14
+ * @date 2021-10-02
  */
-
 #pragma once
 
-#ifndef BCOS_LOG  // #define LOG(level)  should be defined
+namespace bcos
+{
+namespace boostssl
+{
+namespace ws
+{
+enum WsError
+{
+    AcceptError = -4000,
+    ReadError = -4001,
+    WriteError = -4002,
+    PingError = -4003,
+    PongError = -4004,
+    PacketError = -4005,
+    SessionDisconnect = -4006,
+    UserDisconnect = -4007,
+    TimeOut = -4008,
+    NoActiveCons = -4009,
+    EndPointNotExist = -4010,
+    UndefinedException = -4099
+};
 
-#include <iostream>
-
-#define FALT 6
-#define ERROR 5
-#define WARNING 4
-#define INFO 3
-#define DEBUG 2
-#define TRACE 1
-
-#define BCOS_LOG(l) std::cout << l
-#define LOG_BADGE(_NAME) "[" << (_NAME) << "]"
-#define LOG_DESC(_DESCRIPTION) (_DESCRIPTION)
-#define LOG_KV(_K, _V) "," << (_K) << "=" << (_V)
-
-#endif
+}  // namespace ws
+}  // namespace boostssl
+}  // namespace bcos
