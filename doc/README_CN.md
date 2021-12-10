@@ -8,7 +8,7 @@ bcos-boostssl是一个基于`websocket`协议的通用网络库，既可以作�
 
 ## 文档
 
-- [FISCO BCOS 3.0文档](https://fisco-bcos-documentation-3x.readthedocs.io/zh/latest/index.html)
+- [FISCO BCOS 3.x文档](https://fisco-bcos-doc.readthedocs.io/)
 
 ## 加入社区
 
