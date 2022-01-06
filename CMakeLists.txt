@@ -76,9 +76,7 @@ include_directories(${CMAKE_INSTALL_INCLUDEDIR}/include)
 # install dependencies
 # include(InstallBcosFrameworkDependencies)
 
-set(BOOSTSSL_CONTEXT_TARGET "boostssl-context")
-set(BOOSTSSL_HTTPSERVER_TARGET "boostssl-httpserver")
-set(BOOSTSSL_WEBSOCKET_TARGET "boostssl-websocket")
+set(BOOSTSSL_TARGET "bcos-boostssl")
 
 include(InstallConfig)
 # install the include files for hash
