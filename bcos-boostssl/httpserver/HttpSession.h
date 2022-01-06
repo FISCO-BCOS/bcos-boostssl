@@ -21,7 +21,7 @@
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/httpserver/HttpQueue.h>
 #include <bcos-boostssl/httpserver/HttpStream.h>
-#include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-utilities/BoostLog.h>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/strand.hpp>
@@ -87,7 +87,7 @@ public:
         if (ec)
         {
             HTTP_SESSION(WARNING) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
-                                << LOG_KV("error", ec);
+                                  << LOG_KV("error", ec);
             // return doClose();
             return;
         }
@@ -137,7 +137,7 @@ public:
         if (ec)
         {
             HTTP_SESSION(WARNING) << LOG_BADGE("onWrite") << LOG_DESC("close the connection")
-                                << LOG_KV("error", ec);
+                                  << LOG_KV("error", ec);
             // return doClose();
             return;
         }
@@ -210,8 +210,8 @@ public:
                 buildHttpResp(boost::beast::http::status::http_version_not_supported, version, "");
             send(resp);
             HTTP_SESSION(WARNING) << LOG_BADGE("handleRequest")
-                                << LOG_DESC("unsupported http service")
-                                << LOG_KV("body", resp->body());
+                                  << LOG_DESC("unsupported http service")
+                                  << LOG_KV("body", resp->body());
         }
     }
 

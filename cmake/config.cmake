@@ -9,3 +9,9 @@ hunter_config(
     CMAKE_ARGS
     # CONFIG_MACRO=BOOST_UUID_RANDOM_PROVIDER_FORCE_POSIX;BOOST_ALL_DYN_LINK
 )
+
+hunter_config(bcos-utilities
+	VERSION 3.0.0-local
+	URL https://${URL_BASE}/FISCO-BCOS/bcos-utilities/archive/5cfd3960f4b87b6d61ea479cbe5ae1bd20ff12c8.tar.gz
+	SHA1 a25da3f97cde57c44a510611f29af0737f7b5199
+)

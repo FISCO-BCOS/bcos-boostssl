@@ -27,7 +27,6 @@ using namespace bcos;
 using namespace bcos::test;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
-using namespace bcos::boostssl::utilities;
 
 BOOST_FIXTURE_TEST_SUITE(WsMessageTest, TestPromptFixture)
 
