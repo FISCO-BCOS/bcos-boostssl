@@ -20,10 +20,10 @@
 #pragma once
 
 #include <bcos-boostssl/httpserver/Common.h>
-#include <bcos-boostssl/utilities/BoostLog.h>
-#include <bcos-boostssl/utilities/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsTools.h>
+#include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/Common.h>
 #include <boost/asio/buffer.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl.hpp>
@@ -69,8 +69,7 @@ public:
     virtual void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) = 0;
     virtual void asyncRead(boost::beast::flat_buffer& _buffer, WsStreamRWHandler _handler) = 0;
-    virtual void asyncWrite(
-        const bcos::boostssl::utilities::bytes& _buffer, WsStreamRWHandler _handler) = 0;
+    virtual void asyncWrite(const bcos::bytes& _buffer, WsStreamRWHandler _handler) = 0;
 
     virtual std::string localEndpoint()
     {
@@ -169,8 +168,7 @@ public:
         m_stream->async_read(_buffer, _handler);
     }
 
-    void asyncWrite(
-        const bcos::boostssl::utilities::bytes& _buffer, WsStreamRWHandler _handler) override
+    void asyncWrite(const bcos::bytes& _buffer, WsStreamRWHandler _handler) override
     {
         m_stream->binary(true);
         m_stream->async_write(boost::asio::buffer(_buffer), _handler);
@@ -246,8 +244,7 @@ public:
         m_stream->async_read(_buffer, _handler);
     }
 
-    void asyncWrite(
-        const bcos::boostssl::utilities::bytes& _buffer, WsStreamRWHandler _handler) override
+    void asyncWrite(const bcos::bytes& _buffer, WsStreamRWHandler _handler) override
     {
         m_stream->binary(true);
         m_stream->async_write(boost::asio::buffer(_buffer), _handler);
