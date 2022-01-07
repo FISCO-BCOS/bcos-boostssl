@@ -19,11 +19,11 @@
  */
 
 #include "bcos-boostssl/websocket/WsInitializer.h"
-#include <bcos-boostssl/utilities/BoostLog.h>
-#include <bcos-boostssl/utilities/Common.h>
-#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsService.h>
+#include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/Common.h>
+#include <bcos-utilities/ThreadPool.h>
 #include <string>
 
 using namespace bcos;
@@ -31,7 +31,6 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 using namespace bcos::boostssl::context;
-using namespace bcos::boostssl::utilities;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
@@ -107,7 +106,7 @@ int main(int argc, char** argv)
             [](Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
                 std::shared_ptr<WsSession> _session) {
                 (void)_session;
-                if (_error && _error->errorCode() != protocol::CommonError::SUCCESS)
+                if (_error && _error->errorCode() != 0)
                 {
                     BCOS_LOG(ERROR)
                         << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("callback response error")

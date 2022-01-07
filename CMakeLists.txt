@@ -21,8 +21,8 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum OS X deployment ve
 
 include(FetchContent)
 if (NOT DEFINED URL_BASE)
-    set(URL_BASE "github.com")
-    # set(URL_BASE "github.com.cnpmjs.org")
+    # set(URL_BASE "github.com")
+    set(URL_BASE "github.com.cnpmjs.org")
 endif()
 
 # set(BCOS_CMAKE_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bcos-cmake-scripts)
@@ -40,9 +40,9 @@ list(APPEND CMAKE_MODULE_PATH ${BCOS_BOOSTSSL_CMAKE_DIR})
 #init hunter
 include(HunterGate)
 HunterGate(
-    URL https://${URL_BASE}/FISCO-BCOS/hunter/archive/71170724ef6bec8370132ebd6c75637669e8e815.tar.gz
-    SHA1 393f5bf902b5b7d0d443b43ac25a58771d4fdec9
-    FILEPATH "${CMAKE_SOURCE_DIR}/cmake/config.cmake"
+    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/9bb4c2aa139cfa53af5779105cd0d5570c31fbf5.tar.gz"
+    SHA1 "02165406cd653bedfe88538926453ede8eca84ba"
+    FILEPATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.cmake"
 )
 
 project(bcos-boostssl VERSION "1.0.0")
@@ -55,7 +55,7 @@ include(CompilerSettings)
 
 # Boost
 hunter_add_package(Boost COMPONENTS all)
-find_package(Boost CONFIG REQUIRED log chrono system filesystem thread)
+find_package(Boost CONFIG REQUIRED log chrono system filesystem thread iostreams)
 
 # OpenSSL
 hunter_add_package(OpenSSL)
@@ -65,6 +65,10 @@ find_package(OpenSSL REQUIRED)
 hunter_add_package(jsoncpp)
 find_package(jsoncpp CONFIG REQUIRED)
 
+# bcos-utilities
+hunter_add_package(bcos-utilities)
+find_package(bcos-utilities CONFIG REQUIRED)
+
 include_directories(${CMAKE_INSTALL_INCLUDEDIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_INSTALL_INCLUDEDIR}/include)
@@ -72,16 +76,23 @@ include_directories(${CMAKE_INSTALL_INCLUDEDIR}/include)
 # install dependencies
 # include(InstallBcosFrameworkDependencies)
 
-set(BOOSTSSL_UTILITIES_TARGET "boostssl-utilities")
-set(BOOSTSSL_CONTEXT_TARGET "boostssl-context")
-set(BOOSTSSL_HTTPSERVER_TARGET "boostssl-httpserver")
-set(BOOSTSSL_WEBSOCKET_TARGET "boostssl-websocket")
+set(BOOSTSSL_TARGET "bcos-boostssl")
 
 include(InstallConfig)
 # install the include files for hash
 include(InstallInclude)
 
 add_subdirectory(bcos-boostssl)
+
+# install bcos-boostssl
+install(
+    TARGETS ${BOOSTSSL_TARGET}
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
 
 # TODO: remove ut temp for remove bcos-framework deps
 # ut
@@ -94,8 +105,6 @@ add_subdirectory(bcos-boostssl)
 if (BUILD_EXEC_TEST)
     add_subdirectory(test/exec)
 endif()
-
-
 
 # for code coverage
 # if (COVERAGE)
