@@ -84,6 +84,16 @@ include(InstallInclude)
 
 add_subdirectory(bcos-boostssl)
 
+# install bcos-boostssl
+install(
+    TARGETS ${BOOSTSSL_TARGET}
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
 # TODO: remove ut temp for remove bcos-framework deps
 # ut
 # if (TESTS)
