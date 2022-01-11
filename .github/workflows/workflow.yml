@@ -89,7 +89,7 @@ jobs:
       - name: configure
         run: mkdir -p build && cd build && cmake ../
       - name: compile
-        run: cd build && make -j2
+        run: cd build && make -j4
       # - name: run test
       #  run: CTEST_OUTPUT_ON_FAILURE=TRUE make test
   build_with_centos:
@@ -127,11 +127,16 @@ jobs:
         run: |
           yum install -y epel-release centos-release-scl
           yum install -y git make gcc gcc-c++ glibc-static glibc-devel openssl cmake3 ccache devtoolset-7 libzstd-devel zlib-devel flex bison python-devel python3-devel && source /opt/rh/devtoolset-7/enable
-      - name: configure and compile
+      - name: configure
         run: |
           source /opt/rh/devtoolset-7/enable
           mkdir -p build && cd build
           cmake3 ../ -DHUNTER_STATUS_DEBUG=ON
+      - name: compile
+        run: |
+          source /opt/rh/devtoolset-7/enable
+          mkdir -p build && cd build
+          make -j4
   build_with_windows:
     name: build_with_windows
     runs-on: ${{ matrix.os }}
