@@ -132,3 +132,39 @@ jobs:
           source /opt/rh/devtoolset-7/enable
           mkdir -p build && cd build
           cmake3 ../ -DHUNTER_STATUS_DEBUG=ON
+  build_with_windows:
+    name: build_with_windows
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 5
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            /home/runner/.hunter
+            /github/home/.hunter
+            /Users/runner/.hunter
+            /home/runner/.hunter/_Base/Download/
+            /github/home/.hunter/_Base/Download/
+            /Users/runner/.hunter/_Base/Download/
+            C:/.hunter/
+            C:/.hunter/_Base/Download/
+            ccache
+          key: hunter-msvc-v3-notest-${{ runner.temp }}-${{ github.base_ref }}-${{ hashFiles('.github/workflows/workflow.yml') }}
+          restore-keys: |
+            hunter-msvc-v3-notest-${{ runner.temp }}-${{ github.base_ref }}-${{ hashFiles('.github/workflows/workflow.yml') }}
+            hunter-msvc-v3-notest-${{ runner.temp }}-${{ github.base_ref }}-
+            hunter-msvc-v3-notest-${{ runner.temp }}-
+      - name: Add MSbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+      - name: configure
+        if: runner.os == 'Windows'
+        run: mkdir -p build && cd build && cmake -G "Visual Studio 16 2019" -A x64 ../ -DHUNTER_CONFIGURATION_TYPES=Release -DHUNTER_STATUS_DEBUG=ON
+      - name: compile
+        run: 
+          cd build && MSBuild bcos-boostssl.sln /p:Configuration=Release /p:Platform=x64
