@@ -12,6 +12,6 @@ hunter_config(
 
 hunter_config(bcos-utilities
 	VERSION 3.0.0-local
-	URL https://${URL_BASE}/FISCO-BCOS/bcos-utilities/archive/5cfd3960f4b87b6d61ea479cbe5ae1bd20ff12c8.tar.gz
-	SHA1 a25da3f97cde57c44a510611f29af0737f7b5199
+	URL https://${URL_BASE}/FISCO-BCOS/bcos-utilities/archive/b94375d933cc65c348b5c219f2ed821a5f66d9b1.tar.gz
+	SHA1 2ae9c579e924ccb67f07c9626d4d748bc60c9cef
 )
