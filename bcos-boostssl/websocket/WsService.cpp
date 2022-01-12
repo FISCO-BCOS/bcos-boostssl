@@ -34,7 +34,6 @@
 #include <tuple>
 #include <vector>
 
-
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
@@ -151,7 +150,15 @@ void WsService::stop()
     {
         m_heartbeat->cancel();
     }
-
+    if (m_iocThread->get_id() != std::this_thread::get_id())
+    {
+        m_iocThread->join();
+        m_iocThread.reset();
+    }
+    else
+    {
+        m_iocThread->detach();
+    }
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
 }
 
@@ -391,7 +398,8 @@ WsSessions WsService::sessions()
         }
     }
 
-    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("sessions") << LOG_KV("size", sessions.size());
+    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("sessions") << LOG_KV("size",
+    // sessions.size());
     return sessions;
 }
 
@@ -584,7 +592,6 @@ void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,
 
     return asyncSendMessage(ss, _msg, _options, _respFunc);
 }
-
 
 void WsService::broadcastMessage(std::shared_ptr<WsMessage> _msg)
 {
