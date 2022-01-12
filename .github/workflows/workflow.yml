@@ -171,5 +171,4 @@ jobs:
         if: runner.os == 'Windows'
         run: mkdir -p build && cd build && cmake -G "Visual Studio 16 2019" -A x64 ../ -DHUNTER_CONFIGURATION_TYPES=Release -DHUNTER_STATUS_DEBUG=ON
       - name: compile
-        run: 
-          cd build && MSBuild bcos-boostssl.sln /p:Configuration=Release /p:Platform=x64
+        run: cd build && MSBuild bcos-boostssl.sln /p:Configuration=Release /p:Platform=x64
