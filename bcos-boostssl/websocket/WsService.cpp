@@ -296,6 +296,7 @@ bool WsService::registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler)
 
 std::shared_ptr<WsSession> WsService::newSession(std::shared_ptr<WsStream> _stream)
 {
+    _stream->setReadMaxMsg(m_config->maxReadMsgSize());
     auto wsSession = std::make_shared<WsSession>();
     std::string endPoint = _stream->remoteEndpoint();
     wsSession->setStream(_stream);

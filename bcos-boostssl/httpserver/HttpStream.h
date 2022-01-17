@@ -118,9 +118,13 @@ public:
 
     virtual ws::WsStream::Ptr wsStream() override
     {
-        auto wsStream = std::make_shared<ws::WsStreamImpl>(
-            std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
-                std::move(*m_stream)));
+        auto ws_stream = std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(std::move(*m_stream)) ;
+        boost::beast::websocket::permessage_deflate opt;
+        opt.client_enable = true; // for clients
+        opt.server_enable = true; // for servers
+        ws_stream->set_option(opt);
+
+        auto wsStream = std::make_shared<ws::WsStreamImpl>(ws_stream);
         m_closed.store(true);
         return wsStream;
     }
@@ -194,6 +198,12 @@ public:
         auto stream = std::make_shared<
             boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
             std::move(*m_stream));
+
+        boost::beast::websocket::permessage_deflate opt;
+        opt.client_enable = true; // for clients
+        opt.server_enable = true; // for servers
+        stream->set_option(opt);
+
         m_closed.store(true);
         auto wsStream = std::make_shared<ws::WsStreamSslImpl>(stream);
         return wsStream;
