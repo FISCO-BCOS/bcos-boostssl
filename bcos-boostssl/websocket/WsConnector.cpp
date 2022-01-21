@@ -77,6 +77,16 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
     }
 }
 
+template<class T>
+inline void setWsCompressionOption(T t)
+{
+    // must set compress option before handshake, otherwise network compress will fail
+    boost::beast::websocket::permessage_deflate opt;
+    opt.client_enable = true; // for clients
+    opt.server_enable = true; // for servers
+    t->set_option(opt);
+}
+
 /**
  * @brief:
  * @param _host: the remote server host, support ipv4, ipv6, domain name
@@ -130,11 +140,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                 std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(*ioc);
             boost::beast::get_lowest_layer(*stream).expires_after(std::chrono::seconds(30));
 
-            // must set compress option before handshake, otherwise network compress will fail
-            boost::beast::websocket::permessage_deflate opt;
-            opt.client_enable = true; // for clients
-            opt.server_enable = true; // for servers
-            stream->set_option(opt);
+            setWsCompressionOption(stream);
 
             // async connect
             boost::beast::get_lowest_layer(*stream).async_connect(_results,
@@ -244,11 +250,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
             auto stream = std::make_shared<boost::beast::websocket::stream<
                 boost::beast::ssl_stream<boost::beast::tcp_stream>>>(*ioc, *ctx);
 
-            // must set compress option before handshake, otherwise network compress will fail
-            boost::beast::websocket::permessage_deflate opt;
-            opt.client_enable = true; // for clients
-            opt.server_enable = true; // for servers
-            stream->set_option(opt);
+            setWsCompressionOption(stream);
 
             boost::beast::get_lowest_layer(*stream).expires_after(std::chrono::seconds(30));
 
