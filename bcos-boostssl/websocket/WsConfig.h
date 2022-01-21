@@ -90,7 +90,7 @@ private:
     // cert config for boostssl
     std::shared_ptr<context::ContextConfig> m_contextConfig;
 
-    uint64_t m_maxReadMsgSize;
+    uint64_t m_maxReadMsgSize = 16*1024*1024;
 
 public:
     void setModel(WsModel _model) { m_model = _model; }
