@@ -141,6 +141,9 @@ public:
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
     void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
 
+    int32_t maxWriteMsgSize() const { return m_maxWriteMsgSize; }
+    void setMaxWriteMsgSize(int32_t _maxWriteMsgSize) { m_maxWriteMsgSize = _maxWriteMsgSize; }
+
     std::size_t queueSize()
     {
         boost::shared_lock<boost::shared_mutex> lock(x_queue);
@@ -172,6 +175,9 @@ private:
 
     //
     int32_t m_sendMsgTimeout = -1;
+    //
+    int32_t m_maxWriteMsgSize = -1;
+
     //
     WsStream::Ptr m_stream;
     // callbacks
