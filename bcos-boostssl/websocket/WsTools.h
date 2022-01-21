@@ -53,16 +53,6 @@ public:
     static bool stringToEndPoint(const std::string& peer, EndPoint& _endpoint);
 
     static void close(boost::asio::ip::tcp::socket& skt);
-
-    template<class T>
-    static void setWsCompressionOption(T t)
-    {
-        // must set compress option before handshake, otherwise network compress will fail
-        boost::beast::websocket::permessage_deflate opt;
-        opt.client_enable = true; // for clients
-        opt.server_enable = true; // for servers
-        t->set_option(opt);
-    }
 };
 }  // namespace ws
 }  // namespace boostssl
