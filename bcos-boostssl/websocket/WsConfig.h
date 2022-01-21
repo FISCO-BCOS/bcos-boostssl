@@ -29,6 +29,7 @@
 #define MIN_HEART_BEAT_PERIOD_MS (10000)
 #define MIN_RECONNECT_PERIOD_MS (10000)
 #define DEFAULT_MESSAGE_TIMEOUT_MS (-1)
+#define DEFAULT_MAX_MESSAGE_SIZE (32 * 1024 * 1024)
 #define MIN_THREAD_POOL_SIZE (1)
 
 namespace bcos
@@ -90,13 +91,14 @@ private:
     // cert config for boostssl
     std::shared_ptr<context::ContextConfig> m_contextConfig;
 
-    uint64_t m_maxReadMsgSize = 16*1024*1024;
+    // the max message to be send or read
+    uint32_t m_maxMsgSize{DEFAULT_MAX_MESSAGE_SIZE};
 
 public:
     void setModel(WsModel _model) { m_model = _model; }
     WsModel model() const { return m_model; }
 
-    bool asClient() { return m_model & WsModel::Client; }
+    bool asClient() const { return m_model & WsModel::Client; }
     bool asServer() const { return m_model & WsModel::Server; }
 
     void setListenIP(const std::string _listenIP) { m_listenIP = _listenIP; }
@@ -105,8 +107,8 @@ public:
     void setListenPort(uint16_t _listenPort) { m_listenPort = _listenPort; }
     uint16_t listenPort() const { return m_listenPort; }
 
-    void setMaxReadMsgSize(uint64_t _maxReadMsgSize) { m_maxReadMsgSize = _maxReadMsgSize; }
-    uint64_t maxReadMsgSize() const { return m_maxReadMsgSize; }
+    void setMaxMsgSize(uint32_t _maxMsgSize) { m_maxMsgSize = _maxMsgSize; }
+    uint32_t maxMsgSize() const { return m_maxMsgSize; }
 
     uint32_t reconnectPeriod() const
     {
@@ -131,7 +133,7 @@ public:
     }
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
-    EndPointsConstPtr connectedPeers() { return m_connectedPeers; }
+    EndPointsConstPtr connectedPeers() const { return m_connectedPeers; }
     void setConnectedPeers(EndPointsConstPtr _connectedPeers)
     {
         m_connectedPeers = _connectedPeers;

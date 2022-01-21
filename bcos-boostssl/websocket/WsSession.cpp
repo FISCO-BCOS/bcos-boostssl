@@ -337,6 +337,19 @@ void WsSession::asyncSendMessage(
     std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
 {
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    // check if message size overflow
+    if ((int64_t)_msg->data()->size() > (int64_t)maxWriteMsgSize())
+    {
+        auto error = std::make_shared<Error>(WsError::MessageOverflow, "Message size overflow");
+        _respFunc(error, nullptr, nullptr);
+
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("asyncSendMessage") << LOG_DESC("send message size overflow")
+            << LOG_KV("seq", seq) << LOG_KV("msgSize", _msg->data()->size())
+            << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
+        return;
+    }
+
     auto buffer = std::make_shared<bytes>();
     _msg->encode(*buffer);
 

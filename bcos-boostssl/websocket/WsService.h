@@ -120,9 +120,6 @@ public:
         m_threadPool = _threadPool;
     }
 
-    bool disableSsl() const { return m_disableSsl; }
-    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
-
     bool waitConnectFinish() const { return m_waitConnectFinish; }
     void setWaitConnectFinish(bool _b) { m_waitConnectFinish = _b; }
 
@@ -138,8 +135,8 @@ public:
     std::shared_ptr<WsConnector> connector() const { return m_connector; }
     void setConnector(std::shared_ptr<WsConnector> _connector) { m_connector = _connector; }
 
-    std::shared_ptr<WsConfig> config() const { return m_config; }
-    void setConfig(std::shared_ptr<WsConfig> _config) { m_config = _config; }
+    WsConfig::ConstPtr config() const { return m_config; }
+    void setConfig(WsConfig::ConstPtr _config) { m_config = _config; }
 
     std::shared_ptr<bcos::boostssl::http::HttpServer> httpServer() const { return m_httpServer; }
     void setHttpServer(std::shared_ptr<bcos::boostssl::http::HttpServer> _httpServer)
@@ -164,18 +161,12 @@ public:
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
 
-    int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
-    void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
-
 public:
     void waitForConnectionEstablish();
 
 private:
     bool m_running{false};
-    bool m_disableSsl{false};
     bool m_waitConnectFinish{false};
-    //
-    int32_t m_sendMsgTimeout = -1;
     // default timeout , 30s
     int32_t m_waitConnectFinishTimeout = 30000;
 
@@ -186,7 +177,7 @@ private:
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // Config
-    std::shared_ptr<WsConfig> m_config;
+    std::shared_ptr<const WsConfig> m_config;
     // ws connector
     std::shared_ptr<WsConnector> m_connector;
     // io context

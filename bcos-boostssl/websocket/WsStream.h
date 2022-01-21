@@ -66,7 +66,7 @@ public:
     virtual bool open() = 0;
     virtual void close() = 0;
 
-    virtual void setReadMaxMsg(uint32_t _maxValue) = 0;
+    virtual void setMaxReadMsgSize(uint32_t _maxValue) = 0;
 
     virtual void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) = 0;
@@ -159,10 +159,7 @@ public:
         }
     }
 
-    void setReadMaxMsg(uint32_t _maxValue) override
-    {
-        m_stream->read_message_max(_maxValue);
-    }
+    void setMaxReadMsgSize(uint32_t _maxValue) override { m_stream->read_message_max(_maxValue); }
 
     void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) override
@@ -240,10 +237,7 @@ public:
         }
     }
 
-    void setReadMaxMsg(uint32_t _maxValue) override
-    {
-        m_stream->read_message_max(_maxValue);
-    }
+    void setMaxReadMsgSize(uint32_t _maxValue) override { m_stream->read_message_max(_maxValue); }
 
     void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) override

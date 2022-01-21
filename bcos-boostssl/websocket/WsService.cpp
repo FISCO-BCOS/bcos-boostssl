@@ -120,7 +120,8 @@ void WsService::start()
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start")
                             << LOG_DESC("start websocket service successfully")
-                            << LOG_KV("model", m_config->model());
+                            << LOG_KV("model", m_config->model())
+                            << LOG_KV("max msg size", m_config->maxMsgSize());
 }
 
 void WsService::stop()
@@ -296,17 +297,19 @@ bool WsService::registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler)
 
 std::shared_ptr<WsSession> WsService::newSession(std::shared_ptr<WsStream> _stream)
 {
-    _stream->setReadMaxMsg(m_config->maxReadMsgSize());
     auto wsSession = std::make_shared<WsSession>();
-    std::string endPoint = _stream->remoteEndpoint();
-    wsSession->setStream(_stream);
 
+    std::string endPoint = _stream->remoteEndpoint();
+    _stream->setMaxReadMsgSize(m_config->maxMsgSize());
+
+    wsSession->setStream(_stream);
     wsSession->setIoc(ioc());
     wsSession->setThreadPool(threadPool());
     wsSession->setMessageFactory(messageFactory());
     wsSession->setEndPoint(endPoint);
     wsSession->setConnectedEndPoint(endPoint);
-    wsSession->setSendMsgTimeout(m_sendMsgTimeout);
+    wsSession->setMaxWriteMsgSize(m_config->maxMsgSize());
+    wsSession->setSendMsgTimeout(m_config->sendMsgTimeout());
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
     wsSession->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {
@@ -547,6 +550,13 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
                             << LOG_KV("endpoint", session->endPoint())
                             << LOG_KV("errorCode", _error->errorCode())
                             << LOG_KV("errorMessage", _error->errorMessage());
+
+                        if (shouldSendNotRetry(_error->errorCode()))
+                        {
+                            return self->respFunc(_error, _msg, _session);
+                        }
+
+                        // resend message again
                         return self->sendMessage();
                     }
 
@@ -565,7 +575,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
     retry->sendMessage();
 
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
-    int32_t timeout = _options.timeout > 0 ? _options.timeout : m_sendMsgTimeout;
+    int32_t timeout = _options.timeout > 0 ? _options.timeout : m_config->sendMsgTimeout();
 
     WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
                              << LOG_KV("size", size) << LOG_KV("timeout", timeout);
