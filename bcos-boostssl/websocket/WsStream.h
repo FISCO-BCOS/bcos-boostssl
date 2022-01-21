@@ -66,6 +66,8 @@ public:
     virtual bool open() = 0;
     virtual void close() = 0;
 
+    virtual void setReadMaxMsg(uint32_t _maxValue) = 0;
+
     virtual void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) = 0;
     virtual void asyncRead(boost::beast::flat_buffer& _buffer, WsStreamRWHandler _handler) = 0;
@@ -157,6 +159,11 @@ public:
         }
     }
 
+    void setReadMaxMsg(uint32_t _maxValue) override
+    {
+        m_stream->read_message_max(_maxValue);
+    }
+
     void asyncHandshake(
         bcos::boostssl::http::HttpRequest _httpRequest, WsStreamHandshakeHandler _handler) override
     {
@@ -231,6 +238,11 @@ public:
             WsTools::close(m_stream->next_layer().next_layer().socket());
             WEBSOCKET_SSL_STREAM(INFO) << LOG_DESC("close the ssl stream") << LOG_KV("this", this);
         }
+    }
+
+    void setReadMaxMsg(uint32_t _maxValue) override
+    {
+        m_stream->read_message_max(_maxValue);
     }
 
     void asyncHandshake(

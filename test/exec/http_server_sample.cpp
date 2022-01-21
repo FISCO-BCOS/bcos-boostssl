@@ -62,7 +62,7 @@ int main(int argc, char** argv)
         disableSsl = argv[3];
     }
 
-    BCOS_LOG(INFO) << LOG_DESC("http-server") << LOG_KV("ip", host) << LOG_KV("port", port)
+    BCOS_LOG(INFO) << LOG_DESC("http-server-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
                    << LOG_KV("disableSsl", disableSsl);
 
 
@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     config->setListenPort(port);
     config->setThreadPoolSize(4);
     config->setDisableSsl(0 == disableSsl.compare("true"));
-    if (config->disableSsl())
+    if (!config->disableSsl())
     {
         auto contextConfig = std::make_shared<ContextConfig>();
         contextConfig->initConfig("./boostssl.ini");

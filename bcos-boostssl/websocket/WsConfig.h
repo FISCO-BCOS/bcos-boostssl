@@ -90,6 +90,8 @@ private:
     // cert config for boostssl
     std::shared_ptr<context::ContextConfig> m_contextConfig;
 
+    uint64_t m_maxReadMsgSize = 16*1024*1024;
+
 public:
     void setModel(WsModel _model) { m_model = _model; }
     WsModel model() const { return m_model; }
@@ -102,6 +104,9 @@ public:
 
     void setListenPort(uint16_t _listenPort) { m_listenPort = _listenPort; }
     uint16_t listenPort() const { return m_listenPort; }
+
+    void setMaxReadMsgSize(uint64_t _maxReadMsgSize) { m_maxReadMsgSize = _maxReadMsgSize; }
+    uint64_t maxReadMsgSize() const { return m_maxReadMsgSize; }
 
     uint32_t reconnectPeriod() const
     {

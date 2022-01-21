@@ -118,9 +118,12 @@ public:
 
     virtual ws::WsStream::Ptr wsStream() override
     {
-        auto wsStream = std::make_shared<ws::WsStreamImpl>(
+        auto ws_stream =
             std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
-                std::move(*m_stream)));
+                std::move(*m_stream));
+        ws::setWsCompressionOption(ws_stream);
+
+        auto wsStream = std::make_shared<ws::WsStreamImpl>(ws_stream);
         m_closed.store(true);
         return wsStream;
     }
@@ -166,7 +169,6 @@ private:
     std::shared_ptr<boost::beast::tcp_stream> m_stream;
 };
 
-
 // The http stream
 class HttpStreamSslImpl : public HttpStream, public std::enable_shared_from_this<HttpStreamSslImpl>
 {
@@ -191,11 +193,13 @@ public:
 
     virtual ws::WsStream::Ptr wsStream() override
     {
-        auto stream = std::make_shared<
+        auto ws_stream = std::make_shared<
             boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
             std::move(*m_stream));
+        ws::setWsCompressionOption(ws_stream);
+
         m_closed.store(true);
-        auto wsStream = std::make_shared<ws::WsStreamSslImpl>(stream);
+        auto wsStream = std::make_shared<ws::WsStreamSslImpl>(ws_stream);
         return wsStream;
     }
 

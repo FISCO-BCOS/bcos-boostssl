@@ -20,6 +20,7 @@
 
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
+#include <bcos-boostssl/websocket/WsTools.h>
 #include <boost/asio/error.hpp>
 #include <boost/thread/thread.hpp>
 #include <memory>
@@ -28,7 +29,6 @@
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
-
 
 /**
  * @brief: connect to the server
@@ -129,6 +129,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
             auto stream =
                 std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(*ioc);
             boost::beast::get_lowest_layer(*stream).expires_after(std::chrono::seconds(30));
+
+            ws::setWsCompressionOption(stream);
 
             // async connect
             boost::beast::get_lowest_layer(*stream).async_connect(_results,
@@ -238,6 +240,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
             auto stream = std::make_shared<boost::beast::websocket::stream<
                 boost::beast::ssl_stream<boost::beast::tcp_stream>>>(*ioc, *ctx);
 
+            ws::setWsCompressionOption(stream);
+
             boost::beast::get_lowest_layer(*stream).expires_after(std::chrono::seconds(30));
 
             // async connect
@@ -258,13 +262,15 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port,
                         << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect success")
                         << LOG_KV("host", _host) << LOG_KV("port", _port);
 
-                    // Set SNI Hostname (many hosts need this to handshake successfully)
+                    // Set SNI Hostname (many hosts need this to handshake
+                    // successfully)
                     /*
-                    if (!SSL_set_tlsext_host_name(ws_.next_layer().native_handle(), host_.c_str()))
+                    if (!SSL_set_tlsext_host_name(ws_.next_layer().native_handle(),
+                    host_.c_str()))
                     {
                         ec = beast::error_code(
-                            static_cast<int>(::ERR_get_error()), net::error::get_ssl_category());
-                        return fail(ec, "connect");
+                            static_cast<int>(::ERR_get_error()),
+                    net::error::get_ssl_category()); return fail(ec, "connect");
                     }*/
 
                     // start ssl handshake
