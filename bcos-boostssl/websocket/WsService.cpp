@@ -27,6 +27,7 @@
 #include <json/json.h>
 #include <boost/core/ignore_unused.hpp>
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -226,9 +227,9 @@ void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
         uint16_t port = peer.port;
 
         auto self = std::weak_ptr<WsService>(shared_from_this());
-        m_connector->connectToWsServer(host, port,
+        m_connector->connectToWsServer(host, port, m_config->disableSsl(),
             [self, connectedEndPoint](
-                boost::beast::error_code _ec, std::shared_ptr<WsStream> _stream) {
+                boost::beast::error_code _ec, std::shared_ptr<WsStreamDelegate> _wsStreamDelegate) {
                 auto service = self.lock();
                 if (!service)
                 {
@@ -240,7 +241,7 @@ void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
                     return;
                 }
 
-                auto session = service->newSession(_stream);
+                auto session = service->newSession(_wsStreamDelegate);
                 // reset connected endpoint
                 session->setConnectedEndPoint(connectedEndPoint);
                 session->startAsClient();
@@ -295,14 +296,14 @@ bool WsService::registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler)
     return false;
 }
 
-std::shared_ptr<WsSession> WsService::newSession(std::shared_ptr<WsStream> _stream)
+std::shared_ptr<WsSession> WsService::newSession(
+    std::shared_ptr<WsStreamDelegate> _wsStreamDelegate)
 {
+    _wsStreamDelegate->setMaxReadMsgSize(m_config->maxMsgSize());
+
+    std::string endPoint = _wsStreamDelegate->remoteEndpoint();
     auto wsSession = std::make_shared<WsSession>();
-
-    std::string endPoint = _stream->remoteEndpoint();
-    _stream->setMaxReadMsgSize(m_config->maxMsgSize());
-
-    wsSession->setStream(_stream);
+    wsSession->setWsStreamDelegate(_wsStreamDelegate);
     wsSession->setIoc(ioc());
     wsSession->setThreadPool(threadPool());
     wsSession->setMessageFactory(messageFactory());
@@ -551,7 +552,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
                             << LOG_KV("errorCode", _error->errorCode())
                             << LOG_KV("errorMessage", _error->errorMessage());
 
-                        if (shouldSendNotRetry(_error->errorCode()))
+                        if (notRetryAgain(_error->errorCode()))
                         {
                             return self->respFunc(_error, _msg, _session);
                         }

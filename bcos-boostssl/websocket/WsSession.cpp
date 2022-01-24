@@ -44,9 +44,9 @@ void WsSession::drop(uint32_t _reason)
 
     m_isDrop = true;
 
-    if (m_stream)
+    if (m_wsStreamDelegate)
     {
-        m_stream->close();
+        m_wsStreamDelegate->close();
     }
 
     auto self = std::weak_ptr<WsSession>(shared_from_this());
@@ -59,70 +59,6 @@ void WsSession::drop(uint32_t _reason)
     });
 }
 
-void WsSession::ping()
-{
-    try
-    {
-        if (m_stream)
-        {
-            m_stream->ping();
-        }
-    }
-    catch (const std::exception& _e)
-    {
-        WEBSOCKET_SESSION(WARNING)
-            << LOG_BADGE("ping") << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this)
-            << LOG_KV("what", std::string(_e.what()));
-        drop(WsError::PingError);
-    }
-}
-
-void WsSession::pong()
-{
-    try
-    {
-        if (m_stream)
-        {
-            m_stream->pong();
-        }
-    }
-    catch (const std::exception& _e)
-    {
-        WEBSOCKET_SESSION(WARNING)
-            << LOG_BADGE("pong") << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this)
-            << LOG_KV("what", std::string(_e.what()));
-        drop(WsError::PongError);
-    }
-}
-
-// TODO: init ping/pong
-
-// void WsSession::initPingPoing()
-// {
-//     auto s = std::weak_ptr<WsSession>(shared_from_this());
-//     auto endPoint = m_endPoint;
-//     // callback for ping/pong
-//     m_wsStream.control_callback([s, endPoint](auto&& _kind, auto&& _payload) {
-//         auto session = s.lock();
-//         if (!session)
-//         {
-//             return;
-//         }
-
-//         if (_kind == boost::beast::websocket::frame_type::ping)
-//         {  // ping message
-//             session->pong();
-//             WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive ping") << LOG_KV("endPoint", endPoint)
-//                                      << LOG_KV("payload", _payload);
-//         }
-//         else if (_kind == boost::beast::websocket::frame_type::pong)
-//         {  // pong message
-//             WEBSOCKET_SESSION(TRACE) << LOG_DESC("receive pong") << LOG_KV("endPoint", endPoint)
-//                                      << LOG_KV("payload", _payload);
-//         }
-//     });
-// }
-
 // start WsSession as client
 void WsSession::startAsClient()
 {
@@ -131,9 +67,6 @@ void WsSession::startAsClient()
         auto session = shared_from_this();
         m_connectHandler(nullptr, session);
     }
-
-    // register ping/pong callback
-    // initPingPoing();
 
     // read message
     asyncRead();
@@ -146,26 +79,19 @@ void WsSession::startAsClient()
 // start WsSession as server
 void WsSession::startAsServer(HttpRequest _httpRequest)
 {
-    // register ping/pong callback
-    // initPingPoing();
-
-    // // set websocket params
-    // m_wsStream.set_option(
-    //     boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
-
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsServer") << LOG_DESC("start websocket handshake")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 
     auto session = shared_from_this();
-    m_stream->asyncHandshake(_httpRequest,
-        std::bind(&WsSession::onHandshake, shared_from_this(), std::placeholders::_1));
+    m_wsStreamDelegate->asyncAccept(
+        _httpRequest, std::bind(&WsSession::onWsAccept, shared_from_this(), std::placeholders::_1));
 }
 
-void WsSession::onHandshake(boost::beast::error_code _ec)
+void WsSession::onWsAccept(boost::beast::error_code _ec)
 {
     if (_ec)
     {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onHandshake") << LOG_KV("error", _ec.message());
+        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onWsAccept") << LOG_KV("error", _ec.message());
         return drop(WsError::AcceptError);
     }
 
@@ -176,7 +102,7 @@ void WsSession::onHandshake(boost::beast::error_code _ec)
 
     asyncRead();
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("onHandshake")
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("onWsAccept")
                             << LOG_DESC("websocket handshake successfully")
                             << LOG_KV("endPoint", endPoint()) << LOG_KV("session", this);
 }
@@ -235,8 +161,8 @@ void WsSession::asyncRead()
     }
     try
     {
-        m_stream->asyncRead(m_buffer, std::bind(&WsSession::onRead, shared_from_this(),
-                                          std::placeholders::_1, std::placeholders::_2));
+        m_wsStreamDelegate->asyncRead(m_buffer, std::bind(&WsSession::onRead, shared_from_this(),
+                                                    std::placeholders::_1, std::placeholders::_2));
     }
     catch (const std::exception& _e)
     {
@@ -288,7 +214,7 @@ void WsSession::asyncWrite()
     {
         auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
-        m_stream->asyncWrite(
+        m_wsStreamDelegate->asyncWrite(
             *m_queue.front(), [session](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
@@ -379,7 +305,7 @@ void WsSession::asyncSendMessage(
     }
 
     {
-        boost::asio::post(m_stream->stream().get_executor(),
+        boost::asio::post(*m_ioc,
             boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), buffer));
     }
 }

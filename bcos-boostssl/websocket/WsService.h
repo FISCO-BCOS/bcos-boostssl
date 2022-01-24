@@ -73,7 +73,7 @@ public:
     void startIocThread();
 
 public:
-    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStream> _stream);
+    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStreamDelegate> _wsStreamDelegate);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -102,12 +102,6 @@ public:
     virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsMessage> _msg);
 
 public:
-    std::shared_ptr<WsStreamFactory> wsStreamFactory() { return m_wsStreamFactory; }
-    void setWsStreamFactory(std::shared_ptr<WsStreamFactory> _wsStreamFactory)
-    {
-        m_wsStreamFactory = _wsStreamFactory;
-    }
-
     std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
     void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
     {
@@ -172,8 +166,6 @@ private:
 
     // WsMessageFactory
     std::shared_ptr<WsMessageFactory> m_messageFactory;
-    // WsStreamFactory
-    std::shared_ptr<WsStreamFactory> m_wsStreamFactory;
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // Config
