@@ -465,7 +465,7 @@ void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<W
 {
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
 
-    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvMessage")
+    WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
                              << LOG_DESC("receive message from server")
                              << LOG_KV("type", _msg->type()) << LOG_KV("seq", seq)
                              << LOG_KV("endpoint", _session->endPoint())
