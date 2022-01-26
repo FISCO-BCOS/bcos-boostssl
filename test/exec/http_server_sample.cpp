@@ -37,10 +37,10 @@ using namespace bcos::boostssl::context;
 
 void usage()
 {
-    std::cerr << "Usage: http-server <host> <port> <ssl>\n"
+    std::cerr << "Usage: http-server-sample <host> <port> <ssl>\n"
               << "Example:\n"
-              << "    ./http-server 127.0.0.1 20200 true\n"
-              << "    ./http-server 127.0.0.1 20200 false\n";
+              << "    ./http-server-sample 127.0.0.1 20200 true\n"
+              << "    ./http-server-sample 127.0.0.1 20200 false\n";
     std::exit(0);
 }
 

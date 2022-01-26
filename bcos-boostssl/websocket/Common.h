@@ -57,17 +57,6 @@ struct Options
     uint32_t timeout = 0;  ///< The timeout value of async function, in milliseconds.
 };
 
-template <class T>
-inline void setWsCompressionOption(T t)
-{
-    // must set compress option before handshake, otherwise network compress will
-    // fail
-    boost::beast::websocket::permessage_deflate opt;
-    opt.client_enable = true;  // for clients
-    opt.server_enable = true;  // for servers
-    t->set_option(opt);
-}
-
 }  // namespace ws
 }  // namespace boostssl
 }  // namespace bcos
