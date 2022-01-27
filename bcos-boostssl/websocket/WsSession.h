@@ -61,7 +61,7 @@ public:
     void startAsServer(bcos::boostssl::http::HttpRequest _httpRequest);
 
 public:
-    void onHandshake(boost::beast::error_code _ec);
+    void onWsAccept(boost::beast::error_code _ec);
 
     void asyncRead();
     void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
@@ -73,12 +73,11 @@ public:
     void onReadPacket(boost::beast::flat_buffer& _buffer);
     void onWritePacket();
 
-    void ping();
-    void pong();
-    // void initPingPoing();
-
 public:
-    virtual bool isConnected() { return !m_isDrop && m_stream && m_stream->open(); }
+    virtual bool isConnected()
+    {
+        return !m_isDrop && m_wsStreamDelegate && m_wsStreamDelegate->open();
+    }
     /**
      * @brief: async send message
      * @param _msg: message
@@ -132,8 +131,11 @@ public:
     void setVersion(uint16_t _version) { m_version.store(_version); }
     uint16_t version() const { return m_version.load(); }
 
-    WsStream::Ptr stream() { return m_stream; }
-    void setStream(WsStream::Ptr _stream) { m_stream = _stream; }
+    WsStreamDelegate::Ptr wsStreamDelegate() { return m_wsStreamDelegate; }
+    void setWsStreamDelegate(WsStreamDelegate::Ptr _wsStreamDelegate)
+    {
+        m_wsStreamDelegate = _wsStreamDelegate;
+    }
 
     boost::beast::flat_buffer& buffer() { return m_buffer; }
     void setBuffer(boost::beast::flat_buffer _buffer) { m_buffer = std::move(_buffer); }
@@ -179,7 +181,7 @@ private:
     int32_t m_maxWriteMsgSize = -1;
 
     //
-    WsStream::Ptr m_stream;
+    WsStreamDelegate::Ptr m_wsStreamDelegate;
     // callbacks
     boost::shared_mutex x_callback;
     std::unordered_map<std::string, CallBack::Ptr> m_callbacks;
