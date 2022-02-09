@@ -42,7 +42,7 @@ enum WsError
     UndefinedException = -4099
 };
 
-inline bool shouldSendNotRetry(int _wsError)
+inline bool notRetryAgain(int _wsError)
 {
     return (_wsError == boostssl::ws::WsError::MessageOverflow);
 }

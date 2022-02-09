@@ -46,7 +46,7 @@ public:
 public:
     virtual boost::beast::tcp_stream& stream() = 0;
 
-    virtual ws::WsStream::Ptr wsStream() = 0;
+    virtual ws::WsStreamDelegate::Ptr wsStream() = 0;
 
     virtual bool open() = 0;
     virtual void close() = 0;
@@ -116,16 +116,11 @@ public:
 public:
     virtual boost::beast::tcp_stream& stream() override { return *m_stream; }
 
-    virtual ws::WsStream::Ptr wsStream() override
+    virtual ws::WsStreamDelegate::Ptr wsStream() override
     {
-        auto ws_stream =
-            std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
-                std::move(*m_stream));
-        ws::setWsCompressionOption(ws_stream);
-
-        auto wsStream = std::make_shared<ws::WsStreamImpl>(ws_stream);
         m_closed.store(true);
-        return wsStream;
+        auto builder = std::make_shared<ws::WsStreamDelegateBuilder>();
+        return builder->build(m_stream);
     }
 
     virtual bool open() override
@@ -191,16 +186,11 @@ public:
 public:
     virtual boost::beast::tcp_stream& stream() override { return m_stream->next_layer(); }
 
-    virtual ws::WsStream::Ptr wsStream() override
+    virtual ws::WsStreamDelegate::Ptr wsStream() override
     {
-        auto ws_stream = std::make_shared<
-            boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
-            std::move(*m_stream));
-        ws::setWsCompressionOption(ws_stream);
-
         m_closed.store(true);
-        auto wsStream = std::make_shared<ws::WsStreamSslImpl>(ws_stream);
-        return wsStream;
+        auto builder = std::make_shared<ws::WsStreamDelegateBuilder>();
+        return builder->build(m_stream);
     }
 
     virtual bool open() override

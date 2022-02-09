@@ -51,10 +51,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto ioc = std::make_shared<boost::asio::io_context>();
     auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(*ioc);
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
-    auto wsStreamFactory = std::make_shared<WsStreamFactory>();
+    auto builder = std::make_shared<WsStreamDelegateBuilder>();
 
-    auto threadPool = std::make_shared<ThreadPool>(
-        "t_ws", _config->threadPoolSize() > 0 ? _config->threadPoolSize() : 4);
+    auto threadPoolSize = _config->threadPoolSize() > 0 ? _config->threadPoolSize() :
+                                                          std::thread::hardware_concurrency();
+    if (!threadPoolSize)
+    {
+        threadPoolSize = 16;
+    }
+    auto threadPool = std::make_shared<ThreadPool>("t_ws", threadPoolSize);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
@@ -85,15 +90,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         auto httpServer = httpServerFactory->buildHttpServer(
             _config->listenIP(), _config->listenPort(), ioc, ctx);
         httpServer->setDisableSsl(_config->disableSsl());
-        httpServer->setWsUpgradeHandler(
-            [wsServiceWeakPtr](HttpStream::Ptr _httpStream, HttpRequest&& _httpRequest) {
-                auto service = wsServiceWeakPtr.lock();
-                if (service)
-                {
-                    auto session = service->newSession(_httpStream->wsStream());
-                    session->startAsServer(_httpRequest);
-                }
-            });
+        httpServer->setWsUpgradeHandler([wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream,
+                                            HttpRequest&& _httpRequest) {
+            auto service = wsServiceWeakPtr.lock();
+            if (service)
+            {
+                auto session = service->newSession(_httpStream->wsStream());
+                session->startAsServer(_httpRequest);
+            }
+        });
 
         _wsService->setHttpServer(httpServer);
     }
@@ -130,15 +135,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
     }
 
+    builder->setCtx(ctx);
     connector->setCtx(ctx);
-    connector->setDisableSsl(_config->disableSsl());
+    connector->setBuilder(builder);
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
     _wsService->setConfig(_config);
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);
-    _wsService->setWsStreamFactory(wsStreamFactory);
     _wsService->setMessageFactory(messageFactory);
 
     WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
