@@ -39,17 +39,53 @@ using namespace bcos::boostssl::http;
 
 void WsSession::drop(uint32_t _reason)
 {
+    if (m_isDrop)
+    {
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop")
+                                << LOG_DESC("the session has already been dropped")
+                                << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
+        return;
+    }
+
+    m_isDrop = true;
+
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
                             << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
 
-    m_isDrop = true;
+    auto self = std::weak_ptr<WsSession>(shared_from_this());
+    // call callbacks
+    {
+        auto error = std::make_shared<Error>(
+            WsError::SessionDisconnect, "the session has been disconnected");
+
+        boost::shared_lock<boost::shared_mutex> lock(x_callback);
+        for (auto& cbEntry : m_callbacks)
+        {
+            auto callback = cbEntry.second;
+            if (callback->timer)
+            {
+                callback->timer->cancel();
+            }
+
+            WEBSOCKET_SESSION(TRACE)
+                << LOG_DESC("the session has been disconnected") << LOG_KV("seq", cbEntry.first);
+
+            m_threadPool->enqueue(
+                [callback, error]() { callback->respCallBack(error, nullptr, nullptr); });
+        }
+    }
+
+    // clear callbacks
+    {
+        boost::unique_lock<boost::shared_mutex> lock(x_callback);
+        m_callbacks.clear();
+    }
 
     if (m_wsStreamDelegate)
     {
         m_wsStreamDelegate->close();
     }
 
-    auto self = std::weak_ptr<WsSession>(shared_from_this());
     m_threadPool->enqueue([self]() {
         auto session = self.lock();
         if (session)
@@ -320,7 +356,7 @@ WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& 
 {
     CallBack::Ptr callback = nullptr;
     {
-        boost::shared_lock<boost::shared_mutex> lock(x_callback);
+        boost::unique_lock<boost::shared_mutex> lock(x_callback);
         auto it = m_callbacks.find(_seq);
         if (it != m_callbacks.end())
         {
