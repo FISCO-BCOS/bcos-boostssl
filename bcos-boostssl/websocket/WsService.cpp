@@ -25,17 +25,21 @@
 #include <bcos-utilities/Common.h>
 #include <bcos-utilities/ThreadPool.h>
 #include <json/json.h>
-#include <boost/core/ignore_unused.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <string>
 #include <thread>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace bcos;
+using namespace std::chrono_literals;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
@@ -48,39 +52,6 @@ WsService::~WsService()
 {
     stop();
     WEBSOCKET_SERVICE(INFO) << LOG_KV("[DELOBJ][WsService]", this);
-}
-
-void WsService::waitForConnectionEstablish()
-{
-    auto start = std::chrono::high_resolution_clock::now();
-    auto end = start + std::chrono::milliseconds(m_waitConnectFinishTimeout);
-
-    while (true)
-    {
-        // sleep for connection establish
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        auto ss = sessions();
-        if (!ss.empty())
-        {
-            break;
-        }
-
-        if (std::chrono::high_resolution_clock::now() < end)
-        {
-            continue;
-        }
-        else
-        {
-            stop();
-            WEBSOCKET_SERVICE(WARNING) << LOG_BADGE("waitForConnectionEstablish")
-                                       << LOG_DESC("the connection to the server timed out")
-                                       << LOG_KV("timeout", m_waitConnectFinishTimeout);
-
-            BOOST_THROW_EXCEPTION(std::runtime_error("The connection to the server timed out"));
-            return;
-        }
-    }
 }
 
 void WsService::start()
@@ -104,15 +75,10 @@ void WsService::start()
     // start as client
     if (m_config->asClient())
     {
-        if (m_config->connectedPeers())
+        if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
         {
-            reconnect();
-        }
-
-        // Note: block until at least one connection establish
-        if (!m_config->connectedPeers()->empty() && m_waitConnectFinish)
-        {
-            waitForConnectionEstablish();
+            // Connect to peers and wait for at least one connection to be successfully established
+            syncConnectToEndpoints(m_config->connectedPeers());
         }
     }
 
@@ -191,13 +157,6 @@ void WsService::heartbeat()
 {
     auto ss = sessions();
 
-    /*
-    for (auto const& s : ss)
-    {
-        s->ping();
-    }
-    */
-
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("heartbeat") << LOG_DESC("connected nodes")
                             << LOG_KV("count", ss.size());
 
@@ -214,21 +173,100 @@ void WsService::heartbeat()
     });
 }
 
-void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
+std::string WsService::genConnectError(
+    const std::string& _error, const std::string& _host, uint16_t port, bool end)
 {
+    std::string msg = _error;
+    msg += ":/";
+    msg += _host;
+    msg += ":";
+    msg += std::to_string(port);
+    if (!end)
+    {
+        msg += ", ";
+    }
+    return msg;
+}
+
+void WsService::syncConnectToEndpoints(EndPointsConstPtr _peers)
+{
+    std::string errorMsg;
+    std::size_t sucCount = 0;
+
+    auto vPromise = asyncConnectToEndpoints(_peers);
+
+    for (std::size_t i = 0; i < vPromise->size(); ++i)
+    {
+        auto fut = (*vPromise)[i]->get_future();
+
+        auto status = fut.wait_for(std::chrono::milliseconds(m_waitConnectFinishTimeout));
+        switch (status)
+        {
+        case std::future_status::deferred:
+            break;
+        case std::future_status::timeout:
+            errorMsg += genConnectError("connection timeout", (*_peers)[i].host, (*_peers)[i].port,
+                i == vPromise->size() - 1);
+            break;
+        case std::future_status::ready:
+
+            try
+            {
+                auto ec = fut.get();
+                if (ec)
+                {
+                    errorMsg += genConnectError(ec.message(), (*_peers)[i].host, (*_peers)[i].port,
+                        i == vPromise->size() - 1);
+                }
+                else
+                {
+                    sucCount++;
+                }
+            }
+            catch (std::exception& _e)
+            {
+                WEBSOCKET_SERVICE(WARNING)
+                    << LOG_BADGE("syncConnectToEndpoints") << LOG_DESC("future get throw exception")
+                    << LOG_KV("e", _e.what());
+            }
+            break;
+        }
+    }
+
+    if (sucCount == 0)
+    {
+        stop();
+        BOOST_THROW_EXCEPTION(std::runtime_error("[" + boost::to_lower_copy(errorMsg) + "]"));
+        return;
+    }
+}
+
+std::shared_ptr<std::vector<std::shared_ptr<std::promise<boost::beast::error_code>>>>
+WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
+{
+    std::shared_ptr<std::vector<std::shared_ptr<std::promise<boost::beast::error_code>>>> vPromise =
+        std::make_shared<std::vector<std::shared_ptr<std::promise<boost::beast::error_code>>>>();
+
     for (auto const& peer : *_peers)
     {
         std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
 
-        WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("connectOnce") << LOG_DESC("try to connect to peer")
-                                 << LOG_KV("endpoint", connectedEndPoint);
+        /*
+        WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncConnect")
+                                 << LOG_DESC("try to connect to endpoint")
+                                 << LOG_KV("host", peer.host) << LOG_KV("port", peer.port);
+        */
+
+        std::shared_ptr<std::promise<boost::beast::error_code>> p =
+            std::make_shared<std::promise<boost::beast::error_code>>();
+        vPromise->push_back(p);
 
         std::string host = peer.host;
         uint16_t port = peer.port;
 
         auto self = std::weak_ptr<WsService>(shared_from_this());
         m_connector->connectToWsServer(host, port, m_config->disableSsl(),
-            [self, connectedEndPoint](
+            [p, self, connectedEndPoint](
                 boost::beast::error_code _ec, std::shared_ptr<WsStreamDelegate> _wsStreamDelegate) {
                 auto service = self.lock();
                 if (!service)
@@ -236,22 +274,25 @@ void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
                     return;
                 }
 
+                p->set_value(_ec);
+
                 if (_ec)
                 {
                     return;
                 }
 
                 auto session = service->newSession(_wsStreamDelegate);
-                // reset connected endpoint
                 session->setConnectedEndPoint(connectedEndPoint);
                 session->startAsClient();
             });
     }
+
+    return vPromise;
 }
 
 void WsService::reconnect()
 {
-    auto waitConnectedPeers = std::make_shared<std::vector<EndPoint>>();
+    auto connectedPeers = std::make_shared<std::vector<EndPoint>>();
 
     // select all disconnected nodes
     auto peers = m_config->connectedPeers();
@@ -264,12 +305,12 @@ void WsService::reconnect()
             continue;
         }
 
-        waitConnectedPeers->push_back(peer);
+        connectedPeers->push_back(peer);
     }
 
-    if (!waitConnectedPeers->empty())
+    if (!connectedPeers->empty())
     {
-        asyncConnectOnce(waitConnectedPeers);
+        asyncConnectToEndpoints(connectedPeers);
     }
 
     m_reconnect = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
@@ -416,7 +457,7 @@ WsSessions WsService::sessions()
  */
 void WsService::onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session)
 {
-    boost::ignore_unused(_error);
+    std::ignore = _error;
     std::string endpoint = "";
     std::string connectedEndPoint = "";
     if (_session)
@@ -440,7 +481,7 @@ void WsService::onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session
  */
 void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _session)
 {
-    boost::ignore_unused(_error);
+    std::ignore = _error;
     std::string endpoint = "";
     std::string connectedEndPoint = "";
     if (_session)

@@ -32,6 +32,7 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
+// TODO: how to set timeout for connect to wsServer ???
 void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bool _disableSsl,
     std::function<void(boost::beast::error_code, std::shared_ptr<WsStreamDelegate>)> _callback)
 {
@@ -74,6 +75,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
 
             // create raw tcp stream
             auto rawStream = std::make_shared<boost::beast::tcp_stream>(*ioc);
+            // rawStream->expires_after(std::chrono::seconds(30));
 
             // async connect
             rawStream->async_connect(_results,
