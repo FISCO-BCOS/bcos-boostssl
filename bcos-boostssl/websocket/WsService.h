@@ -76,6 +76,7 @@ public:
 
 public:
     void startIocThread();
+    void stopIocThread();
 
 public:
     std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStreamDelegate> _wsStreamDelegate);
@@ -113,11 +114,13 @@ public:
         m_messageFactory = _messageFactory;
     }
 
-    // TODO: for compile
+    // TODO: remove in the future , just for compile
     void setWaitConnectFinish(bool) {}
 
-    int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
+    std::size_t iocThreadCount() const { return m_iocThreadCount; }
+    void setIocThreadCount(std::size_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
 
+    int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
     void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
 
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
@@ -179,7 +182,7 @@ private:
     // ssl context
     std::shared_ptr<boost::asio::ssl::context> m_ctx = nullptr;
     // thread for ioc
-    std::shared_ptr<std::thread> m_iocThread;
+    std::shared_ptr<std::vector<std::thread>> m_iocThreads;
     // reconnect timer
     std::shared_ptr<boost::asio::deadline_timer> m_reconnect;
     // heartbeat timer
@@ -188,6 +191,7 @@ private:
     std::shared_ptr<bcos::boostssl::http::HttpServer> m_httpServer;
 
 private:
+    std::size_t m_iocThreadCount;
     // mutex for m_sessions
     mutable boost::shared_mutex x_mutex;
     // all active sessions
@@ -200,7 +204,7 @@ private:
     // disconnected handlers, the handers will be called when ws session
     // disconnected
     std::vector<DisconnectHandler> m_disconnectHandlers;
-    // disconnected handlers, the handers will be called when ws session
+    // handshake handlers, the handers will be called when ws session
     // disconnected
     std::vector<HandshakeHandler> m_handshakeHandlers;
 };

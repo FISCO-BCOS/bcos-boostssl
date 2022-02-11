@@ -49,7 +49,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
     auto ioc = std::make_shared<boost::asio::io_context>();
-    auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(*ioc);
+    auto resolver =
+        std::make_shared<boost::asio::ip::tcp::resolver>((boost::asio::make_strand(*ioc)));
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
     auto builder = std::make_shared<WsStreamDelegateBuilder>();
 
@@ -59,7 +60,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     {
         threadPoolSize = 16;
     }
-    auto threadPool = std::make_shared<ThreadPool>("t_ws", threadPoolSize);
+    auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
@@ -141,6 +142,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
+    _wsService->setIocThreadCount(threadPoolSize);
     _wsService->setConfig(_config);
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);
@@ -154,6 +156,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                                 << LOG_KV("server", _config->asServer())
                                 << LOG_KV("client", _config->asClient())
                                 << LOG_KV("threadPoolSize", _config->threadPoolSize())
+                                << LOG_KV("iocThreadCount", _config->iocThreadCount())
                                 << LOG_KV("maxMsgSize", _config->maxMsgSize())
                                 << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
                                 << LOG_KV("connected peers", _config->connectedPeers() ?

@@ -80,6 +80,8 @@ void WsService::start()
             // Connect to peers and wait for at least one connection to be successfully established
             syncConnectToEndpoints(m_config->connectedPeers());
         }
+
+        reconnect();
     }
 
     // heartbeat
@@ -118,39 +120,72 @@ void WsService::stop()
     {
         m_heartbeat->cancel();
     }
-    if (m_iocThread->get_id() != std::this_thread::get_id())
-    {
-        m_iocThread->join();
-        m_iocThread.reset();
-    }
-    else
-    {
-        m_iocThread->detach();
-    }
+
+    stopIocThread();
+
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
 }
 
 void WsService::startIocThread()
 {
-    m_iocThread = std::make_shared<std::thread>([&] {
-        while (m_running)
+    std::size_t threads =
+        m_iocThreadCount > 0 ? m_iocThreadCount : std::thread::hardware_concurrency();
+    if (!threads)
+    {
+        threads = 4;
+    }
+
+    m_iocThreads = std::make_shared<std::vector<std::thread>>();
+    m_iocThreads->reserve(threads);
+
+    for (std::size_t i = 0; i < threads; i++)
+    {
+        m_iocThreads->emplace_back([&, i] {
+            bcos::pthread_setThreadName("t_ws_ioc_" + std::to_string(i));
+            while (m_running)
+            {
+                try
+                {
+                    m_ioc->run();
+                }
+                catch (const std::exception& e)
+                {
+                    WEBSOCKET_SERVICE(WARNING)
+                        << LOG_BADGE("startIocThread") << LOG_DESC("Exception in IOC Thread:")
+                        << boost::diagnostic_information(e);
+                }
+
+                if (m_running)
+                {
+                    m_ioc->restart();
+                }
+            }
+
+            WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread") << "IOC thread exit";
+        });
+    }
+
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread")
+                            << LOG_KV("ioc thread count", m_iocThreads->size());
+}
+
+void WsService::stopIocThread()
+{
+    // stop io threads
+    if (m_iocThreads && !m_iocThreads->empty())
+    {
+        for (auto& t : *m_iocThreads)
         {
-            try
+            if (t.get_id() != std::this_thread::get_id())
             {
-                m_ioc->run();
+                t.join();
             }
-            catch (const std::exception& e)
+            else
             {
-                WEBSOCKET_SERVICE(WARNING)
-                    << LOG_BADGE("startIocThread") << LOG_DESC("Exception in IOC Thread:")
-                    << boost::diagnostic_information(e);
+                t.detach();
             }
-
-            m_ioc->reset();
         }
-
-        WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread") << "IOC thread exit";
-    });
+    }
 }
 
 void WsService::heartbeat()
@@ -313,9 +348,10 @@ void WsService::reconnect()
         asyncConnectToEndpoints(connectedPeers);
     }
 
+    auto self = std::weak_ptr<WsService>(shared_from_this());
     m_reconnect = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
         boost::posix_time::milliseconds(m_config->reconnectPeriod()));
-    auto self = std::weak_ptr<WsService>(shared_from_this());
+
     m_reconnect->async_wait([self](const boost::system::error_code&) {
         auto service = self.lock();
         if (!service)

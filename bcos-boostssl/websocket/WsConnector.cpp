@@ -22,6 +22,7 @@
 #include <bcos-boostssl/websocket/WsConnector.h>
 #include <bcos-boostssl/websocket/WsTools.h>
 #include <boost/asio/error.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/beast/websocket/stream_base.hpp>
 #include <boost/thread/thread.hpp>
 #include <cstddef>
@@ -74,7 +75,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                 << LOG_KV("endPoint", endpoint);
 
             // create raw tcp stream
-            auto rawStream = std::make_shared<boost::beast::tcp_stream>(*ioc);
+            auto rawStream =
+                std::make_shared<boost::beast::tcp_stream>(boost::asio::make_strand(*ioc));
             // rawStream->expires_after(std::chrono::seconds(30));
 
             // async connect

@@ -77,6 +77,9 @@ private:
     // thread pool size
     uint32_t m_threadPoolSize{4};
 
+    // thread count for ioc thread
+    uint32_t m_iocThreadCount{4};
+
     // time out for send message
     int32_t m_sendMsgTimeout{DEFAULT_MESSAGE_TIMEOUT_MS};
 
@@ -126,6 +129,9 @@ public:
 
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
     void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
+
+    uint32_t iocThreadCount() const { return m_iocThreadCount; }
+    void setIocThreadCount(uint32_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
 
     uint32_t threadPoolSize() const
     {
