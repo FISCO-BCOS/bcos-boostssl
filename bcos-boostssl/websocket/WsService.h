@@ -113,6 +113,9 @@ public:
         m_messageFactory = _messageFactory;
     }
 
+    // TODO: for compile
+    void setWaitConnectFinish(bool) {}
+
     int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
 
     void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }

@@ -32,6 +32,9 @@
 #include <string>
 #include <utility>
 
+#define MESSAGE_SEND_DELAY_REPORT_MS (10000)
+#define MAX_MESSAGE_SEND_DELAY_MS (5000)
+
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
@@ -225,15 +228,49 @@ void WsSession::onRead(boost::system::error_code _ec, std::size_t)
 
 void WsSession::onWritePacket()
 {
-    boost::unique_lock<boost::shared_mutex> lock(x_queue);
-    // remove the front ele from the queue, it has been sent
-    m_queue.erase(m_queue.begin());
-
-    // send the next message if any
-    if (!m_queue.empty())
+    std::shared_ptr<Message> msg = nullptr;
+    std::size_t nMsgQueueSize = 0;
     {
-        asyncWrite();
+        boost::unique_lock<boost::shared_mutex> lock(x_queue);
+        msg = m_queue.front();
+        // remove the front ele from the queue, it has been sent
+        m_queue.erase(m_queue.begin());
+        nMsgQueueSize = m_queue.size();
+
+        // send the next message if any
+        if (!m_queue.empty())
+        {
+            asyncWrite();
+        }
     }
+
+    // Note: check whether there is a large delay in sending
+#if 1
+    auto now = std::chrono::high_resolution_clock::now();
+    auto delayMS =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - msg->incomeTimePoint).count();
+
+    if (delayMS >= MAX_MESSAGE_SEND_DELAY_MS)
+    {
+        m_msgDelayCount++;
+    }
+
+    auto reportMS =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_msgDelayReportMS).count();
+    if (reportMS >= MESSAGE_SEND_DELAY_REPORT_MS)
+    {
+        if (m_msgDelayCount > 0)
+        {
+            WEBSOCKET_SESSION(WARNING)
+                << LOG_BADGE("onWrite") << LOG_DESC("message sending in large delay")
+                << LOG_KV("endpoint", endPoint()) << LOG_KV("nDelayCount", m_msgDelayCount)
+                << LOG_KV("nMsgQueueSize", nMsgQueueSize) << LOG_KV("timeInterval", reportMS);
+        }
+
+        m_msgDelayCount = 0;
+        m_msgDelayReportMS = now;
+    }
+#endif
 }
 
 void WsSession::asyncWrite()
@@ -251,7 +288,7 @@ void WsSession::asyncWrite()
         auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
         m_wsStreamDelegate->asyncWrite(
-            *m_queue.front(), [session](boost::beast::error_code _ec, std::size_t) {
+            *(m_queue.front()->buffer), [session](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
                     WEBSOCKET_SESSION(WARNING)
@@ -273,12 +310,17 @@ void WsSession::asyncWrite()
     }
 }
 
-void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
+void WsSession::onWrite(const std::string& _seq, std::shared_ptr<bytes> _buffer)
 {
+    auto msg = std::make_shared<Message>();
+    msg->seq = _seq;
+    msg->buffer = _buffer;
+    msg->incomeTimePoint = std::chrono::high_resolution_clock::now();
+
     std::unique_lock<boost::shared_mutex> lock(x_queue);
     auto isEmpty = m_queue.empty();
     // data to be sent is always enqueue first
-    m_queue.push_back(_buffer);
+    m_queue.push_back(msg);
 
     // no writing, send it
     if (isEmpty)
@@ -342,7 +384,7 @@ void WsSession::asyncSendMessage(
 
     {
         boost::asio::post(*m_ioc,
-            boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), buffer));
+            boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), seq, buffer));
     }
 }
 
