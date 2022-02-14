@@ -331,37 +331,38 @@ WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
 
 void WsService::reconnect()
 {
-    auto connectedPeers = std::make_shared<std::vector<EndPoint>>();
-
-    // select all disconnected nodes
-    auto peers = m_config->connectedPeers();
-    for (auto const& peer : *peers)
-    {
-        std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
-        auto session = getSession(connectedEndPoint);
-        if (session)
-        {
-            continue;
-        }
-
-        connectedPeers->push_back(peer);
-    }
-
-    if (!connectedPeers->empty())
-    {
-        asyncConnectToEndpoints(connectedPeers);
-    }
-
     auto self = std::weak_ptr<WsService>(shared_from_this());
     m_reconnect = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
         boost::posix_time::milliseconds(m_config->reconnectPeriod()));
 
-    m_reconnect->async_wait([self](const boost::system::error_code&) {
+    m_reconnect->async_wait([self, this](const boost::system::error_code&) {
         auto service = self.lock();
         if (!service)
         {
             return;
         }
+
+        auto connectedPeers = std::make_shared<std::vector<EndPoint>>();
+
+        // select all disconnected nodes
+        auto peers = m_config->connectedPeers();
+        for (auto const& peer : *peers)
+        {
+            std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
+            auto session = getSession(connectedEndPoint);
+            if (session)
+            {
+                continue;
+            }
+
+            connectedPeers->push_back(peer);
+        }
+
+        if (!connectedPeers->empty())
+        {
+            asyncConnectToEndpoints(connectedPeers);
+        }
+
         service->reconnect();
     });
 }

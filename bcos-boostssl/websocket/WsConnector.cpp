@@ -67,8 +67,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_resolve failed")
                     << LOG_KV("error", _ec) << LOG_KV("errorMessage", _ec.message())
                     << LOG_KV("endpoint", endpoint);
-                connector->erasePendingConns(endpoint);
                 _callback(_ec, "", nullptr);
+                connector->erasePendingConns(endpoint);
                 return;
             }
 
@@ -91,8 +91,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                         WEBSOCKET_CONNECTOR(WARNING)
                             << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect failed")
                             << LOG_KV("error", _ec.message()) << LOG_KV("endpoint", endpoint);
-                        connector->erasePendingConns(endpoint);
                         _callback(_ec, "", nullptr);
+                        connector->erasePendingConns(endpoint);
                         return;
                     }
 
@@ -112,8 +112,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                 << LOG_BADGE("connectToWsServer")
                                 << LOG_DESC("ssl async_handshake failed") << LOG_KV("host", _host)
                                 << LOG_KV("port", _port) << LOG_KV("error", _ec.message());
-                            connector->erasePendingConns(endpoint);
                             _callback(_ec, " ssl handshake failed", nullptr);
+                            connector->erasePendingConns(endpoint);
                             return;
                         }
 
@@ -138,8 +138,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                         << LOG_DESC("websocket async_handshake failed")
                                         << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                                         << LOG_KV("port", _port);
-                                    connector->erasePendingConns(endpoint);
                                     _callback(_ec, "", nullptr);
+                                    connector->erasePendingConns(endpoint);
                                     return;
                                 }
 
@@ -147,9 +147,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                     << LOG_BADGE("connectToWsServer")
                                     << LOG_DESC("websocket handshake successfully")
                                     << LOG_KV("host", _host) << LOG_KV("port", _port);
-
-                                connector->erasePendingConns(endpoint);
                                 _callback(_ec, "", wsStreamDelegate);
+                                connector->erasePendingConns(endpoint);
                             });
                     });
                 });
