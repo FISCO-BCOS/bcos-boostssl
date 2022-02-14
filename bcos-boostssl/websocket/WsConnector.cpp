@@ -35,7 +35,9 @@ using namespace bcos::boostssl::ws;
 
 // TODO: how to set timeout for connect to wsServer ???
 void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bool _disableSsl,
-    std::function<void(boost::beast::error_code, std::shared_ptr<WsStreamDelegate>)> _callback)
+    std::function<void(boost::beast::error_code, const std::string& _extErrorMsg,
+        std::shared_ptr<WsStreamDelegate>)>
+        _callback)
 {
     auto ioc = m_ioc;
     auto ctx = m_ctx;
@@ -47,7 +49,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
         WEBSOCKET_CONNECTOR(WARNING)
             << LOG_BADGE("connectToWsServer") << LOG_DESC("insertPendingConns")
             << LOG_KV("endpoint", endpoint);
-        _callback(boost::beast::error_code(boost::asio::error::would_block), nullptr);
+        _callback(boost::beast::error_code(boost::asio::error::would_block), "", nullptr);
         return;
     }
 
@@ -66,7 +68,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                     << LOG_KV("error", _ec) << LOG_KV("errorMessage", _ec.message())
                     << LOG_KV("endpoint", endpoint);
                 connector->erasePendingConns(endpoint);
-                _callback(_ec, nullptr);
+                _callback(_ec, "", nullptr);
                 return;
             }
 
@@ -90,7 +92,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                             << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect failed")
                             << LOG_KV("error", _ec.message()) << LOG_KV("endpoint", endpoint);
                         connector->erasePendingConns(endpoint);
-                        _callback(_ec, nullptr);
+                        _callback(_ec, "", nullptr);
                         return;
                     }
 
@@ -111,7 +113,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                 << LOG_DESC("ssl async_handshake failed") << LOG_KV("host", _host)
                                 << LOG_KV("port", _port) << LOG_KV("error", _ec.message());
                             connector->erasePendingConns(endpoint);
-                            _callback(_ec, nullptr);
+                            _callback(_ec, " ssl handshake failed", nullptr);
                             return;
                         }
 
@@ -137,7 +139,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                         << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                                         << LOG_KV("port", _port);
                                     connector->erasePendingConns(endpoint);
-                                    _callback(_ec, nullptr);
+                                    _callback(_ec, "", nullptr);
                                     return;
                                 }
 
@@ -147,7 +149,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                     << LOG_KV("host", _host) << LOG_KV("port", _port);
 
                                 connector->erasePendingConns(endpoint);
-                                _callback(_ec, wsStreamDelegate);
+                                _callback(_ec, "", wsStreamDelegate);
                             });
                     });
                 });

@@ -67,7 +67,7 @@ public:
     void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
     void asyncWrite();
-    void onWrite(const std::string& _seq, std::shared_ptr<bcos::bytes> _buffer);
+    void onWrite(std::shared_ptr<bcos::bytes> _buffer);
 
     // async read
     void onReadPacket(boost::beast::flat_buffer& _buffer);
@@ -200,7 +200,6 @@ private:
 
     struct Message
     {
-        std::string seq;
         std::shared_ptr<bcos::bytes> buffer;
         std::chrono::time_point<std::chrono::high_resolution_clock> incomeTimePoint;
     };

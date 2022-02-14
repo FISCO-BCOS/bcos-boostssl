@@ -55,7 +55,9 @@ public:
      * @return void:
      */
     void connectToWsServer(const std::string& _host, uint16_t _port, bool _disableSsl,
-        std::function<void(boost::beast::error_code, std::shared_ptr<WsStreamDelegate>)> _callback);
+        std::function<void(boost::beast::error_code, const std::string& extErrorMsg,
+            std::shared_ptr<WsStreamDelegate>)>
+            _callback);
 
 public:
     bool erasePendingConns(const std::string& _nodeIPEndpoint)

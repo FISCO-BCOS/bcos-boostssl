@@ -67,7 +67,8 @@ public:
     virtual void reconnect();
     virtual void heartbeat();
 
-    std::shared_ptr<std::vector<std::shared_ptr<std::promise<boost::beast::error_code>>>>
+    std::shared_ptr<std::vector<
+        std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
     asyncConnectToEndpoints(EndPointsConstPtr _peers);
 
     std::string genConnectError(

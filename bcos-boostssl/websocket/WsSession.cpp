@@ -32,7 +32,7 @@
 #include <string>
 #include <utility>
 
-#define MESSAGE_SEND_DELAY_REPORT_MS (10000)
+#define MESSAGE_SEND_DELAY_REPORT_MS (5000)
 #define MAX_MESSAGE_SEND_DELAY_MS (5000)
 
 using namespace bcos;
@@ -310,10 +310,9 @@ void WsSession::asyncWrite()
     }
 }
 
-void WsSession::onWrite(const std::string& _seq, std::shared_ptr<bytes> _buffer)
+void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
 {
     auto msg = std::make_shared<Message>();
-    msg->seq = _seq;
     msg->buffer = _buffer;
     msg->incomeTimePoint = std::chrono::high_resolution_clock::now();
 
@@ -384,7 +383,7 @@ void WsSession::asyncSendMessage(
 
     {
         boost::asio::post(*m_ioc,
-            boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), seq, buffer));
+            boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), buffer));
     }
 }
 

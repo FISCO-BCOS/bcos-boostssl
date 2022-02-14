@@ -247,11 +247,13 @@ void WsService::syncConnectToEndpoints(EndPointsConstPtr _peers)
 
             try
             {
-                auto ec = fut.get();
-                if (ec)
+                auto result = fut.get();
+                if (result.first)
                 {
-                    errorMsg += genConnectError(ec.message(), (*_peers)[i].host, (*_peers)[i].port,
-                        i == vPromise->size() - 1);
+                    errorMsg += genConnectError(result.second.empty() ?
+                                                    result.first.message() :
+                                                    result.second + " " + result.first.message(),
+                        (*_peers)[i].host, (*_peers)[i].port, i == vPromise->size() - 1);
                 }
                 else
                 {
@@ -276,11 +278,12 @@ void WsService::syncConnectToEndpoints(EndPointsConstPtr _peers)
     }
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<std::promise<boost::beast::error_code>>>>
+std::shared_ptr<
+    std::vector<std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
 WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
 {
-    std::shared_ptr<std::vector<std::shared_ptr<std::promise<boost::beast::error_code>>>> vPromise =
-        std::make_shared<std::vector<std::shared_ptr<std::promise<boost::beast::error_code>>>>();
+    auto vPromise = std::make_shared<std::vector<
+        std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>();
 
     for (auto const& peer : *_peers)
     {
@@ -292,8 +295,7 @@ WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
                                  << LOG_KV("host", peer.host) << LOG_KV("port", peer.port);
         */
 
-        std::shared_ptr<std::promise<boost::beast::error_code>> p =
-            std::make_shared<std::promise<boost::beast::error_code>>();
+        auto p = std::make_shared<std::promise<std::pair<boost::beast::error_code, std::string>>>();
         vPromise->push_back(p);
 
         std::string host = peer.host;
@@ -301,15 +303,17 @@ WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
 
         auto self = std::weak_ptr<WsService>(shared_from_this());
         m_connector->connectToWsServer(host, port, m_config->disableSsl(),
-            [p, self, connectedEndPoint](
-                boost::beast::error_code _ec, std::shared_ptr<WsStreamDelegate> _wsStreamDelegate) {
+            [p, self, connectedEndPoint](boost::beast::error_code _ec,
+                const std::string& _extErrorMsg,
+                std::shared_ptr<WsStreamDelegate> _wsStreamDelegate) {
                 auto service = self.lock();
                 if (!service)
                 {
                     return;
                 }
 
-                p->set_value(_ec);
+                auto futResult = std::make_pair(_ec, _extErrorMsg);
+                p->set_value(futResult);
 
                 if (_ec)
                 {
