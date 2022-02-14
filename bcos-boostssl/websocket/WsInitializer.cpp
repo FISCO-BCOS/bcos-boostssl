@@ -47,19 +47,20 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         messageFactory = std::make_shared<WsMessageFactory>();
     }
 
-    auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
-    auto ioc = std::make_shared<boost::asio::io_context>();
-    auto resolver =
-        std::make_shared<boost::asio::ip::tcp::resolver>((boost::asio::make_strand(*ioc)));
-    auto connector = std::make_shared<WsConnector>(resolver, ioc);
-    auto builder = std::make_shared<WsStreamDelegateBuilder>();
-
     auto threadPoolSize = _config->threadPoolSize() > 0 ? _config->threadPoolSize() :
                                                           std::thread::hardware_concurrency();
     if (!threadPoolSize)
     {
         threadPoolSize = 16;
     }
+
+    uint32_t iocThreadCount = threadPoolSize;
+    auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
+    auto ioc = std::make_shared<boost::asio::io_context>(iocThreadCount);
+    auto resolver =
+        std::make_shared<boost::asio::ip::tcp::resolver>((boost::asio::make_strand(*ioc)));
+    auto connector = std::make_shared<WsConnector>(resolver, ioc);
+    auto builder = std::make_shared<WsStreamDelegateBuilder>();
     auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
@@ -142,7 +143,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
-    _wsService->setIocThreadCount(threadPoolSize);
+    _wsService->setIocThreadCount(iocThreadCount);
     _wsService->setConfig(_config);
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);

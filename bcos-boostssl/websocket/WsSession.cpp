@@ -340,6 +340,19 @@ void WsSession::asyncSendMessage(
     std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
 {
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+
+    if (!isConnected())
+    {
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("asyncSendMessage") << LOG_DESC("the session has been disconnected")
+            << LOG_KV("seq", seq) << LOG_KV("endpoint", endPoint());
+
+        auto error = std::make_shared<Error>(
+            WsError::SessionDisconnect, "the session has been disconnected");
+        _respFunc(error, nullptr, nullptr);
+        return;
+    }
+
     // check if message size overflow
     if ((int64_t)_msg->data()->size() > (int64_t)maxWriteMsgSize())
     {
@@ -348,7 +361,8 @@ void WsSession::asyncSendMessage(
 
         WEBSOCKET_SESSION(WARNING)
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("send message size overflow")
-            << LOG_KV("seq", seq) << LOG_KV("msgSize", _msg->data()->size())
+            << LOG_KV("endpoint", endPoint()) << LOG_KV("seq", seq)
+            << LOG_KV("msgSize", _msg->data()->size())
             << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
         return;
     }
@@ -365,7 +379,7 @@ void WsSession::asyncSendMessage(
         {
             // create new timer to handle timeout
             auto timer = std::make_shared<boost::asio::deadline_timer>(
-                *m_ioc, boost::posix_time::milliseconds(timeout));
+                boost::asio::make_strand(*m_ioc), boost::posix_time::milliseconds(timeout));
 
             callback->timer = timer;
             auto self = std::weak_ptr<WsSession>(shared_from_this());
@@ -382,7 +396,7 @@ void WsSession::asyncSendMessage(
     }
 
     {
-        boost::asio::post(*m_ioc,
+        boost::asio::post(m_wsStreamDelegate->tcpStream().get_executor(),
             boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), buffer));
     }
 }
