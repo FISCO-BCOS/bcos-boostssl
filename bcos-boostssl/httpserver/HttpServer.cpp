@@ -110,7 +110,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     {
         HTTP_SERVER(WARNING) << LOG_BADGE("accept") << LOG_KV("error", ec)
                              << LOG_KV("message", ec.message());
-        return;
+        return doAccept();
     }
 
     auto localEndpoint = socket.local_endpoint();

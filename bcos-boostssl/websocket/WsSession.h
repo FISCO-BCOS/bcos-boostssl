@@ -198,9 +198,20 @@ private:
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
 
+    struct Message
+    {
+        std::shared_ptr<bcos::bytes> buffer;
+        std::chrono::time_point<std::chrono::high_resolution_clock> incomeTimePoint;
+    };
+
     // send message queue
     mutable boost::shared_mutex x_queue;
-    std::vector<std::shared_ptr<bcos::bytes>> m_queue;
+    std::vector<std::shared_ptr<Message>> m_queue;
+
+    // for send performance statistics
+    std::atomic<uint32_t> m_msgDelayCount = 0;
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_msgDelayReportMS =
+        std::chrono::high_resolution_clock::now();
 };
 
 }  // namespace ws

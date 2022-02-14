@@ -25,17 +25,21 @@
 #include <bcos-utilities/Common.h>
 #include <bcos-utilities/ThreadPool.h>
 #include <json/json.h>
-#include <boost/core/ignore_unused.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <string>
 #include <thread>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace bcos;
+using namespace std::chrono_literals;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
@@ -48,39 +52,6 @@ WsService::~WsService()
 {
     stop();
     WEBSOCKET_SERVICE(INFO) << LOG_KV("[DELOBJ][WsService]", this);
-}
-
-void WsService::waitForConnectionEstablish()
-{
-    auto start = std::chrono::high_resolution_clock::now();
-    auto end = start + std::chrono::milliseconds(m_waitConnectFinishTimeout);
-
-    while (true)
-    {
-        // sleep for connection establish
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        auto ss = sessions();
-        if (!ss.empty())
-        {
-            break;
-        }
-
-        if (std::chrono::high_resolution_clock::now() < end)
-        {
-            continue;
-        }
-        else
-        {
-            stop();
-            WEBSOCKET_SERVICE(WARNING) << LOG_BADGE("waitForConnectionEstablish")
-                                       << LOG_DESC("the connection to the server timed out")
-                                       << LOG_KV("timeout", m_waitConnectFinishTimeout);
-
-            BOOST_THROW_EXCEPTION(std::runtime_error("The connection to the server timed out"));
-            return;
-        }
-    }
 }
 
 void WsService::start()
@@ -104,16 +75,13 @@ void WsService::start()
     // start as client
     if (m_config->asClient())
     {
-        if (m_config->connectedPeers())
+        if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
         {
-            reconnect();
+            // Connect to peers and wait for at least one connection to be successfully established
+            syncConnectToEndpoints(m_config->connectedPeers());
         }
 
-        // Note: block until at least one connection establish
-        if (!m_config->connectedPeers()->empty() && m_waitConnectFinish)
-        {
-            waitForConnectionEstablish();
-        }
+        reconnect();
     }
 
     // heartbeat
@@ -152,51 +120,77 @@ void WsService::stop()
     {
         m_heartbeat->cancel();
     }
-    if (m_iocThread->get_id() != std::this_thread::get_id())
-    {
-        m_iocThread->join();
-        m_iocThread.reset();
-    }
-    else
-    {
-        m_iocThread->detach();
-    }
+
+    stopIocThread();
+
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
 }
 
 void WsService::startIocThread()
 {
-    m_iocThread = std::make_shared<std::thread>([&] {
-        while (m_running)
+    std::size_t threads =
+        m_iocThreadCount > 0 ? m_iocThreadCount : std::thread::hardware_concurrency();
+    if (!threads)
+    {
+        threads = 4;
+    }
+
+    m_iocThreads = std::make_shared<std::vector<std::thread>>();
+    m_iocThreads->reserve(threads);
+
+    for (std::size_t i = 0; i < threads; i++)
+    {
+        m_iocThreads->emplace_back([&, i] {
+            bcos::pthread_setThreadName("t_ws_ioc_" + std::to_string(i));
+            while (m_running)
+            {
+                try
+                {
+                    m_ioc->run();
+                }
+                catch (const std::exception& e)
+                {
+                    WEBSOCKET_SERVICE(WARNING)
+                        << LOG_BADGE("startIocThread") << LOG_DESC("Exception in IOC Thread:")
+                        << boost::diagnostic_information(e);
+                }
+
+                if (m_running)
+                {
+                    m_ioc->restart();
+                }
+            }
+
+            WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread") << "IOC thread exit";
+        });
+    }
+
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread")
+                            << LOG_KV("ioc thread count", m_iocThreads->size());
+}
+
+void WsService::stopIocThread()
+{
+    // stop io threads
+    if (m_iocThreads && !m_iocThreads->empty())
+    {
+        for (auto& t : *m_iocThreads)
         {
-            try
+            if (t.get_id() != std::this_thread::get_id())
             {
-                m_ioc->run();
+                t.join();
             }
-            catch (const std::exception& e)
+            else
             {
-                WEBSOCKET_SERVICE(WARNING)
-                    << LOG_BADGE("startIocThread") << LOG_DESC("Exception in IOC Thread:")
-                    << boost::diagnostic_information(e);
+                t.detach();
             }
-
-            m_ioc->reset();
         }
-
-        WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread") << "IOC thread exit";
-    });
+    }
 }
 
 void WsService::heartbeat()
 {
     auto ss = sessions();
-
-    /*
-    for (auto const& s : ss)
-    {
-        s->ping();
-    }
-    */
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("heartbeat") << LOG_DESC("connected nodes")
                             << LOG_KV("count", ss.size());
@@ -214,27 +208,112 @@ void WsService::heartbeat()
     });
 }
 
-void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
+std::string WsService::genConnectError(
+    const std::string& _error, const std::string& _host, uint16_t port, bool end)
 {
+    std::string msg = _error;
+    msg += ":/";
+    msg += _host;
+    msg += ":";
+    msg += std::to_string(port);
+    if (!end)
+    {
+        msg += ", ";
+    }
+    return msg;
+}
+
+void WsService::syncConnectToEndpoints(EndPointsConstPtr _peers)
+{
+    std::string errorMsg;
+    std::size_t sucCount = 0;
+
+    auto vPromise = asyncConnectToEndpoints(_peers);
+
+    for (std::size_t i = 0; i < vPromise->size(); ++i)
+    {
+        auto fut = (*vPromise)[i]->get_future();
+
+        auto status = fut.wait_for(std::chrono::milliseconds(m_waitConnectFinishTimeout));
+        switch (status)
+        {
+        case std::future_status::deferred:
+            break;
+        case std::future_status::timeout:
+            errorMsg += genConnectError("connection timeout", (*_peers)[i].host, (*_peers)[i].port,
+                i == vPromise->size() - 1);
+            break;
+        case std::future_status::ready:
+
+            try
+            {
+                auto result = fut.get();
+                if (result.first)
+                {
+                    errorMsg += genConnectError(result.second.empty() ?
+                                                    result.first.message() :
+                                                    result.second + " " + result.first.message(),
+                        (*_peers)[i].host, (*_peers)[i].port, i == vPromise->size() - 1);
+                }
+                else
+                {
+                    sucCount++;
+                }
+            }
+            catch (std::exception& _e)
+            {
+                WEBSOCKET_SERVICE(WARNING)
+                    << LOG_BADGE("syncConnectToEndpoints") << LOG_DESC("future get throw exception")
+                    << LOG_KV("e", _e.what());
+            }
+            break;
+        }
+    }
+
+    if (sucCount == 0)
+    {
+        stop();
+        BOOST_THROW_EXCEPTION(std::runtime_error("[" + boost::to_lower_copy(errorMsg) + "]"));
+        return;
+    }
+}
+
+std::shared_ptr<
+    std::vector<std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
+WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
+{
+    auto vPromise = std::make_shared<std::vector<
+        std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>();
+
     for (auto const& peer : *_peers)
     {
         std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
 
-        WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("connectOnce") << LOG_DESC("try to connect to peer")
-                                 << LOG_KV("endpoint", connectedEndPoint);
+        /*
+        WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncConnect")
+                                 << LOG_DESC("try to connect to endpoint")
+                                 << LOG_KV("host", peer.host) << LOG_KV("port", peer.port);
+        */
+
+        auto p = std::make_shared<std::promise<std::pair<boost::beast::error_code, std::string>>>();
+        vPromise->push_back(p);
 
         std::string host = peer.host;
         uint16_t port = peer.port;
 
         auto self = std::weak_ptr<WsService>(shared_from_this());
         m_connector->connectToWsServer(host, port, m_config->disableSsl(),
-            [self, connectedEndPoint](
-                boost::beast::error_code _ec, std::shared_ptr<WsStreamDelegate> _wsStreamDelegate) {
+            [p, self, connectedEndPoint](boost::beast::error_code _ec,
+                const std::string& _extErrorMsg,
+                std::shared_ptr<WsStreamDelegate> _wsStreamDelegate) {
                 auto service = self.lock();
                 if (!service)
                 {
                     return;
                 }
+
+                auto futResult = std::make_pair(_ec, _extErrorMsg);
+                p->set_value(futResult);
 
                 if (_ec)
                 {
@@ -242,45 +321,48 @@ void WsService::asyncConnectOnce(EndPointsConstPtr _peers)
                 }
 
                 auto session = service->newSession(_wsStreamDelegate);
-                // reset connected endpoint
                 session->setConnectedEndPoint(connectedEndPoint);
                 session->startAsClient();
             });
     }
+
+    return vPromise;
 }
 
 void WsService::reconnect()
 {
-    auto waitConnectedPeers = std::make_shared<std::vector<EndPoint>>();
-
-    // select all disconnected nodes
-    auto peers = m_config->connectedPeers();
-    for (auto const& peer : *peers)
-    {
-        std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
-        auto session = getSession(connectedEndPoint);
-        if (session)
-        {
-            continue;
-        }
-
-        waitConnectedPeers->push_back(peer);
-    }
-
-    if (!waitConnectedPeers->empty())
-    {
-        asyncConnectOnce(waitConnectedPeers);
-    }
-
+    auto self = std::weak_ptr<WsService>(shared_from_this());
     m_reconnect = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
         boost::posix_time::milliseconds(m_config->reconnectPeriod()));
-    auto self = std::weak_ptr<WsService>(shared_from_this());
-    m_reconnect->async_wait([self](const boost::system::error_code&) {
+
+    m_reconnect->async_wait([self, this](const boost::system::error_code&) {
         auto service = self.lock();
         if (!service)
         {
             return;
         }
+
+        auto connectedPeers = std::make_shared<std::vector<EndPoint>>();
+
+        // select all disconnected nodes
+        auto peers = m_config->connectedPeers();
+        for (auto const& peer : *peers)
+        {
+            std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
+            auto session = getSession(connectedEndPoint);
+            if (session)
+            {
+                continue;
+            }
+
+            connectedPeers->push_back(peer);
+        }
+
+        if (!connectedPeers->empty())
+        {
+            asyncConnectToEndpoints(connectedPeers);
+        }
+
         service->reconnect();
     });
 }
@@ -416,7 +498,7 @@ WsSessions WsService::sessions()
  */
 void WsService::onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session)
 {
-    boost::ignore_unused(_error);
+    std::ignore = _error;
     std::string endpoint = "";
     std::string connectedEndPoint = "";
     if (_session)
@@ -440,7 +522,7 @@ void WsService::onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session
  */
 void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _session)
 {
-    boost::ignore_unused(_error);
+    std::ignore = _error;
     std::string endpoint = "";
     std::string connectedEndPoint = "";
     if (_session)
