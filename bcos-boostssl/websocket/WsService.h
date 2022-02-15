@@ -48,7 +48,7 @@ namespace boostssl
 namespace ws
 {
 using WsSessions = std::vector<std::shared_ptr<WsSession>>;
-using MsgHandler = std::function<void(std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
+using MsgHandler = std::function<void(std::shared_ptr<MessageFace>, std::shared_ptr<WsSession>)>;
 using ConnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using DisconnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using HandshakeHandler = std::function<void(
@@ -91,7 +91,7 @@ public:
     virtual void onDisconnect(bcos::Error::Ptr _error, std::shared_ptr<WsSession> _session);
 
     virtual void onRecvMessage(
-        std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session);
+        std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsSession> _session);
 
     virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());

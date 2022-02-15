@@ -85,7 +85,7 @@ public:
      * @param _respCallback: callback
      * @return void:
      */
-    virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(),
+    virtual void asyncSendMessage(std::shared_ptr<MessageFace> _msg, Options _options = Options(),
         RespCallBack _respCallback = RespCallBack());
 
 public:

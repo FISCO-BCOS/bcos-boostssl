@@ -50,6 +50,16 @@ public:
     virtual int64_t decode(bytesConstRef _buffer) = 0;
 };
 
+class MessageFaceFactory
+{
+public:
+    using Ptr = std::shared_ptr<MessageFaceFactory>;
+
+public:
+    virtual ~MessageFaceFactory() {}
+    virtual MessageFace::Ptr buildMessage() = 0;
+};
+
 class WsMessage : public MessageFace
 {
 public:
@@ -88,8 +98,7 @@ private:
     std::shared_ptr<bcos::bytes> m_data;
 };
 
-
-class WsMessageFactory
+class WsMessageFactory : public MessageFaceFactory
 {
 public:
     using Ptr = std::shared_ptr<WsMessageFactory>;
@@ -104,7 +113,7 @@ public:
         return seq;
     }
 
-    virtual std::shared_ptr<WsMessage> buildMessage()
+    virtual MessageFace::Ptr buildMessage() override
     {
         auto msg = std::make_shared<WsMessage>();
         auto seq = newSeq();

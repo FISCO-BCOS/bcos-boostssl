@@ -96,14 +96,14 @@ int main(int argc, char** argv)
     int i = 0;
     while (true)
     {
-        auto msg = wsService->messageFactory()->buildMessage();
+        auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
         msg->setPacketType(999);
         auto randStr = wsService->messageFactory()->newSeq();
         msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
         BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
                        << LOG_KV("req", randStr);
         wsService->asyncSendMessage(msg, Options(-1),
-            [](Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
+            [](Error::Ptr _error, std::shared_ptr<MessageFace> _msg,
                 std::shared_ptr<WsSession> _session) {
                 (void)_session;
                 if (_error && _error->errorCode() != 0)
