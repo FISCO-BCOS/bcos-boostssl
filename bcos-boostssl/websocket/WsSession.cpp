@@ -152,7 +152,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     auto size = boost::asio::buffer_size(m_buffer.data());
 
     auto message = m_messageFactory->buildMessage();
-    if (message->decode(data, size) < 0)
+    if (message->decode(bytesConstRef(data, size)) < 0)
     {  // invalid packet, stop this session ?
         WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
                                    << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
@@ -162,7 +162,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     _buffer.consume(_buffer.size());
 
     auto session = shared_from_this();
-    auto seq = std::string(message->seq()->begin(), message->seq()->end());
+    auto seq = message->seq();
     auto self = std::weak_ptr<WsSession>(session);
     auto callback = getAndRemoveRespCallback(seq);
 
@@ -339,7 +339,7 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
 void WsSession::asyncSendMessage(
     std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
 {
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto seq = _msg->seq();
 
     if (!isConnected())
     {
@@ -358,7 +358,7 @@ void WsSession::asyncSendMessage(
     }
 
     // check if message size overflow
-    if ((int64_t)_msg->data()->size() > (int64_t)maxWriteMsgSize())
+    if ((int64_t)_msg->payload()->size() > (int64_t)maxWriteMsgSize())
     {
         if (_respFunc)
         {
@@ -369,7 +369,7 @@ void WsSession::asyncSendMessage(
         WEBSOCKET_SESSION(WARNING)
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("send message size overflow")
             << LOG_KV("endpoint", endPoint()) << LOG_KV("seq", seq)
-            << LOG_KV("msgSize", _msg->data()->size())
+            << LOG_KV("msgSize", _msg->payload()->size())
             << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
         return;
     }

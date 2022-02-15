@@ -39,30 +39,33 @@ bool WsMessage::encode(bytes& _buffer)
     uint16_t status = boost::asio::detail::socket_ops::host_to_network_short(m_status);
 
     // seq length should be SEQ_LENGTH(32) long
-    if (m_seq->size() != SEQ_LENGTH)
+    if (m_seq.size() != SEQ_LENGTH)
     {
         return false;
     }
 
     _buffer.insert(_buffer.end(), (byte*)&type, (byte*)&type + 2);
     _buffer.insert(_buffer.end(), (byte*)&status, (byte*)&status + 2);
-    _buffer.insert(_buffer.end(), m_seq->begin(), m_seq->end());
+    _buffer.insert(_buffer.end(), m_seq.begin(), m_seq.end());
     _buffer.insert(_buffer.end(), m_data->begin(), m_data->end());
 
     return true;
 }
 
-int64_t WsMessage::decode(const byte* _buffer, std::size_t _size)
+ssize_t WsMessage::decode(bytesConstRef _buffer)
 {
-    if (_size < MESSAGE_MIN_LENGTH)
+    std::size_t size = _buffer.size();
+    if (size < MESSAGE_MIN_LENGTH)
     {
         return -1;
     }
 
-    m_seq->clear();
+    m_seq.clear();
     m_data->clear();
 
-    auto p = _buffer;
+    auto dataBuffer = _buffer.data();
+    // auto p = std::make_shared<bytes>(_buffer.begin(), _buffer.end());
+    auto p = _buffer.data();
     // type field
     m_type = boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)p));
     p += 2;
@@ -72,10 +75,10 @@ int64_t WsMessage::decode(const byte* _buffer, std::size_t _size)
     p += 2;
 
     // seq field
-    m_seq->insert(m_seq->begin(), p, p + SEQ_LENGTH);
+    m_seq.insert(m_seq.begin(), p, p + SEQ_LENGTH);
     p += SEQ_LENGTH;
     // data field
-    m_data->insert(m_data->begin(), p, _buffer + _size);
+    m_data->insert(m_data->begin(), p, dataBuffer + size);
 
-    return _size;
+    return size;
 }

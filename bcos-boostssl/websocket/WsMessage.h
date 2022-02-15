@@ -34,7 +34,23 @@ namespace boostssl
 namespace ws
 {
 // the message format for ws protocol
-class WsMessage
+class MessageFace
+{
+public:
+    using Ptr = std::shared_ptr<MessageFace>;
+
+public:
+    virtual ~MessageFace() {}
+
+    virtual uint16_t packetType() const = 0;
+    virtual std::string seq() const = 0;
+    virtual std::shared_ptr<bytes> payload() const = 0;
+
+    virtual bool encode(bcos::bytes& _buffer) = 0;
+    virtual ssize_t decode(bytesConstRef _buffer) = 0;
+};
+
+class WsMessage : public MessageFace
 {
 public:
     using Ptr = std::shared_ptr<WsMessage>;
@@ -46,30 +62,32 @@ public:
 public:
     WsMessage()
     {
-        m_seq = std::make_shared<bcos::bytes>(SEQ_LENGTH, 0);
+        std::string str(SEQ_LENGTH, '0');
+        m_seq = str;
         m_data = std::make_shared<bcos::bytes>();
     }
 
     virtual ~WsMessage() {}
 
 public:
-    virtual uint16_t type() { return m_type; }
-    virtual void setType(uint16_t _type) { m_type = _type; }
+    virtual uint16_t packetType() const override { return m_type; }
+    virtual void setPacketType(uint16_t _type){ m_type = _type; }
     virtual uint16_t status() { return m_status; }
     virtual void setStatus(uint16_t _status) { m_status = _status; }
-    virtual std::shared_ptr<bcos::bytes> seq() { return m_seq; }
-    virtual void setSeq(std::shared_ptr<bcos::bytes> _seq) { m_seq = _seq; }
-    virtual std::shared_ptr<bcos::bytes> data() { return m_data; }
-    virtual void setData(std::shared_ptr<bcos::bytes> _data) { m_data = _data; }
+    virtual std::string seq() const override { return m_seq; }
+    virtual void setSeq(std::string _seq) { m_seq = _seq; }
+    virtual std::shared_ptr<bcos::bytes> payload() const override { return m_data; }
+    virtual void setPayload(std::shared_ptr<bcos::bytes> _data) { m_data = _data; }
 
 public:
-    virtual bool encode(bcos::bytes& _buffer);
-    virtual int64_t decode(const bcos::byte* _buffer, std::size_t _size);
+    virtual bool encode(bcos::bytes& _buffer) override;
+    // virtual int64_t decode(const bcos::byte* _buffer, std::size_t _size);
+    virtual ssize_t decode(bytesConstRef _buffer) override;
 
 private:
     uint16_t m_type{0};
     uint16_t m_status{0};
-    std::shared_ptr<bcos::bytes> m_seq;
+    std::string m_seq;
     std::shared_ptr<bcos::bytes> m_data;
 };
 
@@ -93,7 +111,7 @@ public:
     {
         auto msg = std::make_shared<WsMessage>();
         auto seq = newSeq();
-        msg->setSeq(std::make_shared<bcos::bytes>(seq.begin(), seq.end()));
+        msg->setSeq(seq);
         return msg;
     }
 
@@ -102,9 +120,9 @@ public:
     {
         auto msg = std::make_shared<WsMessage>();
         auto seq = newSeq();
-        msg->setType(_type);
-        msg->setData(_data);
-        msg->setSeq(std::make_shared<bcos::bytes>(seq.begin(), seq.end()));
+        msg->setPacketType(_type);
+        msg->setPayload(_data);
+        msg->setSeq(seq);
         return msg;
     }
 };

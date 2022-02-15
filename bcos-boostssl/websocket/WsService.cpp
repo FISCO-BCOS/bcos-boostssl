@@ -546,16 +546,16 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
 
 void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
 {
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto seq = _msg->seq();
 
     WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
                              << LOG_DESC("receive message from server")
-                             << LOG_KV("type", _msg->type()) << LOG_KV("seq", seq)
+                             << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
                              << LOG_KV("endpoint", _session->endPoint())
-                             << LOG_KV("data size", _msg->data()->size())
+                             << LOG_KV("data size", _msg->payload()->size())
                              << LOG_KV("use_count", _session.use_count());
 
-    auto it = m_msgType2Method.find(_msg->type());
+    auto it = m_msgType2Method.find(_msg->packetType());
     if (it != m_msgType2Method.end())
     {
         auto callback = it->second;
@@ -565,8 +565,8 @@ void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<W
     {
         WEBSOCKET_SERVICE(WARNING)
             << LOG_BADGE("onRecvMessage") << LOG_DESC("unrecognized message type")
-            << LOG_KV("type", _msg->type()) << LOG_KV("endpoint", _session->endPoint())
-            << LOG_KV("seq", seq) << LOG_KV("data size", _msg->data()->size())
+            << LOG_KV("type", _msg->packetType()) << LOG_KV("endpoint", _session->endPoint())
+            << LOG_KV("seq", seq) << LOG_KV("data size", _msg->payload()->size())
             << LOG_KV("use_count", _session.use_count());
     }
 }
@@ -589,7 +589,7 @@ void WsService::asyncSendMessageByEndPoint(const std::string& _endPoint,
 void WsService::asyncSendMessage(
     std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respCallBack)
 {
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto seq = _msg->seq();
     return asyncSendMessage(sessions(), _msg, _options, _respCallBack);
 }
 
@@ -657,7 +657,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
     retry->respFunc = _respFunc;
     retry->sendMessage();
 
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto seq = _msg->seq();
     int32_t timeout = _options.timeout > 0 ? _options.timeout : m_config->sendMsgTimeout();
 
     WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)

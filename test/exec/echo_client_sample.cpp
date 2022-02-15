@@ -97,9 +97,9 @@ int main(int argc, char** argv)
     while (true)
     {
         auto msg = wsService->messageFactory()->buildMessage();
-        msg->setType(999);
+        msg->setPacketType(999);
         auto randStr = wsService->messageFactory()->newSeq();
-        msg->setData(std::make_shared<bytes>(randStr.begin(), randStr.end()));
+        msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
         BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
                        << LOG_KV("req", randStr);
         wsService->asyncSendMessage(msg, Options(-1),
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
                     return;
                 }
 
-                auto resp = std::string(_msg->data()->begin(), _msg->data()->end());
+                auto resp = std::string(_msg->payload()->begin(), _msg->payload()->end());
                 BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("receive response")
                                << LOG_KV("resp", resp);
             });

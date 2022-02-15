@@ -36,19 +36,19 @@ BOOST_AUTO_TEST_CASE(test_WsMessage)
     auto msg = factory->buildMessage();
     auto buffer = std::make_shared<bytes>();
     auto r = msg->encode(*buffer);
-    auto seq = std::string(msg->seq()->begin(), msg->seq()->end());
+    auto seq = msg->seq();
 
     BOOST_CHECK(r);
-    BOOST_CHECK_EQUAL(msg->seq()->size(), WsMessage::SEQ_LENGTH);
+    BOOST_CHECK_EQUAL(msg->seq().size(), WsMessage::SEQ_LENGTH);
     BOOST_CHECK_EQUAL(buffer->size(), WsMessage::MESSAGE_MIN_LENGTH);
 
     {
         auto decodeMsg = factory->buildMessage();
-        auto size = decodeMsg->decode(buffer->data(), buffer->size());
+        auto size = decodeMsg->decode(bytesConstRef(buffer->data(), buffer->size()));
         BOOST_CHECK(size > 0);
-        BOOST_CHECK_EQUAL(decodeMsg->data()->size(), 0);
-        BOOST_CHECK_EQUAL(decodeMsg->seq()->size(), WsMessage::SEQ_LENGTH);
-        auto decodeSeq = std::string(msg->seq()->begin(), msg->seq()->end());
+        BOOST_CHECK_EQUAL(decodeMsg->payload()->size(), 0);
+        BOOST_CHECK_EQUAL(decodeMsg->seq().size(), WsMessage::SEQ_LENGTH);
+        auto decodeSeq = msg->seq();
         BOOST_CHECK_EQUAL(seq, decodeSeq);
     }
 }
@@ -63,27 +63,27 @@ BOOST_AUTO_TEST_CASE(test_buildMessage)
         auto factory = std::make_shared<WsMessageFactory>();
         auto msg = factory->buildMessage();
         msg->setStatus(status);
-        msg->setType(type);
-        msg->setData(std::make_shared<bytes>(data.begin(), data.end()));
+        msg->setPacketType(type);
+        msg->setPayload(std::make_shared<bytes>(data.begin(), data.end()));
 
         auto buffer = std::make_shared<bytes>();
         auto r = msg->encode(*buffer);
-        auto seq = std::string(msg->seq()->begin(), msg->seq()->end());
+        auto seq = msg->seq();
 
         BOOST_CHECK(r);
-        BOOST_CHECK_EQUAL(msg->seq()->size(), WsMessage::SEQ_LENGTH);
+        BOOST_CHECK_EQUAL(msg->seq().size(), WsMessage::SEQ_LENGTH);
         BOOST_CHECK_EQUAL(buffer->size(), WsMessage::MESSAGE_MIN_LENGTH + data.length());
 
         auto decodeMsg = factory->buildMessage();
-        auto size = decodeMsg->decode(buffer->data(), buffer->size());
+        auto size = decodeMsg->decode(bytesConstRef(buffer->data(), buffer->size()));
         BOOST_CHECK(size > 0);
         BOOST_CHECK_EQUAL(decodeMsg->status(), status);
-        BOOST_CHECK_EQUAL(decodeMsg->type(), type);
-        BOOST_CHECK_EQUAL(decodeMsg->data()->size(), data.size());
-        BOOST_CHECK_EQUAL(decodeMsg->seq()->size(), WsMessage::SEQ_LENGTH);
-        auto decodeSeq = std::string(msg->seq()->begin(), msg->seq()->end());
+        BOOST_CHECK_EQUAL(decodeMsg->packetType(), type);
+        BOOST_CHECK_EQUAL(decodeMsg->payload()->size(), data.size());
+        BOOST_CHECK_EQUAL(decodeMsg->seq().size(), WsMessage::SEQ_LENGTH);
+        auto decodeSeq = msg->seq();
         BOOST_CHECK_EQUAL(seq, decodeSeq);
-        BOOST_CHECK_EQUAL(data, std::string(decodeMsg->data()->begin(), decodeMsg->data()->end()));
+        BOOST_CHECK_EQUAL(data, std::string(decodeMsg->payload()->begin(), decodeMsg->payload()->end()));
     }
 
     {
@@ -93,26 +93,26 @@ BOOST_AUTO_TEST_CASE(test_buildMessage)
         auto factory = std::make_shared<WsMessageFactory>();
         auto msg = factory->buildMessage(type, std::make_shared<bytes>(data.begin(), data.end()));
         msg->setStatus(status);
-        msg->setType(type);
+        msg->setPacketType(type);
 
         auto buffer = std::make_shared<bytes>();
         auto r = msg->encode(*buffer);
-        auto seq = std::string(msg->seq()->begin(), msg->seq()->end());
+        auto seq = msg->seq();
 
         BOOST_CHECK(r);
-        BOOST_CHECK_EQUAL(msg->seq()->size(), WsMessage::SEQ_LENGTH);
+        BOOST_CHECK_EQUAL(msg->seq().size(), WsMessage::SEQ_LENGTH);
         BOOST_CHECK_EQUAL(buffer->size(), WsMessage::MESSAGE_MIN_LENGTH + data.length());
 
         auto decodeMsg = factory->buildMessage();
-        auto size = decodeMsg->decode(buffer->data(), buffer->size());
+        auto size = decodeMsg->decode(bytesConstRef(buffer->data(), buffer->size()));
         BOOST_CHECK(size > 0);
         BOOST_CHECK_EQUAL(decodeMsg->status(), status);
-        BOOST_CHECK_EQUAL(decodeMsg->type(), type);
-        BOOST_CHECK_EQUAL(decodeMsg->data()->size(), data.size());
-        BOOST_CHECK_EQUAL(decodeMsg->seq()->size(), WsMessage::SEQ_LENGTH);
-        auto decodeSeq = std::string(msg->seq()->begin(), msg->seq()->end());
+        BOOST_CHECK_EQUAL(decodeMsg->packetType(), type);
+        BOOST_CHECK_EQUAL(decodeMsg->payload()->size(), data.size());
+        BOOST_CHECK_EQUAL(decodeMsg->seq().size(), WsMessage::SEQ_LENGTH);
+        auto decodeSeq = msg->seq();
         BOOST_CHECK_EQUAL(seq, decodeSeq);
-        BOOST_CHECK_EQUAL(data, std::string(decodeMsg->data()->begin(), decodeMsg->data()->end()));
+        BOOST_CHECK_EQUAL(data, std::string(decodeMsg->payload()->begin(), decodeMsg->payload()->end()));
     }
 }
 BOOST_AUTO_TEST_SUITE_END()

@@ -86,8 +86,8 @@ int main(int argc, char** argv)
 
     wsService->registerMsgHandler(
         999, [](std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session) {
-            auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
-            auto data = std::string(_msg->data()->begin(), _msg->data()->end());
+            auto seq = _msg->seq();
+            auto data = std::string(_msg->payload()->begin(), _msg->payload()->end());
             BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst seq ")
                            << LOG_KV("seq", seq);
             BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst message ")
