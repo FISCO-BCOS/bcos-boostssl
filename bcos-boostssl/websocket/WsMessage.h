@@ -47,7 +47,7 @@ public:
     virtual std::shared_ptr<bytes> payload() const = 0;
 
     virtual bool encode(bcos::bytes& _buffer) = 0;
-    virtual ssize_t decode(bytesConstRef _buffer) = 0;
+    virtual int64_t decode(bytesConstRef _buffer) = 0;
 };
 
 class WsMessage : public MessageFace
@@ -62,8 +62,6 @@ public:
 public:
     WsMessage()
     {
-        std::string str(SEQ_LENGTH, '0');
-        m_seq = str;
         m_data = std::make_shared<bcos::bytes>();
     }
 
@@ -81,13 +79,12 @@ public:
 
 public:
     virtual bool encode(bcos::bytes& _buffer) override;
-    // virtual int64_t decode(const bcos::byte* _buffer, std::size_t _size);
-    virtual ssize_t decode(bytesConstRef _buffer) override;
+    virtual int64_t decode(bytesConstRef _buffer) override;
 
 private:
     uint16_t m_type{0};
     uint16_t m_status{0};
-    std::string m_seq;
+    std::string m_seq {SEQ_LENGTH, '0'};
     std::shared_ptr<bcos::bytes> m_data;
 };
 

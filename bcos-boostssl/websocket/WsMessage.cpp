@@ -52,7 +52,7 @@ bool WsMessage::encode(bytes& _buffer)
     return true;
 }
 
-ssize_t WsMessage::decode(bytesConstRef _buffer)
+int64_t WsMessage::decode(bytesConstRef _buffer)
 {
     std::size_t size = _buffer.size();
     if (size < MESSAGE_MIN_LENGTH)
@@ -64,7 +64,6 @@ ssize_t WsMessage::decode(bytesConstRef _buffer)
     m_data->clear();
 
     auto dataBuffer = _buffer.data();
-    // auto p = std::make_shared<bytes>(_buffer.begin(), _buffer.end());
     auto p = _buffer.data();
     // type field
     m_type = boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)p));
