@@ -337,7 +337,7 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
  * @return void:
  */
 void WsSession::asyncSendMessage(
-    std::shared_ptr<MessageFace> _msg, Options _options, RespCallBack _respFunc)
+    std::shared_ptr<boostssl::MessageFace> _msg, Options _options, RespCallBack _respFunc)
 {
     auto seq = _msg->seq();
 

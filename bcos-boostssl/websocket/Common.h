@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <bcos-boostssl/interfaces/MessageFace.h>
 #include <bcos-utilities/BoostLog.h>
 #include <bcos-utilities/Error.h>
 #include <boost/beast/websocket.hpp>
@@ -39,17 +40,16 @@ namespace boostssl
 {
 namespace ws
 {
-class MessageFace;
 class WsMessage;
 class WsSession;
 
 using RespCallBack =
-    std::function<void(bcos::Error::Ptr, std::shared_ptr<MessageFace>, std::shared_ptr<WsSession>)>;
+    std::function<void(bcos::Error::Ptr, std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
 
 using WsConnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
 using WsDisconnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
 using WsRecvMessageHandler =
-    std::function<void(std::shared_ptr<MessageFace>, std::shared_ptr<WsSession>)>;
+    std::function<void(std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
 
 struct Options
 {

@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     wsInitializer->initWsService(wsService);
 
     wsService->registerMsgHandler(
-        999, [](std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsSession> _session) {
+        999, [](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
             auto seq = _msg->seq();
             auto data = std::string(_msg->payload()->begin(), _msg->payload()->end());
             BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst seq ")

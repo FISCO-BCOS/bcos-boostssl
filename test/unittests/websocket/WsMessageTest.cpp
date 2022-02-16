@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(test_WsMessage)
 BOOST_AUTO_TEST_CASE(test_buildMessage)
 {
     {
-        uint16_t status = 111;
+        int16_t status = 111;
         uint16_t type = 222;
         std::string data = "HelloWorld.";
         auto factory = std::make_shared<WsMessageFactory>();
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(test_buildMessage)
     }
 
     {
-        uint16_t status = 222;
+        int16_t status = 222;
         uint16_t type = 111;
         std::string data = "HelloWorld.";
         auto factory = std::make_shared<WsMessageFactory>();

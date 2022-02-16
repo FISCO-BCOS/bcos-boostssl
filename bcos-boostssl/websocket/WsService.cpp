@@ -411,7 +411,7 @@ std::shared_ptr<WsSession> WsService::newSession(
             }
         });
     wsSession->setRecvMessageHandler(
-        [self](std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsSession> _session) {
+        [self](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
             auto wsService = self.lock();
             if (wsService)
             {
@@ -544,7 +544,7 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
                             << LOG_KV("refCount", _session ? _session.use_count() : -1);
 }
 
-void WsService::onRecvMessage(std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsSession> _session)
+void WsService::onRecvMessage(std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session)
 {
     auto seq = _msg->seq();
 
@@ -624,7 +624,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
 
             auto self = shared_from_this();
             session->asyncSendMessage(msg, options,
-                [self, session](Error::Ptr _error, std::shared_ptr<MessageFace> _msg,
+                [self, session](Error::Ptr _error, std::shared_ptr<boostssl::MessageFace> _msg,
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != 0)
                     {

@@ -103,7 +103,7 @@ int main(int argc, char** argv)
         BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
                        << LOG_KV("req", randStr);
         wsService->asyncSendMessage(msg, Options(-1),
-            [](Error::Ptr _error, std::shared_ptr<MessageFace> _msg,
+            [](Error::Ptr _error, std::shared_ptr<boostssl::MessageFace> _msg,
                 std::shared_ptr<WsSession> _session) {
                 (void)_session;
                 if (_error && _error->errorCode() != 0)

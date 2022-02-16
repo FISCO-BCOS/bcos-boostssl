@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <bcos-boostssl/interfaces/MessageFace.h>
 #include <bcos-utilities/Common.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -34,33 +35,7 @@ namespace boostssl
 namespace ws
 {
 // the message format for ws protocol
-class MessageFace
-{
-public:
-    using Ptr = std::shared_ptr<MessageFace>;
-
-public:
-    virtual ~MessageFace() {}
-
-    virtual uint16_t packetType() const = 0;
-    virtual std::string seq() const = 0;
-    virtual std::shared_ptr<bytes> payload() const = 0;
-
-    virtual bool encode(bcos::bytes& _buffer) = 0;
-    virtual int64_t decode(bytesConstRef _buffer) = 0;
-};
-
-class MessageFaceFactory
-{
-public:
-    using Ptr = std::shared_ptr<MessageFaceFactory>;
-
-public:
-    virtual ~MessageFaceFactory() {}
-    virtual MessageFace::Ptr buildMessage() = 0;
-};
-
-class WsMessage : public MessageFace
+class WsMessage : public boostssl::MessageFace
 {
 public:
     using Ptr = std::shared_ptr<WsMessage>;
@@ -79,13 +54,15 @@ public:
 
 public:
     virtual uint16_t packetType() const override { return m_type; }
-    virtual void setPacketType(uint16_t _type){ m_type = _type; }
-    virtual uint16_t status() { return m_status; }
-    virtual void setStatus(uint16_t _status) { m_status = _status; }
+    virtual void setPacketType(uint16_t _type) override { m_type = _type; }
+    virtual int16_t status() { return m_status; }
+    virtual void setStatus(int16_t _status) { m_status = _status; }
     virtual std::string seq() const override { return m_seq; }
-    virtual void setSeq(std::string _seq) { m_seq = _seq; }
+    virtual void setSeq(std::string _seq) override { m_seq = _seq; }
     virtual std::shared_ptr<bcos::bytes> payload() const override { return m_data; }
-    virtual void setPayload(std::shared_ptr<bcos::bytes> _data) { m_data = _data; }
+    virtual void setPayload(std::shared_ptr<bcos::bytes> _data) override { m_data = _data; }
+    virtual uint16_t ext() const override { return m_ext; }
+    virtual void setExt(uint16_t _ext) override { m_ext = _ext; }
 
 public:
     virtual bool encode(bcos::bytes& _buffer) override;
@@ -93,12 +70,13 @@ public:
 
 private:
     uint16_t m_type{0};
-    uint16_t m_status{0};
+    int16_t m_status{0};
     std::string m_seq {SEQ_LENGTH, '0'};
     std::shared_ptr<bcos::bytes> m_data;
+    uint16_t m_ext = 0;
 };
 
-class WsMessageFactory : public MessageFaceFactory
+class WsMessageFactory : public boostssl::MessageFaceFactory
 {
 public:
     using Ptr = std::shared_ptr<WsMessageFactory>;
@@ -113,7 +91,7 @@ public:
         return seq;
     }
 
-    virtual MessageFace::Ptr buildMessage() override
+    virtual boostssl::MessageFace::Ptr buildMessage() override
     {
         auto msg = std::make_shared<WsMessage>();
         auto seq = newSeq();
