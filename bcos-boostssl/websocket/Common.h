@@ -40,7 +40,6 @@ namespace boostssl
 {
 namespace ws
 {
-class WsMessage;
 class WsSession;
 
 using RespCallBack =

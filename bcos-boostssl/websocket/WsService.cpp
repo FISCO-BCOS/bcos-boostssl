@@ -572,7 +572,7 @@ void WsService::onRecvMessage(std::shared_ptr<boostssl::MessageFace> _msg, std::
 }
 
 void WsService::asyncSendMessageByEndPoint(const std::string& _endPoint,
-    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
+    std::shared_ptr<boostssl::MessageFace> _msg, Options _options, RespCallBack _respFunc)
 {
     std::shared_ptr<WsSession> session = getSession(_endPoint);
     if (!session)
@@ -587,20 +587,20 @@ void WsService::asyncSendMessageByEndPoint(const std::string& _endPoint,
 }
 
 void WsService::asyncSendMessage(
-    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respCallBack)
+    std::shared_ptr<boostssl::MessageFace> _msg, Options _options, RespCallBack _respCallBack)
 {
     auto seq = _msg->seq();
     return asyncSendMessage(sessions(), _msg, _options, _respCallBack);
 }
 
-void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessage> _msg,
+void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl::MessageFace> _msg,
     Options _options, RespCallBack _respFunc)
 {
     class Retry : public std::enable_shared_from_this<Retry>
     {
     public:
         WsSessions ss;
-        std::shared_ptr<WsMessage> msg;
+        std::shared_ptr<boostssl::MessageFace> msg;
         Options options;
         RespCallBack respFunc;
 
@@ -665,7 +665,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
 }
 
 void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,
-    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
+    std::shared_ptr<boostssl::MessageFace> _msg, Options _options, RespCallBack _respFunc)
 {
     ws::WsSessions ss;
     for (const std::string& endPoint : _endPoints)
@@ -687,12 +687,12 @@ void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,
     return asyncSendMessage(ss, _msg, _options, _respFunc);
 }
 
-void WsService::broadcastMessage(std::shared_ptr<WsMessage> _msg)
+void WsService::broadcastMessage(std::shared_ptr<boostssl::MessageFace> _msg)
 {
     broadcastMessage(sessions(), _msg);
 }
 
-void WsService::broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsMessage> _msg)
+void WsService::broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg)
 {
     for (auto& session : _ss)
     {

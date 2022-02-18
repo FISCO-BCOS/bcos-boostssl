@@ -52,7 +52,7 @@ using MsgHandler = std::function<void(std::shared_ptr<boostssl::MessageFace>, st
 using ConnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using DisconnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using HandshakeHandler = std::function<void(
-    bcos::Error::Ptr _error, std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
+    bcos::Error::Ptr _error, std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
 
 class WsService : public std::enable_shared_from_this<WsService>
 {
@@ -93,20 +93,20 @@ public:
     virtual void onRecvMessage(
         std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session);
 
-    virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(),
+    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
-    virtual void asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessage> _msg,
+    virtual void asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl::MessageFace> _msg,
         Options _options = Options(), RespCallBack _respFunc = RespCallBack());
     virtual void asyncSendMessage(const std::set<std::string>& _endPoints,
-        std::shared_ptr<WsMessage> _msg, Options _options = Options(),
+        std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
 
     virtual void asyncSendMessageByEndPoint(const std::string& _endPoint,
-        std::shared_ptr<WsMessage> _msg, Options _options = Options(),
+        std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
 
-    virtual void broadcastMessage(std::shared_ptr<WsMessage> _msg);
-    virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsMessage> _msg);
+    virtual void broadcastMessage(std::shared_ptr<boostssl::MessageFace> _msg);
+    virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg);
 
 public:
     std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
