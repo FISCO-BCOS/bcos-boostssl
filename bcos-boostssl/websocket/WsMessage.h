@@ -41,8 +41,8 @@ public:
     using Ptr = std::shared_ptr<WsMessage>;
     // seq field length
     const static size_t SEQ_LENGTH = 32;
-    /// type(2) + status(2) + seq(32) + data(N)
-    const static size_t MESSAGE_MIN_LENGTH = 36;
+    /// type(2) + status(2) + seq(32) + ext(2) + data(N)
+    const static size_t MESSAGE_MIN_LENGTH = 38;
 
 public:
     WsMessage()

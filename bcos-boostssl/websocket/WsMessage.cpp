@@ -28,7 +28,7 @@ using namespace bcos::boostssl::ws;
 
 // seq field length
 const size_t WsMessage::SEQ_LENGTH;
-/// type(2) + error(2) + seq(32) + data(N)
+/// type(2) + error(2) + seq(32) + + ext(2) + data(N)
 const size_t WsMessage::MESSAGE_MIN_LENGTH;
 
 bool WsMessage::encode(bytes& _buffer)
