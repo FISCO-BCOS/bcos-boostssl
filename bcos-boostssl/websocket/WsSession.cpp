@@ -18,11 +18,11 @@
  * @date 2021-07-08
  */
 
-#include <bcos-boostssl/utilities/BoostLog.h>
-#include <bcos-boostssl/utilities/Common.h>
-#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/WsError.h>
 #include <bcos-boostssl/websocket/WsSession.h>
+#include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/Common.h>
+#include <bcos-utilities/ThreadPool.h>
 #include <boost/beast/websocket/rfc6455.hpp>
 #include <boost/beast/websocket/stream.hpp>
 #include <boost/core/ignore_unused.hpp>
@@ -36,7 +36,6 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
-using namespace bcos::boostssl::utilities;
 
 void WsSession::drop(uint32_t _reason)
 {
@@ -71,9 +70,9 @@ void WsSession::ping()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("ping") << LOG_KV("endpoint", m_endPoint)
-                                 << LOG_KV("session", this)
-                                 << LOG_KV("what", std::string(_e.what()));
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("ping") << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this)
+            << LOG_KV("what", std::string(_e.what()));
         drop(WsError::PingError);
     }
 }
@@ -89,9 +88,9 @@ void WsSession::pong()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("pong") << LOG_KV("endpoint", m_endPoint)
-                                 << LOG_KV("session", this)
-                                 << LOG_KV("what", std::string(_e.what()));
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("pong") << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this)
+            << LOG_KV("what", std::string(_e.what()));
         drop(WsError::PongError);
     }
 }
@@ -191,7 +190,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     if (message->decode(data, size) < 0)
     {  // invalid packet, stop this session ?
         WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
-                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+                                   << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
         return drop(WsError::PacketError);
     }
 
@@ -241,9 +240,9 @@ void WsSession::asyncRead()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("asyncRead") << LOG_DESC("exception")
-                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this)
-                                 << LOG_KV("what", std::string(_e.what()));
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("asyncRead") << LOG_DESC("exception") << LOG_KV("endpoint", endPoint())
+            << LOG_KV("session", this) << LOG_KV("what", std::string(_e.what()));
         drop(WsError::ReadError);
     }
 }
@@ -253,7 +252,7 @@ void WsSession::onRead(boost::system::error_code _ec, std::size_t)
     if (_ec)
     {
         WEBSOCKET_SESSION(WARNING) << LOG_BADGE("asyncRead") << LOG_KV("error", _ec.message())
-                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+                                   << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
 
         return drop(WsError::ReadError);
     }
@@ -304,10 +303,10 @@ void WsSession::asyncWrite()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("asyncWrite")
-                                 << LOG_DESC("async_write throw exception")
-                                 << LOG_KV("session", this) << LOG_KV("endpoint", endPoint())
-                                 << LOG_KV("what", std::string(_e.what()));
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("asyncWrite") << LOG_DESC("async_write throw exception")
+            << LOG_KV("session", this) << LOG_KV("endpoint", endPoint())
+            << LOG_KV("what", std::string(_e.what()));
         drop(WsError::WriteError);
     }
 }

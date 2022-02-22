@@ -20,13 +20,11 @@
 #pragma once
 
 #include <bcos-boostssl/context/ContextConfig.h>
-#include <bcos-boostssl/utilities/BoostLog.h>
+#include <bcos-utilities/BoostLog.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <cstdint>
 #include <memory>
 #include <vector>
-
-#include <bcos-boostssl/network/Common.h>
 
 #define MIN_HEART_BEAT_PERIOD_MS (10000)
 #define MIN_RECONNECT_PERIOD_MS (10000)

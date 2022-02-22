@@ -17,13 +17,13 @@
  * @author: octopus
  * @date 2021-07-28
  */
-#include <bcos-boostssl/utilities/BoostLog.h>
-#include <bcos-boostssl/utilities/Common.h>
-#include <bcos-boostssl/utilities/ThreadPool.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsError.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
+#include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/Common.h>
+#include <bcos-utilities/ThreadPool.h>
 #include <json/json.h>
 #include <boost/core/ignore_unused.hpp>
 #include <algorithm>
@@ -34,10 +34,8 @@
 #include <tuple>
 #include <vector>
 
-
 using namespace bcos;
 using namespace bcos::boostssl;
-using namespace bcos::boostssl::utilities;
 using namespace bcos::boostssl::ws;
 
 WsService::WsService()
@@ -75,8 +73,8 @@ void WsService::waitForConnectionEstablish()
         {
             stop();
             WEBSOCKET_SERVICE(WARNING) << LOG_BADGE("waitForConnectionEstablish")
-                                     << LOG_DESC("the connection to the server timed out")
-                                     << LOG_KV("timeout", m_waitConnectFinishTimeout);
+                                       << LOG_DESC("the connection to the server timed out")
+                                       << LOG_KV("timeout", m_waitConnectFinishTimeout);
 
             BOOST_THROW_EXCEPTION(std::runtime_error("The connection to the server timed out"));
             return;
@@ -152,7 +150,15 @@ void WsService::stop()
     {
         m_heartbeat->cancel();
     }
-
+    if (m_iocThread->get_id() != std::this_thread::get_id())
+    {
+        m_iocThread->join();
+        m_iocThread.reset();
+    }
+    else
+    {
+        m_iocThread->detach();
+    }
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
 }
 
@@ -392,7 +398,8 @@ WsSessions WsService::sessions()
         }
     }
 
-    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("sessions") << LOG_KV("size", sessions.size());
+    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("sessions") << LOG_KV("size",
+    // sessions.size());
     return sessions;
 }
 
@@ -454,7 +461,7 @@ void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<W
 {
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
 
-    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvMessage")
+    WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
                              << LOG_DESC("receive message from server")
                              << LOG_KV("type", _msg->type()) << LOG_KV("seq", seq)
                              << LOG_KV("endpoint", _session->endPoint())
@@ -469,12 +476,11 @@ void WsService::onRecvMessage(std::shared_ptr<WsMessage> _msg, std::shared_ptr<W
     }
     else
     {
-        WEBSOCKET_SERVICE(WARNING) << LOG_BADGE("onRecvMessage")
-                                 << LOG_DESC("unrecognized message type")
-                                 << LOG_KV("type", _msg->type())
-                                 << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq)
-                                 << LOG_KV("data size", _msg->data()->size())
-                                 << LOG_KV("use_count", _session.use_count());
+        WEBSOCKET_SERVICE(WARNING)
+            << LOG_BADGE("onRecvMessage") << LOG_DESC("unrecognized message type")
+            << LOG_KV("type", _msg->type()) << LOG_KV("endpoint", _session->endPoint())
+            << LOG_KV("seq", seq) << LOG_KV("data size", _msg->data()->size())
+            << LOG_KV("use_count", _session.use_count());
     }
 }
 
@@ -533,7 +539,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<WsMessag
             session->asyncSendMessage(msg, options,
                 [self, session](Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
                     std::shared_ptr<WsSession> _session) {
-                    if (_error && _error->errorCode() != protocol::CommonError::SUCCESS)
+                    if (_error && _error->errorCode() != 0)
                     {
                         WEBSOCKET_SERVICE(WARNING)
                             << LOG_BADGE("asyncSendMessage") << LOG_DESC("callback error")
@@ -586,7 +592,6 @@ void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,
 
     return asyncSendMessage(ss, _msg, _options, _respFunc);
 }
-
 
 void WsService::broadcastMessage(std::shared_ptr<WsMessage> _msg)
 {
