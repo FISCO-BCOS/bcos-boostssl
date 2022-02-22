@@ -47,7 +47,7 @@ HunterGate(
 )
 
 project(bcos-boostssl VERSION "1.0.0")
-set(VERSION_SUFFIX "")
+set(VERSION_SUFFIX "-rc2")
 
 # basic settings
 include(Options)
