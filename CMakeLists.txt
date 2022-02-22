@@ -25,17 +25,7 @@ if (NOT DEFINED URL_BASE)
     # set(URL_BASE "github.com.cnpmjs.org")
 endif()
 
-include(FetchContent)
-set(BCOS_CMAKE_SCRIPTS_DIR ${CMAKE_CURRENT_BINARY_DIR}/bcos-cmake-scripts)
-FetchContent_Declare(bcos-cmake-scripts
-    GIT_REPOSITORY https://${URL_BASE}/FISCO-BCOS/bcos-cmake-scripts.git
-    GIT_TAG 364f603f4ec112cb79840ea4026243399d7c419b
-    SOURCE_DIR ${BCOS_CMAKE_SCRIPTS_DIR}
-)
-FetchContent_MakeAvailable(bcos-cmake-scripts)
-
 set(BCOS_BOOSTSSL_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake" CACHE PATH "The cmake path for the library")
-list(APPEND CMAKE_MODULE_PATH ${BCOS_CMAKE_SCRIPTS_DIR})
 list(APPEND CMAKE_MODULE_PATH ${BCOS_BOOSTSSL_CMAKE_DIR})
 
 #init hunter
