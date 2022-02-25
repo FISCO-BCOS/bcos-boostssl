@@ -11,3 +11,4 @@ hunter_config(
 )
 
 hunter_config(bcos-utilities VERSION 1.0.0-rc1-f12788a1 CMAKE_ARGS HUNTER_PACKAGE_LOG_BUILD=ON HUNTER_PACKAGE_LOG_INSTALL=ON)
+hunter_config(OpenSSL VERSION tassl_1.1.1b_v1.4-63b60292)
