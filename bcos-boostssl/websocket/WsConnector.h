@@ -19,9 +19,11 @@
  */
 #pragma once
 #include <bcos-boostssl/websocket/WsStream.h>
+#include <bcos-utilities/DataConvertUtility.h>
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
+#include <boost/asio/ssl.hpp>
 #include <functional>
 #include <mutex>
 #include <set>
@@ -43,7 +45,37 @@ public:
     WsConnector(std::shared_ptr<boost::asio::ip::tcp::resolver> _resolver,
         std::shared_ptr<boost::asio::io_context> _ioc)
       : m_resolver(_resolver), m_ioc(_ioc)
-    {}
+    {
+        initSSLContextPubHexHandler();
+    }
+
+    void initSSLContextPubHexHandler()
+    {
+        auto handler = [](X509* x509, std::string& _pubHex) -> bool {
+            ASN1_BIT_STRING* pubKey =
+                X509_get0_pubkey_bitstr(x509);  // csc->current_cert is an X509 struct
+            if (pubKey == NULL)
+            {
+                return false;
+            }
+
+            auto hex = bcos::toHexString(pubKey->data, pubKey->data + pubKey->length, "");
+            _pubHex = *hex.get();
+
+            WEBSOCKET_CONNECTOR(INFO) << LOG_DESC("[NEW]SSLContext pubHex: " + _pubHex);
+            return true;
+        };
+
+        m_sslContextPubHandler = handler;
+    }
+
+    std::function<bool(X509* x509, std::string& pubHex)> sslContextPubHandler()
+    {
+        return m_sslContextPubHandler;
+    }
+
+    std::function<bool(bool, boost::asio::ssl::verify_context&)> newVerifyCallback(
+        std::shared_ptr<std::string> nodeIDOut);
 
 public:
     /**
@@ -97,6 +129,8 @@ private:
 
     mutable std::mutex x_pendingConns;
     std::set<std::string> m_pendingConns;
+
+    std::function<bool(X509* cert, std::string& pubHex)> m_sslContextPubHandler;
 };
 }  // namespace ws
 }  // namespace boostssl

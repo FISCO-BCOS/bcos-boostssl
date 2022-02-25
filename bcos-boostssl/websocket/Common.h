@@ -23,6 +23,7 @@
 #include <bcos-utilities/BoostLog.h>
 #include <bcos-utilities/Error.h>
 #include <boost/beast/websocket.hpp>
+#include <boost/asio/ssl.hpp>
 
 #define WEBSOCKET_TOOL(LEVEL) BCOS_LOG(LEVEL) << "[WS][TOOL]"
 #define WEBSOCKET_CONNECTOR(LEVEL) BCOS_LOG(LEVEL) << "[WS][CONNECTOR]"
@@ -49,6 +50,7 @@ using WsConnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<Ws
 using WsDisconnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
 using WsRecvMessageHandler =
     std::function<void(std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
+using VerifyCallback = boost::function<bool(bool, boost::asio::ssl::verify_context&)>;
 
 struct Options
 {

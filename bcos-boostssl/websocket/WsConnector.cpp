@@ -102,10 +102,13 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
 
                     auto wsStreamDelegate = builder->build(_disableSsl, rawStream);
 
+                    std::shared_ptr<std::string> endpointPublicKey = std::make_shared<std::string>();
+                    wsStreamDelegate->setVerifyCallback(_disableSsl, connector->newVerifyCallback(endpointPublicKey));
+
                     // start ssl handshake
                     wsStreamDelegate->asyncHandshake([wsStreamDelegate, connector, _host, _port,
                                                          endpoint, _ep,
-                                                         _callback](boost::beast::error_code _ec) {
+                                                         _callback, endpointPublicKey](boost::beast::error_code _ec) {
                         if (_ec)
                         {
                             WEBSOCKET_CONNECTOR(WARNING)
@@ -153,4 +156,81 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                     });
                 });
         });
+}
+
+std::function<bool(bool, boost::asio::ssl::verify_context&)> WsConnector::newVerifyCallback(
+    std::shared_ptr<std::string> nodeIDOut)
+{
+    auto wsConnector = std::weak_ptr<WsConnector>(shared_from_this());
+    return [wsConnector, nodeIDOut](bool preverified, boost::asio::ssl::verify_context& ctx) {
+        auto wsConnectorPtr = wsConnector.lock();
+        if (!wsConnectorPtr)
+        {
+            return false;
+        }
+
+        try
+        {
+            /// return early when the certificate is invalid
+            if (!preverified)
+            {
+                return false;
+            }
+            /// get the object points to certificate
+            X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+            if (!cert)
+            {
+                WEBSOCKET_CONNECTOR(ERROR) << LOG_DESC("Get cert failed");
+                return preverified;
+            }
+
+            if (!wsConnectorPtr->sslContextPubHandler()(cert, *nodeIDOut.get()))
+            {
+                return preverified;
+            }
+
+            int crit = 0;
+            BASIC_CONSTRAINTS* basic =
+                (BASIC_CONSTRAINTS*)X509_get_ext_d2i(cert, NID_basic_constraints, &crit, NULL);
+            if (!basic)
+            {
+                WEBSOCKET_CONNECTOR(ERROR) << LOG_DESC("Get ca basic failed");
+                return preverified;
+            }
+
+            /// ignore ca
+            if (basic->ca)
+            {
+                // ca or agency certificate
+                WEBSOCKET_CONNECTOR(TRACE) << LOG_DESC("Ignore CA certificate");
+                BASIC_CONSTRAINTS_free(basic);
+                return preverified;
+            }
+
+            BASIC_CONSTRAINTS_free(basic);
+            // if (!hostPtr->sslContextPubHandler()(cert, *nodeIDOut.get())) {
+            //   return preverified;
+            // }
+
+            /// append cert-name and issuer name after node ID
+            /// get subject name
+            const char* certName = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
+            /// get issuer name
+            const char* issuerName = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
+            /// format: {nodeID}#{issuer-name}#{cert-name}
+            nodeIDOut->append("#");
+            nodeIDOut->append(issuerName);
+            nodeIDOut->append("#");
+            nodeIDOut->append(certName);
+            OPENSSL_free((void*)certName);
+            OPENSSL_free((void*)issuerName);
+
+            return preverified;
+        }
+        catch (std::exception& e)
+        {
+            WEBSOCKET_CONNECTOR(ERROR) << LOG_DESC("Cert verify failed") << boost::diagnostic_information(e);
+            return preverified;
+        }
+    };
 }
