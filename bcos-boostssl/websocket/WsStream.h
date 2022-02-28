@@ -71,6 +71,7 @@ public:
 
     void initDefaultOpt()
     {
+        /* //TODO: close compress temp
         // default open compress option
         {
             boost::beast::websocket::permessage_deflate opt;
@@ -79,6 +80,7 @@ public:
 
             m_stream->set_option(opt);
         }
+        */
 
         // default timeout option
         {
