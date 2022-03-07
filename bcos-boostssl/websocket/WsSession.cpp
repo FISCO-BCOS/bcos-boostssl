@@ -347,17 +347,24 @@ void WsSession::asyncSendMessage(
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("the session has been disconnected")
             << LOG_KV("seq", seq) << LOG_KV("endpoint", endPoint());
 
-        auto error = std::make_shared<Error>(
-            WsError::SessionDisconnect, "the session has been disconnected");
-        _respFunc(error, nullptr, nullptr);
+        if (_respFunc)
+        {
+            auto error = std::make_shared<Error>(
+                WsError::SessionDisconnect, "the session has been disconnected");
+            _respFunc(error, nullptr, nullptr);
+        }
+
         return;
     }
 
     // check if message size overflow
     if ((int64_t)_msg->data()->size() > (int64_t)maxWriteMsgSize())
     {
-        auto error = std::make_shared<Error>(WsError::MessageOverflow, "Message size overflow");
-        _respFunc(error, nullptr, nullptr);
+        if (_respFunc)
+        {
+            auto error = std::make_shared<Error>(WsError::MessageOverflow, "Message size overflow");
+            _respFunc(error, nullptr, nullptr);
+        }
 
         WEBSOCKET_SESSION(WARNING)
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("send message size overflow")
