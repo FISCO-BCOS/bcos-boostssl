@@ -22,6 +22,7 @@
 #include <bcos-boostssl/httpserver/HttpQueue.h>
 #include <bcos-boostssl/httpserver/HttpStream.h>
 #include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/ThreadPool.h>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/strand.hpp>
@@ -63,7 +64,7 @@ public:
     {
         m_parser.emplace();
         // set limit to http request size, 100m
-        m_parser->body_limit(100 * 1024 * 1024);
+        m_parser->body_limit(PARSER_BODY_LIMITATION);
 
         auto session = shared_from_this();
         m_httpStream->asyncRead(m_buffer, m_parser,
@@ -92,12 +93,18 @@ public:
             return;
         }
 
+        auto self = std::weak_ptr<HttpSession>(shared_from_this());
         if (boost::beast::websocket::is_upgrade(m_parser->get()))
         {
             HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
             if (m_wsUpgradeHandler)
             {
-                m_wsUpgradeHandler(m_httpStream, m_parser->release());
+                auto httpSession = self.lock();
+                if (!httpSession)
+                {
+                    return;
+                }
+                m_wsUpgradeHandler(m_httpStream, m_parser->release(), httpSession->endpointPublicKey());
             }
             else
             {
@@ -112,7 +119,6 @@ public:
 
         HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("receive http request");
 
-        auto self = std::weak_ptr<HttpSession>(shared_from_this());
         handleRequest(m_parser->release(), [self](auto&& msg) {
             auto session = self.lock();
             if (!session)
@@ -187,20 +193,22 @@ public:
         unsigned version = _httpRequest.version();
         if (m_httpReqHandler)
         {
-            std::string request = _httpRequest.body();
-            m_httpReqHandler(request, [this, _httpRequest, version, send, start](
-                                          const std::string& _content) {
-                std::chrono::high_resolution_clock::time_point end =
-                    std::chrono::high_resolution_clock::now();
+            m_threadPool->enqueue([this, version, _httpRequest, send, start](){
+                std::string request = _httpRequest.body();
+                m_httpReqHandler(request, [this, _httpRequest, version, send, start](
+                                            const std::string& _content) {
+                    std::chrono::high_resolution_clock::time_point end =
+                        std::chrono::high_resolution_clock::now();
 
-                auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
-                send(resp);
+                    auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
+                    send(resp);
 
-                auto ms =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("response")
-                                    << LOG_KV("body", resp->body())
-                                    << LOG_KV("keep_alive", resp->keep_alive()) << LOG_KV("ms", ms);
+                    auto ms =
+                        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("response")
+                                        << LOG_KV("body", resp->body())
+                                        << LOG_KV("keep_alive", resp->keep_alive()) << LOG_KV("ms", ms);
+                });
             });
         }
         else
@@ -247,6 +255,11 @@ public:
     HttpStream::Ptr httpStream() { return m_httpStream; }
     void setHttpStream(HttpStream::Ptr _httpStream) { m_httpStream = _httpStream; }
 
+    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool) { m_threadPool = _threadPool; }
+
+    std::shared_ptr<std::string> endpointPublicKey() { return m_endpointPublicKey; }
+    void setEndpointPublicKey(std::shared_ptr<std::string> _EndpointPublicKey) { m_endpointPublicKey = _EndpointPublicKey; }
+
 private:
     HttpStream::Ptr m_httpStream;
 
@@ -254,11 +267,15 @@ private:
 
     std::shared_ptr<Queue> m_queue;
 
+    std::shared_ptr<bcos::ThreadPool> m_threadPool;
+
     HttpReqHandler m_httpReqHandler;
     WsUpgradeHandler m_wsUpgradeHandler;
     // the parser is stored in an optional container so we can
     // construct it from scratch it at the beginning of each new message.
     boost::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> m_parser;
+
+    std::shared_ptr<std::string> m_endpointPublicKey;
 };
 
 }  // namespace http

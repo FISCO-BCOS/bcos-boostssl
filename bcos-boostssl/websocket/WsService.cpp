@@ -190,6 +190,7 @@ void WsService::stopIocThread()
 
 void WsService::heartbeat()
 {
+    // todo: 改下函数名
     auto ss = sessions();
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("heartbeat") << LOG_DESC("connected nodes")
@@ -305,7 +306,7 @@ WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
         m_connector->connectToWsServer(host, port, m_config->disableSsl(),
             [p, self, connectedEndPoint](boost::beast::error_code _ec,
                 const std::string& _extErrorMsg,
-                std::shared_ptr<WsStreamDelegate> _wsStreamDelegate) {
+                std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::shared_ptr<std::string> _endpointPublicKey) {
                 auto service = self.lock();
                 if (!service)
                 {
@@ -320,7 +321,7 @@ WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
                     return;
                 }
 
-                auto session = service->newSession(_wsStreamDelegate);
+                auto session = service->newSession(_wsStreamDelegate, *_endpointPublicKey.get());
                 session->setConnectedEndPoint(connectedEndPoint);
                 session->startAsClient();
             });
@@ -345,6 +346,7 @@ void WsService::reconnect()
         auto connectedPeers = std::make_shared<std::vector<EndPoint>>();
 
         // select all disconnected nodes
+        // todo: connectedPeers p2pservice去重后要更新该配置信息 ip + port, update方法
         auto peers = m_config->connectedPeers();
         for (auto const& peer : *peers)
         {
@@ -378,8 +380,96 @@ bool WsService::registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler)
     return false;
 }
 
+MsgHandler WsService::getMsgHandler(uint32_t _type)
+{
+    // todo: m_wsservice->registerMsgHandler 考虑对变量m_msgType2Method加锁
+    if (m_msgType2Method.count(_type))
+    {
+        return m_msgType2Method[_type];
+    }
+    return nullptr;
+}
+
+void WsService::eraseMsgHandler(uint32_t _type)
+{
+    if (!m_msgType2Method.count(_type))
+    {
+        return;
+    }
+    m_msgType2Method.erase(_type);
+}
+
+NodeInfo WsService::nodeInfo()
+{
+    try
+    {
+        if (m_nodeInfo.nodeID.empty())
+        {
+            /// get certificate
+            auto sslContext = m_ctx->native_handle();
+            X509* cert = SSL_CTX_get0_certificate(sslContext);
+
+            /// get issuer name
+            const char* issuer = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
+            std::string issuerName(issuer);
+
+            /// get subject name
+            const char* subject = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
+            std::string subjectName(subject);
+
+            /// get nodeID
+            std::string nodeIDOut;
+            auto sslContextPubHandler = m_connector->sslCertInfo()->sslContextPubHandler();
+            if (sslContextPubHandler(cert, nodeIDOut))
+            {
+                m_nodeInfo.nodeID = boost::to_upper_copy(nodeIDOut);
+                WEBSOCKET_SERVICE(INFO) << LOG_DESC("Get node information from cert")
+                               << LOG_KV("nodeID", m_nodeInfo.nodeID);
+            }
+
+            /// fill in the node informations
+            m_nodeInfo.agencyName = obtainCommonNameFromSubject(issuerName);
+            m_nodeInfo.nodeName = obtainCommonNameFromSubject(subjectName);
+            m_nodeInfo.nodeIPEndpoint = NodeIPEndpoint(m_listenHost, m_listenPort);
+            /// free resources
+            OPENSSL_free((void*)issuer);
+            OPENSSL_free((void*)subject);
+        }
+    }
+    catch (std::exception& e)
+    {
+        WEBSOCKET_SERVICE(ERROR) << LOG_DESC("Get node information from cert failed.")
+                        << boost::diagnostic_information(e);
+        return m_nodeInfo;
+    }
+    return m_nodeInfo;
+}
+
+std::string WsService::obtainCommonNameFromSubject(std::string const& subject)
+{
+    std::vector<std::string> fields;
+    boost::split(fields, subject, boost::is_any_of("/"), boost::token_compress_on);
+    for (auto field : fields)
+    {
+        std::size_t pos = field.find("CN");
+        if (pos != std::string::npos)
+        {
+            std::vector<std::string> cn_fields;
+            boost::split(cn_fields, field, boost::is_any_of("="), boost::token_compress_on);
+            /// use the whole fields as the common name
+            if (cn_fields.size() < 2)
+            {
+                return field;
+            }
+            /// return real common name
+            return cn_fields[1];
+        }
+    }
+    return subject;
+}
+
 std::shared_ptr<WsSession> WsService::newSession(
-    std::shared_ptr<WsStreamDelegate> _wsStreamDelegate)
+    std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey)
 {
     _wsStreamDelegate->setMaxReadMsgSize(m_config->maxMsgSize());
 
@@ -393,6 +483,7 @@ std::shared_ptr<WsSession> WsService::newSession(
     wsSession->setConnectedEndPoint(endPoint);
     wsSession->setMaxWriteMsgSize(m_config->maxMsgSize());
     wsSession->setSendMsgTimeout(m_config->sendMsgTimeout());
+    wsSession->setPublicKey(_publicKey);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
     wsSession->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {

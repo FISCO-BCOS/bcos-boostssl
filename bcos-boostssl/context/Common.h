@@ -19,10 +19,12 @@
  */
 
 #pragma once
+#include <bcos-utilities/BoostLog.h>
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 
 #define CONTEXT_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][CTX]"
+#define SSLCERT_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][SSLCERT]"
 
 namespace bcos
 {  // namespace bcos

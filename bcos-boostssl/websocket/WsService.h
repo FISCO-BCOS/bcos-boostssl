@@ -20,6 +20,8 @@
 #pragma once
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
+#include <bcos-boostssl/interfaces/NodeInfo.h>
+#include <bcos-boostssl/interfaces/MessageFace.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -80,7 +82,7 @@ public:
     void stopIocThread();
 
 public:
-    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStreamDelegate> _wsStreamDelegate);
+    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -139,6 +141,12 @@ public:
     std::shared_ptr<WsConnector> connector() const { return m_connector; }
     void setConnector(std::shared_ptr<WsConnector> _connector) { m_connector = _connector; }
 
+    void setHostPort(std::string host, uint16_t port)
+    {
+        m_listenHost = host;
+        m_listenPort = port;
+    }
+
     WsConfig::ConstPtr config() const { return m_config; }
     void setConfig(WsConfig::ConstPtr _config) { m_config = _config; }
 
@@ -149,6 +157,10 @@ public:
     }
 
     bool registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler);
+
+    MsgHandler getMsgHandler(uint32_t _type);
+
+    void eraseMsgHandler(uint32_t _msgType);
 
     void registerConnectHandler(ConnectHandler _connectHandler)
     {
@@ -165,6 +177,13 @@ public:
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
 
+    NodeInfo nodeInfo();
+
+    std::string obtainCommonNameFromSubject(std::string const& subject);
+
+    // virtual std::shared_ptr<ASIOInterface> faasioInterface() const { return m_asioInterface; }
+    // virtual std::shared_ptr<ASIOInterface> setFaasioInterface(ASIOInterface _asioInterface) const { return m_asioInterface = _asioInterface; }
+
 private:
     bool m_running{false};
 
@@ -174,6 +193,9 @@ private:
     std::shared_ptr<WsMessageFactory> m_messageFactory;
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
+    // listen host port
+    std::string m_listenHost = "";
+    uint16_t m_listenPort = 0;
     // Config
     std::shared_ptr<const WsConfig> m_config;
     // ws connector
@@ -208,6 +230,9 @@ private:
     // handshake handlers, the handers will be called when ws session
     // disconnected
     std::vector<HandshakeHandler> m_handshakeHandlers;
+
+    // std::shared_ptr<ASIOInterface> m_asioInterface;
+    NodeInfo m_nodeInfo;
 };
 
 }  // namespace ws

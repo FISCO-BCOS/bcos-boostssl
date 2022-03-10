@@ -19,6 +19,7 @@
  */
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
+#include <bcos-utilities/ThreadPool.h>
 #include <memory>
 
 using namespace bcos;
@@ -124,7 +125,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     {  // non ssl , start http session
         auto httpStream = m_httpStreamFactory->buildHttpStream(
             std::make_shared<boost::beast::tcp_stream>(std::move(socket)));
-        buildHttpSession(httpStream)->run();
+        buildHttpSession(httpStream, nullptr)->run();
 
         return doAccept();
     }
@@ -133,8 +134,12 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     auto self = std::weak_ptr<HttpServer>(shared_from_this());
     auto ss = std::make_shared<boost::beast::ssl_stream<boost::beast::tcp_stream>>(
         boost::beast::tcp_stream(std::move(socket)), *m_ctx);
+
+    std::shared_ptr<std::string> endpointPublicKey = std::make_shared<std::string>();
+    ss->set_verify_callback(m_sslCertInfo->newVerifyCallback(endpointPublicKey));
+
     ss->async_handshake(boost::asio::ssl::stream_base::server,
-        [ss, localEndpoint, remoteEndpoint, self](boost::beast::error_code _ec) {
+        [ss, localEndpoint, remoteEndpoint, endpointPublicKey, self](boost::beast::error_code _ec) {
             if (_ec)
             {
                 HTTP_SERVER(INFO) << LOG_BADGE("async_handshake")
@@ -150,7 +155,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
             if (server)
             {
                 auto httpStream = server->httpStreamFactory()->buildHttpStream(ss);
-                server->buildHttpSession(httpStream)->run();
+                server->buildHttpSession(httpStream, endpointPublicKey)->run();
             }
         });
 
@@ -158,7 +163,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
 }
 
 
-HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream)
+HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream, std::shared_ptr<std::string> _endpointPublicKey)
 {
     auto session = std::make_shared<HttpSession>();
 
@@ -189,6 +194,11 @@ HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream)
     session->setHttpStream(_httpStream);
     session->setRequestHandler(m_httpReqHandler);
     session->setWsUpgradeHandler(m_wsUpgradeHandler);
+    session->setThreadPool(threadPool());
+    if(_endpointPublicKey)
+    {
+      session->setEndpointPublicKey(_endpointPublicKey);
+    }
     return session;
 }
 

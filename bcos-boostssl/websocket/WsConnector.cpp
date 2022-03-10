@@ -36,7 +36,7 @@ using namespace bcos::boostssl::ws;
 // TODO: how to set timeout for connect to wsServer ???
 void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bool _disableSsl,
     std::function<void(boost::beast::error_code, const std::string& _extErrorMsg,
-        std::shared_ptr<WsStreamDelegate>)>
+        std::shared_ptr<WsStreamDelegate>, std::shared_ptr<std::string> _endpointPublicKey)>
         _callback)
 {
     auto ioc = m_ioc;
@@ -49,17 +49,18 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
         WEBSOCKET_CONNECTOR(WARNING)
             << LOG_BADGE("connectToWsServer") << LOG_DESC("insertPendingConns")
             << LOG_KV("endpoint", endpoint);
-        _callback(boost::beast::error_code(boost::asio::error::would_block), "", nullptr);
+        _callback(boost::beast::error_code(boost::asio::error::would_block), "", nullptr, nullptr);
         return;
     }
 
     auto resolver = m_resolver;
     auto builder = m_builder;
+    auto sslCertInfo = m_sslCertInfo;
     auto connector = shared_from_this();
-
+   
     // resolve host
     resolver->async_resolve(_host.c_str(), std::to_string(_port).c_str(),
-        [_host, _port, _disableSsl, endpoint, ioc, ctx, connector, builder, _callback](
+        [_host, _port, _disableSsl, endpoint, ioc, ctx, connector, builder, sslCertInfo, _callback](
             boost::beast::error_code _ec, boost::asio::ip::tcp::resolver::results_type _results) {
             if (_ec)
             {
@@ -67,7 +68,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_resolve failed")
                     << LOG_KV("error", _ec) << LOG_KV("errorMessage", _ec.message())
                     << LOG_KV("endpoint", endpoint);
-                _callback(_ec, "", nullptr);
+                _callback(_ec, "", nullptr, nullptr);
                 connector->erasePendingConns(endpoint);
                 return;
             }
@@ -83,7 +84,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
 
             // async connect
             rawStream->async_connect(_results,
-                [_host, _port, _disableSsl, endpoint, connector, builder, rawStream, _callback](
+                [_host, _port, _disableSsl, endpoint, connector, builder, sslCertInfo, rawStream, _callback](
                     boost::beast::error_code _ec,
                     boost::asio::ip::tcp::resolver::results_type::endpoint_type _ep) mutable {
                     if (_ec)
@@ -91,7 +92,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                         WEBSOCKET_CONNECTOR(WARNING)
                             << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect failed")
                             << LOG_KV("error", _ec.message()) << LOG_KV("endpoint", endpoint);
-                        _callback(_ec, "", nullptr);
+                        _callback(_ec, "", nullptr, nullptr);
                         connector->erasePendingConns(endpoint);
                         return;
                     }
@@ -103,7 +104,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                     auto wsStreamDelegate = builder->build(_disableSsl, rawStream);
 
                     std::shared_ptr<std::string> endpointPublicKey = std::make_shared<std::string>();
-                    wsStreamDelegate->setVerifyCallback(_disableSsl, connector->newVerifyCallback(endpointPublicKey));
+                    wsStreamDelegate->setVerifyCallback(_disableSsl, sslCertInfo->newVerifyCallback(endpointPublicKey));
 
                     // start ssl handshake
                     wsStreamDelegate->asyncHandshake([wsStreamDelegate, connector, _host, _port,
@@ -115,7 +116,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                 << LOG_BADGE("connectToWsServer")
                                 << LOG_DESC("ssl async_handshake failed") << LOG_KV("host", _host)
                                 << LOG_KV("port", _port) << LOG_KV("error", _ec.message());
-                            _callback(_ec, " ssl handshake failed", nullptr);
+                            _callback(_ec, " ssl handshake failed", nullptr, nullptr);
                             connector->erasePendingConns(endpoint);
                             return;
                         }
@@ -132,7 +133,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
 
                         // websocket async handshake
                         wsStreamDelegate->asyncWsHandshake(tmpHost, "/",
-                            [connector, _host, _port, endpoint, _callback, wsStreamDelegate](
+                            [connector, _host, _port, endpoint, _callback, wsStreamDelegate, endpointPublicKey](
                                 boost::beast::error_code _ec) mutable {
                                 if (_ec)
                                 {
@@ -141,7 +142,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                         << LOG_DESC("websocket async_handshake failed")
                                         << LOG_KV("error", _ec.message()) << LOG_KV("host", _host)
                                         << LOG_KV("port", _port);
-                                    _callback(_ec, "", nullptr);
+                                    _callback(_ec, "", nullptr, nullptr);
                                     connector->erasePendingConns(endpoint);
                                     return;
                                 }
@@ -150,87 +151,10 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                     << LOG_BADGE("connectToWsServer")
                                     << LOG_DESC("websocket handshake successfully")
                                     << LOG_KV("host", _host) << LOG_KV("port", _port);
-                                _callback(_ec, "", wsStreamDelegate);
+                                _callback(_ec, "", wsStreamDelegate, endpointPublicKey);
                                 connector->erasePendingConns(endpoint);
                             });
                     });
                 });
         });
-}
-
-std::function<bool(bool, boost::asio::ssl::verify_context&)> WsConnector::newVerifyCallback(
-    std::shared_ptr<std::string> nodeIDOut)
-{
-    auto wsConnector = std::weak_ptr<WsConnector>(shared_from_this());
-    return [wsConnector, nodeIDOut](bool preverified, boost::asio::ssl::verify_context& ctx) {
-        auto wsConnectorPtr = wsConnector.lock();
-        if (!wsConnectorPtr)
-        {
-            return false;
-        }
-
-        try
-        {
-            /// return early when the certificate is invalid
-            if (!preverified)
-            {
-                return false;
-            }
-            /// get the object points to certificate
-            X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-            if (!cert)
-            {
-                WEBSOCKET_CONNECTOR(ERROR) << LOG_DESC("Get cert failed");
-                return preverified;
-            }
-
-            if (!wsConnectorPtr->sslContextPubHandler()(cert, *nodeIDOut.get()))
-            {
-                return preverified;
-            }
-
-            int crit = 0;
-            BASIC_CONSTRAINTS* basic =
-                (BASIC_CONSTRAINTS*)X509_get_ext_d2i(cert, NID_basic_constraints, &crit, NULL);
-            if (!basic)
-            {
-                WEBSOCKET_CONNECTOR(ERROR) << LOG_DESC("Get ca basic failed");
-                return preverified;
-            }
-
-            /// ignore ca
-            if (basic->ca)
-            {
-                // ca or agency certificate
-                WEBSOCKET_CONNECTOR(TRACE) << LOG_DESC("Ignore CA certificate");
-                BASIC_CONSTRAINTS_free(basic);
-                return preverified;
-            }
-
-            BASIC_CONSTRAINTS_free(basic);
-            // if (!hostPtr->sslContextPubHandler()(cert, *nodeIDOut.get())) {
-            //   return preverified;
-            // }
-
-            /// append cert-name and issuer name after node ID
-            /// get subject name
-            const char* certName = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
-            /// get issuer name
-            const char* issuerName = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
-            /// format: {nodeID}#{issuer-name}#{cert-name}
-            nodeIDOut->append("#");
-            nodeIDOut->append(issuerName);
-            nodeIDOut->append("#");
-            nodeIDOut->append(certName);
-            OPENSSL_free((void*)certName);
-            OPENSSL_free((void*)issuerName);
-
-            return preverified;
-        }
-        catch (std::exception& e)
-        {
-            WEBSOCKET_CONNECTOR(ERROR) << LOG_DESC("Cert verify failed") << boost::diagnostic_information(e);
-            return preverified;
-        }
-    };
 }

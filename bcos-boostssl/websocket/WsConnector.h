@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <bcos-boostssl/websocket/WsStream.h>
+#include <bcos-boostssl/context/SslCertInfo.h>
 #include <bcos-utilities/DataConvertUtility.h>
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
@@ -46,36 +47,7 @@ public:
         std::shared_ptr<boost::asio::io_context> _ioc)
       : m_resolver(_resolver), m_ioc(_ioc)
     {
-        initSSLContextPubHexHandler();
     }
-
-    void initSSLContextPubHexHandler()
-    {
-        auto handler = [](X509* x509, std::string& _pubHex) -> bool {
-            ASN1_BIT_STRING* pubKey =
-                X509_get0_pubkey_bitstr(x509);  // csc->current_cert is an X509 struct
-            if (pubKey == NULL)
-            {
-                return false;
-            }
-
-            auto hex = bcos::toHexString(pubKey->data, pubKey->data + pubKey->length, "");
-            _pubHex = *hex.get();
-
-            WEBSOCKET_CONNECTOR(INFO) << LOG_DESC("[NEW]SSLContext pubHex: " + _pubHex);
-            return true;
-        };
-
-        m_sslContextPubHandler = handler;
-    }
-
-    std::function<bool(X509* x509, std::string& pubHex)> sslContextPubHandler()
-    {
-        return m_sslContextPubHandler;
-    }
-
-    std::function<bool(bool, boost::asio::ssl::verify_context&)> newVerifyCallback(
-        std::shared_ptr<std::string> nodeIDOut);
 
 public:
     /**
@@ -88,7 +60,7 @@ public:
      */
     void connectToWsServer(const std::string& _host, uint16_t _port, bool _disableSsl,
         std::function<void(boost::beast::error_code, const std::string& extErrorMsg,
-            std::shared_ptr<WsStreamDelegate>)>
+            std::shared_ptr<WsStreamDelegate>, std::shared_ptr<std::string>)>
             _callback);
 
 public:
@@ -121,6 +93,12 @@ public:
     void setBuilder(std::shared_ptr<WsStreamDelegateBuilder> _builder) { m_builder = _builder; }
     std::shared_ptr<WsStreamDelegateBuilder> builder() const { return m_builder; }
 
+    std::shared_ptr<boostssl::context::SslCertInfo> sslCertInfo() const { return m_sslCertInfo; }
+    void setSslCertInfo(std::shared_ptr<bcos::boostssl::context::SslCertInfo> _sslCertInfo)
+    {
+        m_sslCertInfo = _sslCertInfo;
+    }
+
 private:
     std::shared_ptr<WsStreamDelegateBuilder> m_builder;
     std::shared_ptr<boost::asio::ip::tcp::resolver> m_resolver;
@@ -130,7 +108,7 @@ private:
     mutable std::mutex x_pendingConns;
     std::set<std::string> m_pendingConns;
 
-    std::function<bool(X509* cert, std::string& pubHex)> m_sslContextPubHandler;
+    std::shared_ptr<bcos::boostssl::context::SslCertInfo> m_sslCertInfo;
 };
 }  // namespace ws
 }  // namespace boostssl

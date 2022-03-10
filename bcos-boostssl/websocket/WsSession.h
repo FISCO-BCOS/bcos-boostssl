@@ -152,6 +152,9 @@ public:
         return m_queue.size();
     }
 
+    std::string publicKey() const { return m_publicKey; }
+    void setPublicKey(const std::string& _publicKey) { m_publicKey = _publicKey; }
+
 public:
     struct CallBack
     {
@@ -174,6 +177,7 @@ private:
 
     std::string m_endPoint;
     std::string m_connectedEndPoint;
+    std::string m_publicKey;
 
     //
     int32_t m_sendMsgTimeout = -1;
