@@ -484,6 +484,8 @@ std::shared_ptr<WsSession> WsService::newSession(
     wsSession->setMaxWriteMsgSize(m_config->maxMsgSize());
     wsSession->setSendMsgTimeout(m_config->sendMsgTimeout());
     wsSession->setPublicKey(_publicKey);
+    auto nodeID = wsSession->obtainNodeID(_publicKey);
+    wsSession->setNodeID(nodeID);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
     wsSession->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {

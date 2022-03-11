@@ -22,6 +22,7 @@
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsStream.h>
+#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-utilities/Common.h>
 #include <bcos-utilities/ThreadPool.h>
 #include <boost/asio/deadline_timer.hpp>
@@ -155,6 +156,11 @@ public:
     std::string publicKey() const { return m_publicKey; }
     void setPublicKey(const std::string& _publicKey) { m_publicKey = _publicKey; }
 
+    nodeID obtainNodeID(std::string const& _publicKey);
+
+    nodeID nodeID() { return m_nodeId; }
+    void setNodeID(boostssl::nodeID _nodeId) { m_nodeId = _nodeId; }
+
 public:
     struct CallBack
     {
@@ -178,6 +184,7 @@ private:
     std::string m_endPoint;
     std::string m_connectedEndPoint;
     std::string m_publicKey;
+    boostssl::nodeID m_nodeId;
 
     //
     int32_t m_sendMsgTimeout = -1;

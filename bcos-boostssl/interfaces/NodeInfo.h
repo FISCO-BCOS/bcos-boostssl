@@ -91,6 +91,7 @@ struct NodeInfo
     NodeIPEndpoint nodeIPEndpoint;
 };
 using NodeInfos = std::vector<NodeInfo>;
+using nodeID = std::string;
 
 }  // namespace boostssl
 }  // namespace bcos

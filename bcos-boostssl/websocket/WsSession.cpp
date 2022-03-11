@@ -452,3 +452,18 @@ void WsSession::onRespTimeout(const boost::system::error_code& _error, const std
         std::make_shared<Error>(WsError::TimeOut, "waiting for message response timed out");
     m_threadPool->enqueue([callback, error]() { callback->respCallBack(error, nullptr, nullptr); });
 }
+
+nodeID WsSession::obtainNodeID(std::string const& _publicKey)
+{
+    std::vector<std::string> node_info_vec;
+    boost::split(node_info_vec, _publicKey, boost::is_any_of("#"), boost::token_compress_on);
+    if (!node_info_vec.empty())
+    {
+        auto nodeid = node_info_vec[0];
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("obtainNodeID") << LOG_KV("nodeID", nodeid);
+        return nodeid;
+    }
+
+    WEBSOCKET_SESSION(ERROR) << LOG_BADGE("obtainNodeID failed");
+    return "";
+}
