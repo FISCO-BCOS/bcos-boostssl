@@ -147,8 +147,8 @@ public:
         m_listenPort = port;
     }
 
-    WsConfig::ConstPtr config() const { return m_config; }
-    void setConfig(WsConfig::ConstPtr _config) { m_config = _config; }
+    WsConfig::Ptr config() const { return m_config; }
+    void setConfig(WsConfig::Ptr _config) { m_config = _config; }
 
     std::shared_ptr<bcos::boostssl::http::HttpServer> httpServer() const { return m_httpServer; }
     void setHttpServer(std::shared_ptr<bcos::boostssl::http::HttpServer> _httpServer)
@@ -197,7 +197,7 @@ private:
     std::string m_listenHost = "";
     uint16_t m_listenPort = 0;
     // Config
-    std::shared_ptr<const WsConfig> m_config;
+    std::shared_ptr<WsConfig> m_config;
     // ws connector
     std::shared_ptr<WsConnector> m_connector;
     // io context
