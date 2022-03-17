@@ -100,7 +100,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
             auto service = wsServiceWeakPtr.lock();
             if (service)
             {
-                auto session = service->newSession(_httpStream->wsStream(), *_publicKey.get());
+                std::string pulicKeyString = _publicKey == nullptr ? "" : *_publicKey.get();
+                auto session = service->newSession(_httpStream->wsStream(), pulicKeyString);
                 session->startAsServer(_httpRequest);
             }
         });
@@ -117,7 +118,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         if (connectedPeers)
         {
-            for (auto const& peer : *connectedPeers)
+            for (auto& peer : *connectedPeers)
             {
                 if (!WsTools::validIP(peer.host))
                 {

@@ -224,7 +224,7 @@ std::string WsService::genConnectError(
     return msg;
 }
 
-void WsService::syncConnectToEndpoints(EndPointsConstPtr _peers)
+void WsService::syncConnectToEndpoints(EndPointsPtr _peers)
 {
     std::string errorMsg;
     std::size_t sucCount = 0;
@@ -281,12 +281,12 @@ void WsService::syncConnectToEndpoints(EndPointsConstPtr _peers)
 
 std::shared_ptr<
     std::vector<std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
-WsService::asyncConnectToEndpoints(EndPointsConstPtr _peers)
+WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
 {
     auto vPromise = std::make_shared<std::vector<
         std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>();
 
-    for (auto const& peer : *_peers)
+    for (auto& peer : *_peers)
     {
         std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
 
@@ -348,7 +348,7 @@ void WsService::reconnect()
         // select all disconnected nodes
         // todo: connectedPeers p2pservice去重后要更新该配置信息 ip + port, update方法
         auto peers = m_config->connectedPeers();
-        for (auto const& peer : *peers)
+        for (auto& peer : *peers)
         {
             std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
             auto session = getSession(connectedEndPoint);

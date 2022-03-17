@@ -195,10 +195,8 @@ HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream, std::
     session->setRequestHandler(m_httpReqHandler);
     session->setWsUpgradeHandler(m_wsUpgradeHandler);
     session->setThreadPool(threadPool());
-    if(_endpointPublicKey)
-    {
-      session->setEndpointPublicKey(_endpointPublicKey);
-    }
+    session->setEndpointPublicKey(_endpointPublicKey);
+
     return session;
 }
 

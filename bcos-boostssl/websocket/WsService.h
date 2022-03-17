@@ -71,11 +71,11 @@ public:
 
     std::shared_ptr<std::vector<
         std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
-    asyncConnectToEndpoints(EndPointsConstPtr _peers);
+    asyncConnectToEndpoints(EndPointsPtr _peers);
 
     std::string genConnectError(
         const std::string& _error, const std::string& _host, uint16_t port, bool end);
-    void syncConnectToEndpoints(EndPointsConstPtr _peers);
+    void syncConnectToEndpoints(EndPointsPtr _peers);
 
 public:
     void startIocThread();

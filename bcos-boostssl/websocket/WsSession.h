@@ -154,7 +154,7 @@ public:
     }
 
     std::string publicKey() const { return m_publicKey; }
-    void setPublicKey(const std::string& _publicKey) { m_publicKey = _publicKey; }
+    void setPublicKey(std::string const& _publicKey) { m_publicKey = _publicKey; }
 
     nodeID obtainNodeID(std::string const& _publicKey);
 
