@@ -114,8 +114,8 @@ public:
     }
     WsRecvMessageHandler recvMessageHandler() { return m_recvMessageHandler; }
 
-    std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
-    void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
+    std::shared_ptr<MessageFaceFactory> messageFactory() { return m_messageFactory; }
+    void setMessageFactory(std::shared_ptr<MessageFaceFactory> _messageFactory)
     {
         m_messageFactory = _messageFactory;
     }
@@ -203,7 +203,7 @@ private:
     WsRecvMessageHandler m_recvMessageHandler;
 
     // message factory
-    std::shared_ptr<WsMessageFactory> m_messageFactory;
+    std::shared_ptr<MessageFaceFactory> m_messageFactory;
     // thread pool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // ioc

@@ -98,7 +98,10 @@ int main(int argc, char** argv)
     {
         auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
         msg->setPacketType(999);
-        auto randStr = wsService->messageFactory()->newSeq();
+        
+        std::string randStr = boost::uuids::to_string(boost::uuids::random_generator()());
+        randStr.erase(std::remove(randStr.begin(), randStr.end(), '-'), randStr.end());
+
         msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
         BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
                        << LOG_KV("req", randStr);

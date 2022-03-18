@@ -111,8 +111,8 @@ public:
     virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg);
 
 public:
-    std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
-    void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
+    std::shared_ptr<MessageFaceFactory> messageFactory() { return m_messageFactory; }
+    void setMessageFactory(std::shared_ptr<MessageFaceFactory> _messageFactory)
     {
         m_messageFactory = _messageFactory;
     }
@@ -189,8 +189,8 @@ private:
 
     int32_t m_waitConnectFinishTimeout = 30000;
 
-    // WsMessageFactory
-    std::shared_ptr<WsMessageFactory> m_messageFactory;
+    // MessageFaceFactory
+    std::shared_ptr<MessageFaceFactory> m_messageFactory;
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // listen host port
