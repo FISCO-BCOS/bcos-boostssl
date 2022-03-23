@@ -155,7 +155,7 @@ void WsService::startIocThread()
                         << boost::diagnostic_information(e);
                 }
 
-                if (m_running)
+                if (m_running && m_ioc->stopped())
                 {
                     m_ioc->restart();
                 }
