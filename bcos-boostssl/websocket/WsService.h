@@ -67,7 +67,7 @@ public:
     virtual void start();
     virtual void stop();
     virtual void reconnect();
-    virtual void heartbeat();
+    virtual void countConnectedNodes();
 
     std::shared_ptr<std::vector<
         std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>

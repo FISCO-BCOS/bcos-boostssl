@@ -84,8 +84,7 @@ void WsService::start()
         reconnect();
     }
 
-    // heartbeat
-    heartbeat();
+    countConnectedNodes();
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start")
                             << LOG_DESC("start websocket service successfully")
@@ -188,9 +187,8 @@ void WsService::stopIocThread()
     }
 }
 
-void WsService::heartbeat()
+void WsService::countConnectedNodes()
 {
-    // todo: 改下函数名
     auto ss = sessions();
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("heartbeat") << LOG_DESC("connected nodes")
@@ -205,7 +203,7 @@ void WsService::heartbeat()
         {
             return;
         }
-        service->heartbeat();
+        service->countConnectedNodes();
     });
 }
 
