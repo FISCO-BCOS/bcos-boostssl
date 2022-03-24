@@ -190,13 +190,17 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
 
     auto now = std::chrono::high_resolution_clock::now();
 
-    auto reportMS1 = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastReadReportMS).count();
-     if(reportMS1 > 1000){
-
-            WEBSOCKET_SESSION(INFO)
-                << LOG_BADGE("onRead")
-                << LOG_KV("msgRecvTimeTotal", m_msgRecvTimeTotal) << LOG_KV("msgRecvSizeTotal", m_msgRecvSizeTotal)
-                << LOG_KV("lastSecondRecvMsgSizeTotal", m_lastSecondRecvMsgSizeTotal) << LOG_KV("lastSecondRecvMsgTimeTotal", m_lastSecondRecvMsgTimeTotal);
+    auto reportMS1 =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastReadReportMS).count();
+    if (reportMS1 > 1000)
+    {
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("onRead")
+                                << LOG_KV("msgRecvTimeTotal", m_msgRecvTimeTotal)
+                                << LOG_KV("msgRecvSizeTotal", m_msgRecvSizeTotal)
+                                << LOG_KV(
+                                       "lastSecondRecvMsgSizeTotal", m_lastSecondRecvMsgSizeTotal)
+                                << LOG_KV(
+                                       "lastSecondRecvMsgTimeTotal", m_lastSecondRecvMsgTimeTotal);
 
         m_lastSecondRecvMsgSizeTotal = 0;
         m_lastSecondRecvMsgTimeTotal = 0;
@@ -207,7 +211,6 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     m_msgRecvSizeTotal += message->payload()->size();
     m_lastSecondRecvMsgSizeTotal += message->payload()->size();
     m_lastSecondRecvMsgTimeTotal++;
-
 }
 
 void WsSession::asyncRead()
@@ -263,7 +266,7 @@ void WsSession::onWritePacket()
             isEmpty = m_queue.empty();
             buffer = m_queue.front()->buffer;
         }
-  
+
         // send the next message if any
         if (!isEmpty)
         {
@@ -298,15 +301,18 @@ void WsSession::onWritePacket()
         m_msgDelayReportMS = now;
     }
 
-    auto reportMS1 = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastWriteReportMS).count();
+    auto reportMS1 =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastWriteReportMS).count();
 
-    if(reportMS1 > 1000)
+    if (reportMS1 > 1000)
     {
-
-            WEBSOCKET_SESSION(INFO)
-                << LOG_BADGE("onWrite") << LOG_DESC("send report")
-                << LOG_KV("msgWriteTimeTotal", m_msgWriteTimeTotal) << LOG_KV("msgWriteSizeTotal", m_msgWriteSizeTotal)
-                << LOG_KV("lastSecondWriteMsgTimeTotal", m_lastSecondWriteMsgTimeTotal) << LOG_KV("lastSecondWriteMsgSizeTotal", m_lastSecondWriteMsgSizeTotal);
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("onWrite") << LOG_DESC("send report")
+                                << LOG_KV("msgWriteTimeTotal", m_msgWriteTimeTotal)
+                                << LOG_KV("msgWriteSizeTotal", m_msgWriteSizeTotal)
+                                << LOG_KV(
+                                       "lastSecondWriteMsgTimeTotal", m_lastSecondWriteMsgTimeTotal)
+                                << LOG_KV("lastSecondWriteMsgSizeTotal",
+                                       m_lastSecondWriteMsgSizeTotal);
 
         m_lastSecondWriteMsgSizeTotal = 0;
         m_lastSecondWriteMsgTimeTotal = 0;

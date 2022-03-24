@@ -43,7 +43,8 @@ using HttpRequestPtr = std::shared_ptr<HttpRequest>;
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;
 using HttpReqHandler =
     std::function<void(const std::string& req, std::function<void(const std::string& resp)>)>;
-using WsUpgradeHandler = std::function<void(std::shared_ptr<HttpStream>, HttpRequest&&, std::shared_ptr<std::string>)>;
+using WsUpgradeHandler =
+    std::function<void(std::shared_ptr<HttpStream>, HttpRequest&&, std::shared_ptr<std::string>)>;
 
 static const int PARSER_BODY_LIMITATION = 100 * 1024 * 1024;
 }  // namespace http

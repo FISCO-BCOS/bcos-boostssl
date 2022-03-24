@@ -95,7 +95,7 @@ int main(int argc, char** argv)
                            */
             _session->asyncSendMessage(_msg);
         });
-    
+
     auto handler = wsService->getMsgHandler(999);
     if (!handler)
     {

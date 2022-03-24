@@ -104,7 +104,8 @@ public:
                 {
                     return;
                 }
-                m_wsUpgradeHandler(m_httpStream, m_parser->release(), httpSession->endpointPublicKey());
+                m_wsUpgradeHandler(
+                    m_httpStream, m_parser->release(), httpSession->endpointPublicKey());
             }
             else
             {
@@ -193,10 +194,10 @@ public:
         unsigned version = _httpRequest.version();
         if (m_httpReqHandler)
         {
-            m_threadPool->enqueue([this, version, _httpRequest, send, start](){
+            m_threadPool->enqueue([this, version, _httpRequest, send, start]() {
                 std::string request = _httpRequest.body();
                 m_httpReqHandler(request, [this, _httpRequest, version, send, start](
-                                            const std::string& _content) {
+                                              const std::string& _content) {
                     std::chrono::high_resolution_clock::time_point end =
                         std::chrono::high_resolution_clock::now();
 
@@ -205,9 +206,10 @@ public:
 
                     auto ms =
                         std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                    HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("response")
-                                        << LOG_KV("body", resp->body())
-                                        << LOG_KV("keep_alive", resp->keep_alive()) << LOG_KV("ms", ms);
+                    HTTP_SESSION(DEBUG)
+                        << LOG_BADGE("handleRequest") << LOG_DESC("response")
+                        << LOG_KV("body", resp->body()) << LOG_KV("keep_alive", resp->keep_alive())
+                        << LOG_KV("ms", ms);
                 });
             });
         }
@@ -255,10 +257,16 @@ public:
     HttpStream::Ptr httpStream() { return m_httpStream; }
     void setHttpStream(HttpStream::Ptr _httpStream) { m_httpStream = _httpStream; }
 
-    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool) { m_threadPool = _threadPool; }
+    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
+    {
+        m_threadPool = _threadPool;
+    }
 
     std::shared_ptr<std::string> endpointPublicKey() { return m_endpointPublicKey; }
-    void setEndpointPublicKey(std::shared_ptr<std::string> _EndpointPublicKey) { m_endpointPublicKey = _EndpointPublicKey; }
+    void setEndpointPublicKey(std::shared_ptr<std::string> _EndpointPublicKey)
+    {
+        m_endpointPublicKey = _EndpointPublicKey;
+    }
 
 private:
     HttpStream::Ptr m_httpStream;

@@ -307,7 +307,8 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
         m_connector->connectToWsServer(host, port, m_config->disableSsl(),
             [p, self, connectedEndPoint](boost::beast::error_code _ec,
                 const std::string& _extErrorMsg,
-                std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::shared_ptr<std::string> _endpointPublicKey) {
+                std::shared_ptr<WsStreamDelegate> _wsStreamDelegate,
+                std::shared_ptr<std::string> _endpointPublicKey) {
                 auto service = self.lock();
                 if (!service)
                 {
@@ -425,7 +426,7 @@ NodeInfo WsService::nodeInfo()
             {
                 m_nodeInfo.nodeID = boost::to_upper_copy(nodeIDOut);
                 WEBSOCKET_SERVICE(INFO) << LOG_DESC("Get node information from cert")
-                               << LOG_KV("nodeID", m_nodeInfo.nodeID);
+                                        << LOG_KV("nodeID", m_nodeInfo.nodeID);
             }
 
             /// fill in the node informations
@@ -440,7 +441,7 @@ NodeInfo WsService::nodeInfo()
     catch (std::exception& e)
     {
         WEBSOCKET_SERVICE(ERROR) << LOG_DESC("Get node information from cert failed.")
-                        << boost::diagnostic_information(e);
+                                 << boost::diagnostic_information(e);
         return m_nodeInfo;
     }
     return m_nodeInfo;
@@ -486,7 +487,7 @@ std::shared_ptr<WsSession> WsService::newSession(
     wsSession->setSendMsgTimeout(m_config->sendMsgTimeout());
     wsSession->setPublicKey(_publicKey);
     auto nodeID = wsSession->obtainNodeID(_publicKey);
-    wsSession->setNodeID(nodeID);
+    wsSession->setNodeId(nodeID);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
     wsSession->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {
@@ -638,7 +639,8 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
                             << LOG_KV("refCount", _session ? _session.use_count() : -1);
 }
 
-void WsService::onRecvMessage(std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session)
+void WsService::onRecvMessage(
+    std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session)
 {
     auto seq = _msg->seq();
 
@@ -747,7 +749,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
     auto retry = std::make_shared<Retry>();
     retry->ss = _ss;
     retry->msg = _msg;
-    
+
     retry->options = _options;
     retry->respFunc = _respFunc;
     retry->sendMessage();
@@ -787,7 +789,8 @@ void WsService::broadcastMessage(std::shared_ptr<boostssl::MessageFace> _msg)
     broadcastMessage(sessions(), _msg);
 }
 
-void WsService::broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg)
+void WsService::broadcastMessage(
+    const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg)
 {
     for (auto& session : _ss)
     {

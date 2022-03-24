@@ -19,10 +19,10 @@
  */
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
+#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsStream.h>
-#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-utilities/Common.h>
 #include <bcos-utilities/ThreadPool.h>
 #include <boost/asio/deadline_timer.hpp>
@@ -86,8 +86,8 @@ public:
      * @param _respCallback: callback
      * @return void:
      */
-    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
-        RespCallBack _respCallback = RespCallBack());
+    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg,
+        Options _options = Options(), RespCallBack _respCallback = RespCallBack());
 
 public:
     std::string endPoint() const { return m_endPoint; }
@@ -158,8 +158,8 @@ public:
 
     nodeID obtainNodeID(std::string const& _publicKey);
 
-    nodeID nodeID() { return m_nodeId; }
-    void setNodeID(boostssl::nodeID _nodeId) { m_nodeId = _nodeId; }
+    nodeID nodeId() { return m_nodeId; }
+    void setNodeId(boostssl::nodeID _nodeId) { m_nodeId = _nodeId; }
 
 public:
     struct CallBack
@@ -225,22 +225,19 @@ private:
         std::chrono::high_resolution_clock::now();
 
 
-std::chrono::time_point<std::chrono::high_resolution_clock> m_lastReadReportMS =
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_lastReadReportMS =
         std::chrono::high_resolution_clock::now();
     std::atomic<int64_t> m_msgRecvSizeTotal = 0;
     std::atomic<int64_t> m_msgRecvTimeTotal = 0;
     std::atomic<int64_t> m_lastSecondRecvMsgSizeTotal = 0;
     std::atomic<int64_t> m_lastSecondRecvMsgTimeTotal = 0;
 
-std::chrono::time_point<std::chrono::high_resolution_clock> m_lastWriteReportMS =
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_lastWriteReportMS =
         std::chrono::high_resolution_clock::now();
     std::atomic<int64_t> m_msgWriteSizeTotal = 0;
     std::atomic<int64_t> m_msgWriteTimeTotal = 0;
     std::atomic<int64_t> m_lastSecondWriteMsgSizeTotal = 0;
     std::atomic<int64_t> m_lastSecondWriteMsgTimeTotal = 0;
-
-    
-
 };
 
 }  // namespace ws

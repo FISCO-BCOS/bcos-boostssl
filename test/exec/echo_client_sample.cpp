@@ -43,7 +43,6 @@ void usage()
     std::exit(0);
 }
 
-
 int main(int argc, char** argv)
 {
     if (argc < 5)
@@ -53,7 +52,6 @@ int main(int argc, char** argv)
 
     std::string host = argv[1];
     uint16_t port = atoi(argv[2]);
-    
 
     std::string disableSsl = "true";
     uint16_t sizeNum = 1;
@@ -64,12 +62,12 @@ int main(int argc, char** argv)
         disableSsl = argv[3];
     }
 
-    if(argc > 4)
+    if (argc > 4)
     {
         sizeNum = atoi(argv[4]);
     }
 
-    if(argc > 5)
+    if (argc > 5)
     {
         interval = atoi(argv[5]);
     }
@@ -108,15 +106,17 @@ int main(int argc, char** argv)
     // construct message
     auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
     msg->setPacketType(999);
-    
-    // std::string randStr = boost::uuids::to_string(boost::uuids::random_generator()());
-    // randStr.erase(std::remove(randStr.begin(), randStr.end(), '-'), randStr.end());
+
+    // std::string randStr =
+    // boost::uuids::to_string(boost::uuids::random_generator()());
+    // randStr.erase(std::remove(randStr.begin(), randStr.end(), '-'),
+    // randStr.end());
     std::string randStr(sizeNum, 'a');
 
     msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
 
     BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
-                    << LOG_KV("request size", randStr.size());
+                   << LOG_KV("request size", randStr.size());
 
     int i = 0;
     while (true)
@@ -136,17 +136,17 @@ int main(int argc, char** argv)
                     return;
                 }
 
-                // auto resp = std::string(_msg->payload()->begin(), _msg->payload()->end());
-                // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("receive response")
+                // auto resp = std::string(_msg->payload()->begin(),
+                // _msg->payload()->end()); BCOS_LOG(INFO) << LOG_BADGE(" [Main]
+                // ===>>>> ") << LOG_DESC("receive response")
                 //               << LOG_KV("resp", resp);
             });
-        
 
-        if ( i % interval == 0)
+        if (i % interval == 0)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-        
+
         i++;
     }
 
