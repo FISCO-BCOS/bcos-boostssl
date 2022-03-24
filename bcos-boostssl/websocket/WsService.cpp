@@ -642,12 +642,12 @@ void WsService::onRecvMessage(std::shared_ptr<boostssl::MessageFace> _msg, std::
 {
     auto seq = _msg->seq();
 
-    WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
-                             << LOG_DESC("receive message from server")
-                             << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
-                             << LOG_KV("endpoint", _session->endPoint())
-                             << LOG_KV("data size", _msg->payload()->size())
-                             << LOG_KV("use_count", _session.use_count());
+    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
+    //                          << LOG_DESC("receive message from server")
+    //                          << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
+    //                          << LOG_KV("endpoint", _session->endPoint())
+    //                          << LOG_KV("data size", _msg->payload()->size())
+    //                          << LOG_KV("use_count", _session.use_count());
 
     auto it = m_msgType2Method.find(_msg->packetType());
     if (it != m_msgType2Method.end())
@@ -742,20 +742,21 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
         }
     };
 
-    auto size = _ss.size();
+    // auto size = _ss.size();
 
     auto retry = std::make_shared<Retry>();
     retry->ss = _ss;
     retry->msg = _msg;
+    
     retry->options = _options;
     retry->respFunc = _respFunc;
     retry->sendMessage();
 
-    auto seq = _msg->seq();
-    int32_t timeout = _options.timeout > 0 ? _options.timeout : m_config->sendMsgTimeout();
+    // auto seq = _msg->seq();
+    // int32_t timeout = _options.timeout > 0 ? _options.timeout : m_config->sendMsgTimeout();
 
-    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
-                             << LOG_KV("size", size) << LOG_KV("timeout", timeout);
+    // WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
+    //                          << LOG_KV("size", size) << LOG_KV("timeout", timeout);
 }
 
 void WsService::asyncSendMessage(const std::set<std::string>& _endPoints,

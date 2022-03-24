@@ -84,7 +84,7 @@ public:
     virtual ~WsMessageFactory() {}
 
 public:
-    virtual std::string newSeq()
+    virtual std::string newSeq() override
     {
         std::string seq = boost::uuids::to_string(boost::uuids::random_generator()());
         seq.erase(std::remove(seq.begin(), seq.end(), '-'), seq.end());

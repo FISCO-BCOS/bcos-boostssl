@@ -36,37 +36,49 @@ using namespace bcos::boostssl::context;
 
 void usage()
 {
-    std::cerr << "Usage: echo-client-sample <peerIp> <peerPort> <ssl>\n"
+    std::cerr << "Usage: echo-client-sample <peerIp> <peerPort> <ssl> <dataSize>\n"
               << "Example:\n"
-              << "    ./echo-client-sample 127.0.0.1 20200 true\n"
-              << "    ./echo-client-sample 127.0.0.1 20200 false\n";
+              << "    ./echo-client-sample 127.0.0.1 20200 true 2\n"
+              << "    ./echo-client-sample 127.0.0.1 20200 false 2\n";
     std::exit(0);
 }
 
 
 int main(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 5)
     {
         usage();
     }
 
     std::string host = argv[1];
     uint16_t port = atoi(argv[2]);
+    
 
     std::string disableSsl = "true";
+    uint16_t sizeNum = 1;
+    uint16_t interval = 10;
 
     if (argc > 3)
     {
         disableSsl = argv[3];
     }
 
+    if(argc > 4)
+    {
+        sizeNum = atoi(argv[4]);
+    }
+
+    if(argc > 5)
+    {
+        interval = atoi(argv[5]);
+    }
+
     BCOS_LOG(INFO) << LOG_DESC("echo-client-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
-                   << LOG_KV("disableSsl", disableSsl);
+                   << LOG_KV("disableSsl", disableSsl) << LOG_KV("datasize", sizeNum);
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Client);
-
 
     EndPoint endpoint;
     endpoint.host = host;
@@ -76,7 +88,7 @@ int main(int argc, char** argv)
     peers->push_back(endpoint);
     config->setConnectedPeers(peers);
 
-    config->setThreadPoolSize(4);
+    config->setThreadPoolSize(1);
     config->setDisableSsl(0 == disableSsl.compare("true"));
     if (!config->disableSsl())
     {
@@ -93,20 +105,26 @@ int main(int argc, char** argv)
 
     wsService->start();
 
+    // construct message
+    auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
+    msg->setPacketType(999);
+    
+    // std::string randStr = boost::uuids::to_string(boost::uuids::random_generator()());
+    // randStr.erase(std::remove(randStr.begin(), randStr.end(), '-'), randStr.end());
+    std::string randStr(sizeNum, 'a');
+
+    msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
+
+    BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
+                    << LOG_KV("request size", randStr.size());
+
     int i = 0;
     while (true)
     {
-        auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
-        msg->setPacketType(999);
-        
-        std::string randStr = boost::uuids::to_string(boost::uuids::random_generator()());
-        randStr.erase(std::remove(randStr.begin(), randStr.end(), '-'), randStr.end());
-
-        msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
-        BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
-                       << LOG_KV("req", randStr);
+        auto seq = wsService->messageFactory()->newSeq();
+        msg->setSeq(seq);
         wsService->asyncSendMessage(msg, Options(-1),
-            [](Error::Ptr _error, std::shared_ptr<boostssl::MessageFace> _msg,
+            [](Error::Ptr _error, std::shared_ptr<boostssl::MessageFace>,
                 std::shared_ptr<WsSession> _session) {
                 (void)_session;
                 if (_error && _error->errorCode() != 0)
@@ -118,11 +136,17 @@ int main(int argc, char** argv)
                     return;
                 }
 
-                auto resp = std::string(_msg->payload()->begin(), _msg->payload()->end());
-                BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("receive response")
-                               << LOG_KV("resp", resp);
+                // auto resp = std::string(_msg->payload()->begin(), _msg->payload()->end());
+                // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("receive response")
+                //               << LOG_KV("resp", resp);
             });
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        
+
+        if ( i % interval == 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        
         i++;
     }
 

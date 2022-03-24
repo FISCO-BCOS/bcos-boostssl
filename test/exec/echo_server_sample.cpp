@@ -69,7 +69,7 @@ int main(int argc, char** argv)
 
     config->setListenIP(host);
     config->setListenPort(port);
-    config->setThreadPoolSize(4);
+    config->setThreadPoolSize(1);
     config->setDisableSsl(0 == disableSsl.compare("true"));
     if (!config->disableSsl())
     {
@@ -86,14 +86,22 @@ int main(int argc, char** argv)
 
     wsService->registerMsgHandler(
         999, [](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
-            auto seq = _msg->seq();
+            /*auto seq = _msg->seq();
             auto data = std::string(_msg->payload()->begin(), _msg->payload()->end());
             BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst seq ")
                            << LOG_KV("seq", seq);
             BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst message ")
                            << LOG_KV("data", data);
+                           */
             _session->asyncSendMessage(_msg);
         });
+    
+    auto handler = wsService->getMsgHandler(999);
+    if (!handler)
+    {
+        std::cout << "msg handler not found";
+        return EXIT_SUCCESS;
+    }
 
     wsService->start();
 

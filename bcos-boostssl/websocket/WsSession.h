@@ -67,7 +67,7 @@ public:
     void asyncRead();
     void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
-    void asyncWrite();
+    void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
     void onWrite(std::shared_ptr<bcos::bytes> _buffer);
 
     // async read
@@ -223,6 +223,24 @@ private:
     std::atomic<uint32_t> m_msgDelayCount = 0;
     std::chrono::time_point<std::chrono::high_resolution_clock> m_msgDelayReportMS =
         std::chrono::high_resolution_clock::now();
+
+
+std::chrono::time_point<std::chrono::high_resolution_clock> m_lastReadReportMS =
+        std::chrono::high_resolution_clock::now();
+    std::atomic<int64_t> m_msgRecvSizeTotal = 0;
+    std::atomic<int64_t> m_msgRecvTimeTotal = 0;
+    std::atomic<int64_t> m_lastSecondRecvMsgSizeTotal = 0;
+    std::atomic<int64_t> m_lastSecondRecvMsgTimeTotal = 0;
+
+std::chrono::time_point<std::chrono::high_resolution_clock> m_lastWriteReportMS =
+        std::chrono::high_resolution_clock::now();
+    std::atomic<int64_t> m_msgWriteSizeTotal = 0;
+    std::atomic<int64_t> m_msgWriteTimeTotal = 0;
+    std::atomic<int64_t> m_lastSecondWriteMsgSizeTotal = 0;
+    std::atomic<int64_t> m_lastSecondWriteMsgTimeTotal = 0;
+
+    
+
 };
 
 }  // namespace ws

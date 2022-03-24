@@ -187,6 +187,27 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
             session->recvMessageHandler()(message, session);
         }
     });
+
+    auto now = std::chrono::high_resolution_clock::now();
+
+    auto reportMS1 = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastReadReportMS).count();
+     if(reportMS1 > 1000){
+
+            WEBSOCKET_SESSION(INFO)
+                << LOG_BADGE("onRead")
+                << LOG_KV("msgRecvTimeTotal", m_msgRecvTimeTotal) << LOG_KV("msgRecvSizeTotal", m_msgRecvSizeTotal)
+                << LOG_KV("lastSecondRecvMsgSizeTotal", m_lastSecondRecvMsgSizeTotal) << LOG_KV("lastSecondRecvMsgTimeTotal", m_lastSecondRecvMsgTimeTotal);
+
+        m_lastSecondRecvMsgSizeTotal = 0;
+        m_lastSecondRecvMsgTimeTotal = 0;
+        m_lastReadReportMS = std::chrono::high_resolution_clock::now();
+    }
+
+    m_msgRecvTimeTotal++;
+    m_msgRecvSizeTotal += message->payload()->size();
+    m_lastSecondRecvMsgSizeTotal += message->payload()->size();
+    m_lastSecondRecvMsgTimeTotal++;
+
 }
 
 void WsSession::asyncRead()
@@ -231,16 +252,22 @@ void WsSession::onWritePacket()
     std::shared_ptr<Message> msg = nullptr;
     std::size_t nMsgQueueSize = 0;
     {
-        boost::unique_lock<boost::shared_mutex> lock(x_queue);
-        msg = m_queue.front();
-        // remove the front ele from the queue, it has been sent
-        m_queue.erase(m_queue.begin());
-        nMsgQueueSize = m_queue.size();
-
-        // send the next message if any
-        if (!m_queue.empty())
+        bool isEmpty = false;
+        std::shared_ptr<bcos::bytes> buffer = nullptr;
         {
-            asyncWrite();
+            boost::unique_lock<boost::shared_mutex> lock(x_queue);
+            msg = m_queue.front();
+            // remove the front ele from the queue, it has been sent
+            m_queue.erase(m_queue.begin());
+            nMsgQueueSize = m_queue.size();
+            isEmpty = m_queue.empty();
+            buffer = m_queue.front()->buffer;
+        }
+  
+        // send the next message if any
+        if (!isEmpty)
+        {
+            asyncWrite(buffer);
         }
     }
 
@@ -270,10 +297,32 @@ void WsSession::onWritePacket()
         m_msgDelayCount = 0;
         m_msgDelayReportMS = now;
     }
+
+    auto reportMS1 = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastWriteReportMS).count();
+
+    if(reportMS1 > 1000)
+    {
+
+            WEBSOCKET_SESSION(INFO)
+                << LOG_BADGE("onWrite") << LOG_DESC("send report")
+                << LOG_KV("msgWriteTimeTotal", m_msgWriteTimeTotal) << LOG_KV("msgWriteSizeTotal", m_msgWriteSizeTotal)
+                << LOG_KV("lastSecondWriteMsgTimeTotal", m_lastSecondWriteMsgTimeTotal) << LOG_KV("lastSecondWriteMsgSizeTotal", m_lastSecondWriteMsgSizeTotal);
+
+        m_lastSecondWriteMsgSizeTotal = 0;
+        m_lastSecondWriteMsgTimeTotal = 0;
+        m_lastWriteReportMS = std::chrono::high_resolution_clock::now();
+    }
+
+    m_msgWriteTimeTotal++;
+    m_msgWriteSizeTotal += msg->buffer->size();
+    m_lastSecondWriteMsgSizeTotal += msg->buffer->size();
+    m_lastSecondWriteMsgTimeTotal++;
+
+
 #endif
 }
 
-void WsSession::asyncWrite()
+void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
 {
     if (!isConnected())
     {
@@ -288,7 +337,7 @@ void WsSession::asyncWrite()
         auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
         m_wsStreamDelegate->asyncWrite(
-            *(m_queue.front()->buffer), [session](boost::beast::error_code _ec, std::size_t) {
+            *_buffer, [session, _buffer](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
                     WEBSOCKET_SESSION(WARNING)
@@ -316,16 +365,21 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
     msg->buffer = _buffer;
     msg->incomeTimePoint = std::chrono::high_resolution_clock::now();
 
-    std::unique_lock<boost::shared_mutex> lock(x_queue);
-    auto isEmpty = m_queue.empty();
-    // data to be sent is always enqueue first
-    m_queue.push_back(msg);
+    bool isEmpty = false;
+    std::shared_ptr<bcos::bytes> buffer = nullptr;
+    {
+        std::unique_lock<boost::shared_mutex> lock(x_queue);
+        isEmpty = m_queue.empty();
+        // data to be sent is always enqueue first
+        m_queue.push_back(msg);
+        buffer = m_queue.front()->buffer;
+    }
 
     // no writing, send it
     if (isEmpty)
     {
         // we are not currently writing, so send this immediately
-        asyncWrite();
+        asyncWrite(buffer);
     }
 }
 

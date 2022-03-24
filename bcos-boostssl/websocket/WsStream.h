@@ -271,7 +271,7 @@ public:
 
     void setVerifyCallback(bool _disableSsl, VerifyCallback callback, bool = true)
     {
-        if(!_disableSsl)
+        if (!_disableSsl)
         {
             m_sslStream->stream()->next_layer().set_verify_callback(callback);
         }
