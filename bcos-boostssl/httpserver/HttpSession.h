@@ -192,12 +192,13 @@ public:
             std::chrono::high_resolution_clock::now();
 
         unsigned version = _httpRequest.version();
-        if (m_httpReqHandler)
-        {
-            m_threadPool->enqueue([this, version, _httpRequest, send, start]() {
+        auto httpReqHandler = m_httpReqHandler;
+        m_threadPool->enqueue([this, httpReqHandler, version, _httpRequest, send, start]() {
+            if (httpReqHandler)
+            {
                 std::string request = _httpRequest.body();
-                m_httpReqHandler(request, [this, _httpRequest, version, send, start](
-                                              const std::string& _content) {
+                httpReqHandler(request, [this, _httpRequest, version, send, start](
+                                            const std::string& _content) {
                     std::chrono::high_resolution_clock::time_point end =
                         std::chrono::high_resolution_clock::now();
 
@@ -211,18 +212,18 @@ public:
                         << LOG_KV("body", resp->body()) << LOG_KV("keep_alive", resp->keep_alive())
                         << LOG_KV("ms", ms);
                 });
-            });
-        }
-        else
-        {
-            // unsupported http service
-            auto resp =
-                buildHttpResp(boost::beast::http::status::http_version_not_supported, version, "");
-            send(resp);
-            HTTP_SESSION(WARNING) << LOG_BADGE("handleRequest")
-                                  << LOG_DESC("unsupported http service")
-                                  << LOG_KV("body", resp->body());
-        }
+            }
+            else
+            {
+                // unsupported http service
+                auto resp = buildHttpResp(
+                    boost::beast::http::status::http_version_not_supported, version, "");
+                send(resp);
+                HTTP_SESSION(WARNING)
+                    << LOG_BADGE("handleRequest") << LOG_DESC("unsupported http service")
+                    << LOG_KV("body", resp->body());
+            }
+        });
     }
 
     /**
