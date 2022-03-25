@@ -197,8 +197,7 @@ public:
             if (httpReqHandler)
             {
                 std::string request = _httpRequest.body();
-                httpReqHandler(request, [this, _httpRequest, version, send, start](
-                                            const std::string& _content) {
+                httpReqHandler(request, [this, version, send, start](const std::string& _content) {
                     std::chrono::high_resolution_clock::time_point end =
                         std::chrono::high_resolution_clock::now();
 
