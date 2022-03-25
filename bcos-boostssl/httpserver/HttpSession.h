@@ -120,16 +120,7 @@ public:
 
         HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("receive http request");
 
-        handleRequest(m_parser->release(), [self](auto&& msg) {
-            auto session = self.lock();
-            if (!session)
-            {
-                return;
-            }
-
-            // put the response into the queue and waiting to be send
-            session->queue()->enqueue(msg);
-        });
+        handleRequest(m_parser->release());
 
         if (!m_queue->isFull())
         {
@@ -178,8 +169,8 @@ public:
      * @param send: http response sender
      * @return void:
      */
-    template <class Send>
-    void handleRequest(HttpRequest&& _httpRequest, Send&& send)
+
+    void handleRequest(HttpRequest&& _httpRequest)
     {
         HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("request")
                             << LOG_KV("method", _httpRequest.method_string())
@@ -192,17 +183,24 @@ public:
             std::chrono::high_resolution_clock::now();
 
         unsigned version = _httpRequest.version();
-        auto httpReqHandler = m_httpReqHandler;
-        m_threadPool->enqueue([this, httpReqHandler, version, _httpRequest, send, start]() {
-            if (httpReqHandler)
+        auto self = std::weak_ptr<HttpSession>(shared_from_this());
+        m_threadPool->enqueue([this, self, version, _httpRequest, start]() {
+            if (m_httpReqHandler)
             {
                 std::string request = _httpRequest.body();
-                httpReqHandler(request, [this, version, send, start](const std::string& _content) {
+                m_httpReqHandler(request, [this, self, version, start](
+                                              const std::string& _content) {
                     std::chrono::high_resolution_clock::time_point end =
                         std::chrono::high_resolution_clock::now();
 
                     auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
-                    send(resp);
+                    auto session = self.lock();
+                    if (!session)
+                    {
+                        return;
+                    }
+                    // put the response into the queue and waiting to be send
+                    session->queue()->enqueue(resp);
 
                     auto ms =
                         std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -217,7 +215,14 @@ public:
                 // unsupported http service
                 auto resp = buildHttpResp(
                     boost::beast::http::status::http_version_not_supported, version, "");
-                send(resp);
+                auto session = self.lock();
+                if (!session)
+                {
+                    return;
+                }
+                // put the response into the queue and waiting to be send
+                session->queue()->enqueue(resp);
+
                 HTTP_SESSION(WARNING)
                     << LOG_BADGE("handleRequest") << LOG_DESC("unsupported http service")
                     << LOG_KV("body", resp->body());
