@@ -46,7 +46,7 @@ public:
 public:
     virtual boost::beast::tcp_stream& stream() = 0;
 
-    virtual ws::WsStream::Ptr wsStream() = 0;
+    virtual ws::WsStreamDelegate::Ptr wsStream() = 0;
 
     virtual bool open() = 0;
     virtual void close() = 0;
@@ -116,13 +116,11 @@ public:
 public:
     virtual boost::beast::tcp_stream& stream() override { return *m_stream; }
 
-    virtual ws::WsStream::Ptr wsStream() override
+    virtual ws::WsStreamDelegate::Ptr wsStream() override
     {
-        auto wsStream = std::make_shared<ws::WsStreamImpl>(
-            std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
-                std::move(*m_stream)));
         m_closed.store(true);
-        return wsStream;
+        auto builder = std::make_shared<ws::WsStreamDelegateBuilder>();
+        return builder->build(m_stream);
     }
 
     virtual bool open() override
@@ -166,7 +164,6 @@ private:
     std::shared_ptr<boost::beast::tcp_stream> m_stream;
 };
 
-
 // The http stream
 class HttpStreamSslImpl : public HttpStream, public std::enable_shared_from_this<HttpStreamSslImpl>
 {
@@ -189,14 +186,11 @@ public:
 public:
     virtual boost::beast::tcp_stream& stream() override { return m_stream->next_layer(); }
 
-    virtual ws::WsStream::Ptr wsStream() override
+    virtual ws::WsStreamDelegate::Ptr wsStream() override
     {
-        auto stream = std::make_shared<
-            boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
-            std::move(*m_stream));
         m_closed.store(true);
-        auto wsStream = std::make_shared<ws::WsStreamSslImpl>(stream);
-        return wsStream;
+        auto builder = std::make_shared<ws::WsStreamDelegateBuilder>();
+        return builder->build(m_stream);
     }
 
     virtual bool open() override

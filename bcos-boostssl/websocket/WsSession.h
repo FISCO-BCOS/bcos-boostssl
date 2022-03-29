@@ -61,7 +61,7 @@ public:
     void startAsServer(bcos::boostssl::http::HttpRequest _httpRequest);
 
 public:
-    void onHandshake(boost::beast::error_code _ec);
+    void onWsAccept(boost::beast::error_code _ec);
 
     void asyncRead();
     void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
@@ -73,12 +73,11 @@ public:
     void onReadPacket(boost::beast::flat_buffer& _buffer);
     void onWritePacket();
 
-    void ping();
-    void pong();
-    // void initPingPoing();
-
 public:
-    virtual bool isConnected() { return !m_isDrop && m_stream && m_stream->open(); }
+    virtual bool isConnected()
+    {
+        return !m_isDrop && m_wsStreamDelegate && m_wsStreamDelegate->open();
+    }
     /**
      * @brief: async send message
      * @param _msg: message
@@ -132,14 +131,20 @@ public:
     void setVersion(uint16_t _version) { m_version.store(_version); }
     uint16_t version() const { return m_version.load(); }
 
-    WsStream::Ptr stream() { return m_stream; }
-    void setStream(WsStream::Ptr _stream) { m_stream = _stream; }
+    WsStreamDelegate::Ptr wsStreamDelegate() { return m_wsStreamDelegate; }
+    void setWsStreamDelegate(WsStreamDelegate::Ptr _wsStreamDelegate)
+    {
+        m_wsStreamDelegate = _wsStreamDelegate;
+    }
 
     boost::beast::flat_buffer& buffer() { return m_buffer; }
     void setBuffer(boost::beast::flat_buffer _buffer) { m_buffer = std::move(_buffer); }
 
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
     void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
+
+    int32_t maxWriteMsgSize() const { return m_maxWriteMsgSize; }
+    void setMaxWriteMsgSize(int32_t _maxWriteMsgSize) { m_maxWriteMsgSize = _maxWriteMsgSize; }
 
     std::size_t queueSize()
     {
@@ -173,7 +178,10 @@ private:
     //
     int32_t m_sendMsgTimeout = -1;
     //
-    WsStream::Ptr m_stream;
+    int32_t m_maxWriteMsgSize = -1;
+
+    //
+    WsStreamDelegate::Ptr m_wsStreamDelegate;
     // callbacks
     boost::shared_mutex x_callback;
     std::unordered_map<std::string, CallBack::Ptr> m_callbacks;
@@ -190,9 +198,20 @@ private:
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
 
+    struct Message
+    {
+        std::shared_ptr<bcos::bytes> buffer;
+        std::chrono::time_point<std::chrono::high_resolution_clock> incomeTimePoint;
+    };
+
     // send message queue
     mutable boost::shared_mutex x_queue;
-    std::vector<std::shared_ptr<bcos::bytes>> m_queue;
+    std::vector<std::shared_ptr<Message>> m_queue;
+
+    // for send performance statistics
+    std::atomic<uint32_t> m_msgDelayCount = 0;
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_msgDelayReportMS =
+        std::chrono::high_resolution_clock::now();
 };
 
 }  // namespace ws

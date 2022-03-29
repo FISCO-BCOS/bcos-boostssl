@@ -29,6 +29,7 @@
 #define MIN_HEART_BEAT_PERIOD_MS (10000)
 #define MIN_RECONNECT_PERIOD_MS (10000)
 #define DEFAULT_MESSAGE_TIMEOUT_MS (-1)
+#define DEFAULT_MAX_MESSAGE_SIZE (32 * 1024 * 1024)
 #define MIN_THREAD_POOL_SIZE (1)
 
 namespace bcos
@@ -76,6 +77,9 @@ private:
     // thread pool size
     uint32_t m_threadPoolSize{4};
 
+    // thread count for ioc thread
+    uint32_t m_iocThreadCount{4};
+
     // time out for send message
     int32_t m_sendMsgTimeout{DEFAULT_MESSAGE_TIMEOUT_MS};
 
@@ -90,11 +94,14 @@ private:
     // cert config for boostssl
     std::shared_ptr<context::ContextConfig> m_contextConfig;
 
+    // the max message to be send or read
+    uint32_t m_maxMsgSize{DEFAULT_MAX_MESSAGE_SIZE};
+
 public:
     void setModel(WsModel _model) { m_model = _model; }
     WsModel model() const { return m_model; }
 
-    bool asClient() { return m_model & WsModel::Client; }
+    bool asClient() const { return m_model & WsModel::Client; }
     bool asServer() const { return m_model & WsModel::Server; }
 
     void setListenIP(const std::string _listenIP) { m_listenIP = _listenIP; }
@@ -102,6 +109,9 @@ public:
 
     void setListenPort(uint16_t _listenPort) { m_listenPort = _listenPort; }
     uint16_t listenPort() const { return m_listenPort; }
+
+    void setMaxMsgSize(uint32_t _maxMsgSize) { m_maxMsgSize = _maxMsgSize; }
+    uint32_t maxMsgSize() const { return m_maxMsgSize; }
 
     uint32_t reconnectPeriod() const
     {
@@ -120,13 +130,16 @@ public:
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
     void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
 
+    uint32_t iocThreadCount() const { return m_iocThreadCount; }
+    void setIocThreadCount(uint32_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
+
     uint32_t threadPoolSize() const
     {
         return m_threadPoolSize ? m_threadPoolSize : MIN_THREAD_POOL_SIZE;
     }
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
-    EndPointsConstPtr connectedPeers() { return m_connectedPeers; }
+    EndPointsConstPtr connectedPeers() const { return m_connectedPeers; }
     void setConnectedPeers(EndPointsConstPtr _connectedPeers)
     {
         m_connectedPeers = _connectedPeers;
