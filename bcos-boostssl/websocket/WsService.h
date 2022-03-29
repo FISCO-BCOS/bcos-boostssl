@@ -20,8 +20,8 @@
 #pragma once
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
-#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/interfaces/MessageFace.h>
+#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -50,7 +50,8 @@ namespace boostssl
 namespace ws
 {
 using WsSessions = std::vector<std::shared_ptr<WsSession>>;
-using MsgHandler = std::function<void(std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
+using MsgHandler =
+    std::function<void(std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
 using ConnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using DisconnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using HandshakeHandler = std::function<void(
@@ -67,7 +68,7 @@ public:
     virtual void start();
     virtual void stop();
     virtual void reconnect();
-    virtual void countConnectedNodes();
+    virtual void reportConnectedNodes();
 
     std::shared_ptr<std::vector<
         std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
@@ -82,7 +83,8 @@ public:
     void stopIocThread();
 
 public:
-    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey);
+    std::shared_ptr<WsSession> newSession(
+        std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -95,10 +97,11 @@ public:
     virtual void onRecvMessage(
         std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session);
 
-    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
-        RespCallBack _respFunc = RespCallBack());
-    virtual void asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl::MessageFace> _msg,
+    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg,
         Options _options = Options(), RespCallBack _respFunc = RespCallBack());
+    virtual void asyncSendMessage(const WsSessions& _ss,
+        std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
+        RespCallBack _respFunc = RespCallBack());
     virtual void asyncSendMessage(const std::set<std::string>& _endPoints,
         std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
@@ -108,7 +111,8 @@ public:
         RespCallBack _respFunc = RespCallBack());
 
     virtual void broadcastMessage(std::shared_ptr<boostssl::MessageFace> _msg);
-    virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg);
+    virtual void broadcastMessage(
+        const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg);
 
 public:
     std::shared_ptr<MessageFaceFactory> messageFactory() { return m_messageFactory; }
@@ -116,9 +120,6 @@ public:
     {
         m_messageFactory = _messageFactory;
     }
-
-    // TODO: remove in the future , just for compile
-    void setWaitConnectFinish(bool) {}
 
     std::size_t iocThreadCount() const { return m_iocThreadCount; }
     void setIocThreadCount(std::size_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
@@ -182,7 +183,8 @@ public:
     std::string obtainCommonNameFromSubject(std::string const& subject);
 
     // virtual std::shared_ptr<ASIOInterface> faasioInterface() const { return m_asioInterface; }
-    // virtual std::shared_ptr<ASIOInterface> setFaasioInterface(ASIOInterface _asioInterface) const { return m_asioInterface = _asioInterface; }
+    // virtual std::shared_ptr<ASIOInterface> setFaasioInterface(ASIOInterface _asioInterface) const
+    // { return m_asioInterface = _asioInterface; }
 
 private:
     bool m_running{false};
