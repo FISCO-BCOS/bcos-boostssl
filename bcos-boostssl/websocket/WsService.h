@@ -68,7 +68,7 @@ public:
     virtual void start();
     virtual void stop();
     virtual void reconnect();
-    virtual void countConnectedNodes();
+    virtual void reportConnectedNodes();
 
     std::shared_ptr<std::vector<
         std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
@@ -120,9 +120,6 @@ public:
     {
         m_messageFactory = _messageFactory;
     }
-
-    // TODO: remove in the future , just for compile
-    void setWaitConnectFinish(bool) {}
 
     std::size_t iocThreadCount() const { return m_iocThreadCount; }
     void setIocThreadCount(std::size_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }

@@ -63,63 +63,60 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> SslCertInfo::newVer
             if (!basic)
             {
                 SSLCERT_LOG(ERROR, m_moduleNameForLog) << LOG_DESC("Get ca basic failed");
-                return preverified;
-            }
+                if (basic->ca)
+                {
+                    // ca or agency certificate
+                    SSLCERT_LOG(TRACE, m_moduleNameForLog) << LOG_DESC("Ignore CA certificate");
+                    BASIC_CONSTRAINTS_free(basic);
+                    return preverified;
+                }
 
-            /// ignore ca
-            if (basic->ca)
-            {
-                // ca or agency certificate
-                SSLCERT_LOG(TRACE, m_moduleNameForLog) << LOG_DESC("Ignore CA certificate");
                 BASIC_CONSTRAINTS_free(basic);
+                // if (!hostPtr->sslContextPubHandler()(cert, *nodeIDOut.get())) {
+                //   return preverified;
+                // }
+
+                /// append cert-name and issuer name after node ID
+                /// get subject name
+                const char* certName = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
+                /// get issuer name
+                const char* issuerName = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
+                /// format: {nodeID}#{issuer-name}#{cert-name}
+                nodeIDOut->append("#");
+                nodeIDOut->append(issuerName);
+                nodeIDOut->append("#");
+                nodeIDOut->append(certName);
+                OPENSSL_free((void*)certName);
+                OPENSSL_free((void*)issuerName);
+
                 return preverified;
             }
+            catch (std::exception& e)
+            {
+                SSLCERT_LOG(ERROR, m_moduleNameForLog)
+                    << LOG_DESC("Cert verify failed") << boost::diagnostic_information(e);
+                return preverified;
+            }
+        };
+    }
 
-            BASIC_CONSTRAINTS_free(basic);
-            // if (!hostPtr->sslContextPubHandler()(cert, *nodeIDOut.get())) {
-            //   return preverified;
-            // }
+    void
+    SslCertInfo::initSSLContextPubHexHandler()
+    {
+        auto handler = [this](X509* x509, std::string& _pubHex) -> bool {
+            ASN1_BIT_STRING* pubKey =
+                X509_get0_pubkey_bitstr(x509);  // csc->current_cert is an X509 struct
+            if (pubKey == NULL)
+            {
+                return false;
+            }
 
-            /// append cert-name and issuer name after node ID
-            /// get subject name
-            const char* certName = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
-            /// get issuer name
-            const char* issuerName = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
-            /// format: {nodeID}#{issuer-name}#{cert-name}
-            nodeIDOut->append("#");
-            nodeIDOut->append(issuerName);
-            nodeIDOut->append("#");
-            nodeIDOut->append(certName);
-            OPENSSL_free((void*)certName);
-            OPENSSL_free((void*)issuerName);
+            auto hex = bcos::toHexString(pubKey->data, pubKey->data + pubKey->length, "");
+            _pubHex = *hex.get();
 
-            return preverified;
-        }
-        catch (std::exception& e)
-        {
-            SSLCERT_LOG(ERROR, m_moduleNameForLog)
-                << LOG_DESC("Cert verify failed") << boost::diagnostic_information(e);
-            return preverified;
-        }
-    };
-}
+            SSLCERT_LOG(INFO, m_moduleNameForLog) << LOG_DESC("[NEW]SSLContext pubHex: " + _pubHex);
+            return true;
+        };
 
-void SslCertInfo::initSSLContextPubHexHandler()
-{
-    auto handler = [this](X509* x509, std::string& _pubHex) -> bool {
-        ASN1_BIT_STRING* pubKey =
-            X509_get0_pubkey_bitstr(x509);  // csc->current_cert is an X509 struct
-        if (pubKey == NULL)
-        {
-            return false;
-        }
-
-        auto hex = bcos::toHexString(pubKey->data, pubKey->data + pubKey->length, "");
-        _pubHex = *hex.get();
-
-        SSLCERT_LOG(INFO, m_moduleNameForLog) << LOG_DESC("[NEW]SSLContext pubHex: " + _pubHex);
-        return true;
-    };
-
-    m_sslContextPubHandler = handler;
-}
+        m_sslContextPubHandler = handler;
+    }

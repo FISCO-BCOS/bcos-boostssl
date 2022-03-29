@@ -20,6 +20,10 @@
 #pragma once
 
 #include <bcos-utilities/Common.h>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <string>
 
 namespace bcos
 {
@@ -54,7 +58,7 @@ public:
 public:
     virtual ~MessageFaceFactory() {}
     virtual MessageFace::Ptr buildMessage() = 0;
-    virtual std::string newSeq() { return std::string(); }
+    virtual std::string newSeq() = 0;
 };
 
 }  // namespace boostssl

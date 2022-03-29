@@ -57,7 +57,3 @@ private:
     std::function<bool(X509* cert, std::string& pubHex)> m_sslContextPubHandler;
     std::string m_moduleNameForLog = "DEFAULT";
 };
-
-}  // namespace context
-}  // namespace boostssl
-}  // namespace bcos

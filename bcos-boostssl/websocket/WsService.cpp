@@ -85,7 +85,7 @@ void WsService::start()
         reconnect();
     }
 
-    countConnectedNodes();
+    reportConnectedNodes();
 
     WEBSOCKET_SERVICE(INFO, m_moduleNameForLog)
         << LOG_BADGE("start") << LOG_DESC("start websocket service successfully")
@@ -189,12 +189,11 @@ void WsService::stopIocThread()
     }
 }
 
-void WsService::countConnectedNodes()
+void WsService::reportConnectedNodes()
 {
     auto ss = sessions();
-
     WEBSOCKET_SERVICE(INFO, m_moduleNameForLog)
-        << LOG_BADGE("countConnectedNodes") << LOG_DESC("connected nodes")
+        << LOG_BADGE("reportConnectedNodes") << LOG_DESC("connected nodes")
         << LOG_KV("count", ss.size());
 
     m_heartbeat = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
@@ -206,7 +205,7 @@ void WsService::countConnectedNodes()
         {
             return;
         }
-        service->countConnectedNodes();
+        service->reportConnectedNodes();
     });
 }
 
@@ -677,9 +676,13 @@ void WsService::asyncSendMessageByEndPoint(const std::string& _endPoint,
     std::shared_ptr<WsSession> session = getSession(_endPoint);
     if (!session)
     {
-        auto error = std::make_shared<Error>(
-            WsError::EndPointNotExist, "there has no connection of the endpoint exist");
-        _respFunc(error, nullptr, nullptr);
+        if (_respFunc)
+        {
+            auto error = std::make_shared<Error>(
+                WsError::EndPointNotExist, "there has no connection of the endpoint exist");
+            _respFunc(error, nullptr, nullptr);
+        }
+
         return;
     }
 
@@ -705,7 +708,25 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
         RespCallBack respFunc;
 
     public:
-        void sendMessage()
+        void trySendMessageWithOutCB()
+        {
+            if (ss.empty())
+            {
+                return;
+            }
+
+            auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::default_random_engine e(seed);
+            std::shuffle(ss.begin(), ss.end(), e);
+
+            auto session = *ss.begin();
+            ss.erase(ss.begin());
+
+            auto self = shared_from_this();
+            session->asyncSendMessage(msg, options);
+        }
+
+        void trySendMessageWithCB()
         {
             if (ss.empty())
             {
@@ -739,8 +760,8 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                             return self->respFunc(_error, _msg, _session);
                         }
 
-                        // resend message again
-                        return self->sendMessage();
+                        // retry
+                        return self->trySendMessageWithCB();
                     }
 
                     self->respFunc(_error, _msg, _session);
@@ -748,16 +769,23 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
         }
     };
 
-    // auto size = _ss.size();
-
     auto retry = std::make_shared<Retry>();
     retry->ss = _ss;
     retry->msg = _msg;
 
     retry->options = _options;
     retry->respFunc = _respFunc;
-    retry->sendMessage();
 
+    if (_respFunc)
+    {
+        retry->trySendMessageWithCB();
+    }
+    else
+    {
+        retry->trySendMessageWithOutCB();
+    }
+
+    // auto size = _ss.size();
     // auto seq = _msg->seq();
     // int32_t timeout = _options.timeout > 0 ? _options.timeout : m_config->sendMsgTimeout();
 
