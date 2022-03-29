@@ -52,16 +52,18 @@ void WsSession::drop(uint32_t _reason)
 
     m_isDrop = true;
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
-                            << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
-
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     // call callbacks
     {
         auto error = std::make_shared<Error>(
             WsError::SessionDisconnect, "the session has been disconnected");
 
-        boost::shared_lock<boost::shared_mutex> lock(x_callback);
+        std::shared_lock<std::shared_mutex> lock(x_callback);
+
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
+                                << LOG_KV("endpoint", m_endPoint)
+                                << LOG_KV("cb size", m_callbacks.size()) << LOG_KV("session", this);
+
         for (auto& cbEntry : m_callbacks)
         {
             auto callback = cbEntry.second;
@@ -80,7 +82,7 @@ void WsSession::drop(uint32_t _reason)
 
     // clear callbacks
     {
-        boost::unique_lock<boost::shared_mutex> lock(x_callback);
+        std::unique_lock<std::shared_mutex> lock(x_callback);
         m_callbacks.clear();
     }
 
@@ -258,13 +260,17 @@ void WsSession::onWritePacket()
         bool isEmpty = false;
         std::shared_ptr<bcos::bytes> buffer = nullptr;
         {
-            boost::unique_lock<boost::shared_mutex> lock(x_queue);
-            msg = m_queue.front();
+            boost::unique_lock<boost::shared_mutex> lock(x_msgQueue);
+            msg = m_msgQueue.front();
             // remove the front ele from the queue, it has been sent
-            m_queue.erase(m_queue.begin());
-            nMsgQueueSize = m_queue.size();
-            isEmpty = m_queue.empty();
-            buffer = m_queue.front()->buffer;
+            // m_msgQueue.erase(m_msgQueue.begin());
+            m_msgQueue.pop_front();
+            nMsgQueueSize = m_msgQueue.size();
+            isEmpty = m_msgQueue.empty();
+            if (!isEmpty)
+            {
+                buffer = m_msgQueue.front()->buffer;
+            }
         }
 
         // send the next message if any
@@ -374,11 +380,11 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
     bool isEmpty = false;
     std::shared_ptr<bcos::bytes> buffer = nullptr;
     {
-        std::unique_lock<boost::shared_mutex> lock(x_queue);
-        isEmpty = m_queue.empty();
+        std::unique_lock<boost::shared_mutex> lock(x_msgQueue);
+        isEmpty = m_msgQueue.empty();
         // data to be sent is always enqueue first
-        m_queue.push_back(msg);
-        buffer = m_queue.front()->buffer;
+        m_msgQueue.push_back(msg);
+        buffer = m_msgQueue.front()->buffer;
     }
 
     // no writing, send it
@@ -470,7 +476,7 @@ void WsSession::asyncSendMessage(
 
 void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback)
 {
-    std::unique_lock<boost::shared_mutex> lock(x_callback);
+    std::unique_lock<std::shared_mutex> lock(x_callback);
     m_callbacks[_seq] = _callback;
 }
 
@@ -478,7 +484,7 @@ WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& 
 {
     CallBack::Ptr callback = nullptr;
     {
-        boost::unique_lock<boost::shared_mutex> lock(x_callback);
+        std::unique_lock<std::shared_mutex> lock(x_callback);
         auto it = m_callbacks.find(_seq);
         if (it != m_callbacks.end())
         {
