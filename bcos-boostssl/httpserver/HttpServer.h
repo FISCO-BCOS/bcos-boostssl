@@ -20,6 +20,7 @@
 #pragma once
 
 #include <bcos-boostssl/httpserver/HttpSession.h>
+#include <bcos-boostssl/context/SslCertInfo.h>
 #include <exception>
 #include <thread>
 namespace bcos
@@ -52,7 +53,7 @@ public:
     void onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);
 
 public:
-    HttpSession::Ptr buildHttpSession(HttpStream::Ptr _stream);
+    HttpSession::Ptr buildHttpSession(HttpStream::Ptr _stream, std::shared_ptr<std::string> _endpointPublicKey);
 
 public:
     HttpReqHandler httpReqHandler() const { return m_httpReqHandler; }
@@ -70,6 +71,12 @@ public:
     std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
     void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
 
+    std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
+    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
+    {
+        m_threadPool = _threadPool;
+    }
+
     WsUpgradeHandler wsUpgradeHandler() const { return m_wsUpgradeHandler; }
     void setWsUpgradeHandler(WsUpgradeHandler _wsUpgradeHandler)
     {
@@ -85,6 +92,12 @@ public:
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 
+    std::shared_ptr<bcos::boostssl::context::SslCertInfo> sslCertInfo() const { return m_sslCertInfo; }
+    void setSslCertInfo(std::shared_ptr<bcos::boostssl::context::SslCertInfo> _sslCertInfo)
+    {
+        m_sslCertInfo = _sslCertInfo;
+    }
+
 private:
     std::string m_listenIP;
     uint16_t m_listenPort;
@@ -96,6 +109,9 @@ private:
     std::shared_ptr<boost::asio::ip::tcp::acceptor> m_acceptor;
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ssl::context> m_ctx;
+
+    std::shared_ptr<bcos::boostssl::context::SslCertInfo> m_sslCertInfo;
+    std::shared_ptr<bcos::ThreadPool> m_threadPool;
 
     std::shared_ptr<HttpStreamFactory> m_httpStreamFactory;
 };

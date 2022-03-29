@@ -19,6 +19,7 @@
  */
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
+#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsStream.h>
@@ -66,7 +67,7 @@ public:
     void asyncRead();
     void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
-    void asyncWrite();
+    void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
     void onWrite(std::shared_ptr<bcos::bytes> _buffer);
 
     // async read
@@ -85,8 +86,8 @@ public:
      * @param _respCallback: callback
      * @return void:
      */
-    virtual void asyncSendMessage(std::shared_ptr<WsMessage> _msg, Options _options = Options(),
-        RespCallBack _respCallback = RespCallBack());
+    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg,
+        Options _options = Options(), RespCallBack _respCallback = RespCallBack());
 
 public:
     std::string endPoint() const { return m_endPoint; }
@@ -113,8 +114,8 @@ public:
     }
     WsRecvMessageHandler recvMessageHandler() { return m_recvMessageHandler; }
 
-    std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
-    void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
+    std::shared_ptr<MessageFaceFactory> messageFactory() { return m_messageFactory; }
+    void setMessageFactory(std::shared_ptr<MessageFaceFactory> _messageFactory)
     {
         m_messageFactory = _messageFactory;
     }
@@ -152,6 +153,14 @@ public:
         return m_queue.size();
     }
 
+    std::string publicKey() const { return m_publicKey; }
+    void setPublicKey(std::string const& _publicKey) { m_publicKey = _publicKey; }
+
+    nodeID obtainNodeID(std::string const& _publicKey);
+
+    nodeID nodeId() { return m_nodeId; }
+    void setNodeId(boostssl::nodeID _nodeId) { m_nodeId = _nodeId; }
+
 public:
     struct CallBack
     {
@@ -174,6 +183,8 @@ private:
 
     std::string m_endPoint;
     std::string m_connectedEndPoint;
+    std::string m_publicKey;
+    boostssl::nodeID m_nodeId;
 
     //
     int32_t m_sendMsgTimeout = -1;
@@ -192,7 +203,7 @@ private:
     WsRecvMessageHandler m_recvMessageHandler;
 
     // message factory
-    std::shared_ptr<WsMessageFactory> m_messageFactory;
+    std::shared_ptr<MessageFaceFactory> m_messageFactory;
     // thread pool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // ioc
@@ -212,6 +223,21 @@ private:
     std::atomic<uint32_t> m_msgDelayCount = 0;
     std::chrono::time_point<std::chrono::high_resolution_clock> m_msgDelayReportMS =
         std::chrono::high_resolution_clock::now();
+
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_lastReadReportMS =
+        std::chrono::high_resolution_clock::now();
+    std::atomic<int64_t> m_msgRecvSizeTotal = 0;
+    std::atomic<int64_t> m_msgRecvTimeTotal = 0;
+    std::atomic<int64_t> m_lastSecondRecvMsgSizeTotal = 0;
+    std::atomic<int64_t> m_lastSecondRecvMsgTimeTotal = 0;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_lastWriteReportMS =
+        std::chrono::high_resolution_clock::now();
+    std::atomic<int64_t> m_msgWriteSizeTotal = 0;
+    std::atomic<int64_t> m_msgWriteTimeTotal = 0;
+    std::atomic<int64_t> m_lastSecondWriteMsgSizeTotal = 0;
+    std::atomic<int64_t> m_lastSecondWriteMsgTimeTotal = 0;
 };
 
 }  // namespace ws

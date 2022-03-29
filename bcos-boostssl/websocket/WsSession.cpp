@@ -152,7 +152,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     auto size = boost::asio::buffer_size(m_buffer.data());
 
     auto message = m_messageFactory->buildMessage();
-    if (message->decode(data, size) < 0)
+    if (message->decode(bytesConstRef(data, size)) < 0)
     {  // invalid packet, stop this session ?
         WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
                                    << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
@@ -162,7 +162,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     _buffer.consume(_buffer.size());
 
     auto session = shared_from_this();
-    auto seq = std::string(message->seq()->begin(), message->seq()->end());
+    auto seq = message->seq();
     auto self = std::weak_ptr<WsSession>(session);
     auto callback = getAndRemoveRespCallback(seq);
 
@@ -187,6 +187,30 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
             session->recvMessageHandler()(message, session);
         }
     });
+
+    auto now = std::chrono::high_resolution_clock::now();
+
+    auto reportMS1 =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastReadReportMS).count();
+    if (reportMS1 > 1000)
+    {
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("onRead")
+                                << LOG_KV("msgRecvTimeTotal", m_msgRecvTimeTotal)
+                                << LOG_KV("msgRecvSizeTotal", m_msgRecvSizeTotal)
+                                << LOG_KV(
+                                       "lastSecondRecvMsgSizeTotal", m_lastSecondRecvMsgSizeTotal)
+                                << LOG_KV(
+                                       "lastSecondRecvMsgTimeTotal", m_lastSecondRecvMsgTimeTotal);
+
+        m_lastSecondRecvMsgSizeTotal = 0;
+        m_lastSecondRecvMsgTimeTotal = 0;
+        m_lastReadReportMS = std::chrono::high_resolution_clock::now();
+    }
+
+    m_msgRecvTimeTotal++;
+    m_msgRecvSizeTotal += message->payload()->size();
+    m_lastSecondRecvMsgSizeTotal += message->payload()->size();
+    m_lastSecondRecvMsgTimeTotal++;
 }
 
 void WsSession::asyncRead()
@@ -231,16 +255,22 @@ void WsSession::onWritePacket()
     std::shared_ptr<Message> msg = nullptr;
     std::size_t nMsgQueueSize = 0;
     {
-        boost::unique_lock<boost::shared_mutex> lock(x_queue);
-        msg = m_queue.front();
-        // remove the front ele from the queue, it has been sent
-        m_queue.erase(m_queue.begin());
-        nMsgQueueSize = m_queue.size();
+        bool isEmpty = false;
+        std::shared_ptr<bcos::bytes> buffer = nullptr;
+        {
+            boost::unique_lock<boost::shared_mutex> lock(x_queue);
+            msg = m_queue.front();
+            // remove the front ele from the queue, it has been sent
+            m_queue.erase(m_queue.begin());
+            nMsgQueueSize = m_queue.size();
+            isEmpty = m_queue.empty();
+            buffer = m_queue.front()->buffer;
+        }
 
         // send the next message if any
-        if (!m_queue.empty())
+        if (!isEmpty)
         {
-            asyncWrite();
+            asyncWrite(buffer);
         }
     }
 
@@ -270,10 +300,35 @@ void WsSession::onWritePacket()
         m_msgDelayCount = 0;
         m_msgDelayReportMS = now;
     }
+
+    auto reportMS1 =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastWriteReportMS).count();
+
+    if (reportMS1 > 1000)
+    {
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("onWrite") << LOG_DESC("send report")
+                                << LOG_KV("msgWriteTimeTotal", m_msgWriteTimeTotal)
+                                << LOG_KV("msgWriteSizeTotal", m_msgWriteSizeTotal)
+                                << LOG_KV(
+                                       "lastSecondWriteMsgTimeTotal", m_lastSecondWriteMsgTimeTotal)
+                                << LOG_KV("lastSecondWriteMsgSizeTotal",
+                                       m_lastSecondWriteMsgSizeTotal);
+
+        m_lastSecondWriteMsgSizeTotal = 0;
+        m_lastSecondWriteMsgTimeTotal = 0;
+        m_lastWriteReportMS = std::chrono::high_resolution_clock::now();
+    }
+
+    m_msgWriteTimeTotal++;
+    m_msgWriteSizeTotal += msg->buffer->size();
+    m_lastSecondWriteMsgSizeTotal += msg->buffer->size();
+    m_lastSecondWriteMsgTimeTotal++;
+
+
 #endif
 }
 
-void WsSession::asyncWrite()
+void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
 {
     if (!isConnected())
     {
@@ -288,7 +343,7 @@ void WsSession::asyncWrite()
         auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
         m_wsStreamDelegate->asyncWrite(
-            *(m_queue.front()->buffer), [session](boost::beast::error_code _ec, std::size_t) {
+            *_buffer, [session, _buffer](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
                     WEBSOCKET_SESSION(WARNING)
@@ -316,16 +371,21 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
     msg->buffer = _buffer;
     msg->incomeTimePoint = std::chrono::high_resolution_clock::now();
 
-    std::unique_lock<boost::shared_mutex> lock(x_queue);
-    auto isEmpty = m_queue.empty();
-    // data to be sent is always enqueue first
-    m_queue.push_back(msg);
+    bool isEmpty = false;
+    std::shared_ptr<bcos::bytes> buffer = nullptr;
+    {
+        std::unique_lock<boost::shared_mutex> lock(x_queue);
+        isEmpty = m_queue.empty();
+        // data to be sent is always enqueue first
+        m_queue.push_back(msg);
+        buffer = m_queue.front()->buffer;
+    }
 
     // no writing, send it
     if (isEmpty)
     {
         // we are not currently writing, so send this immediately
-        asyncWrite();
+        asyncWrite(buffer);
     }
 }
 
@@ -337,9 +397,9 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
  * @return void:
  */
 void WsSession::asyncSendMessage(
-    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
+    std::shared_ptr<MessageFace> _msg, Options _options, RespCallBack _respFunc)
 {
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto seq = _msg->seq();
 
     if (!isConnected())
     {
@@ -358,7 +418,7 @@ void WsSession::asyncSendMessage(
     }
 
     // check if message size overflow
-    if ((int64_t)_msg->data()->size() > (int64_t)maxWriteMsgSize())
+    if ((int64_t)_msg->payload()->size() > (int64_t)maxWriteMsgSize())
     {
         if (_respFunc)
         {
@@ -369,7 +429,7 @@ void WsSession::asyncSendMessage(
         WEBSOCKET_SESSION(WARNING)
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("send message size overflow")
             << LOG_KV("endpoint", endPoint()) << LOG_KV("seq", seq)
-            << LOG_KV("msgSize", _msg->data()->size())
+            << LOG_KV("msgSize", _msg->payload()->size())
             << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
         return;
     }
@@ -451,4 +511,19 @@ void WsSession::onRespTimeout(const boost::system::error_code& _error, const std
     auto error =
         std::make_shared<Error>(WsError::TimeOut, "waiting for message response timed out");
     m_threadPool->enqueue([callback, error]() { callback->respCallBack(error, nullptr, nullptr); });
+}
+
+nodeID WsSession::obtainNodeID(std::string const& _publicKey)
+{
+    std::vector<std::string> node_info_vec;
+    boost::split(node_info_vec, _publicKey, boost::is_any_of("#"), boost::token_compress_on);
+    if (!node_info_vec.empty())
+    {
+        auto nodeid = node_info_vec[0];
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("obtainNodeID") << LOG_KV("nodeID", nodeid);
+        return nodeid;
+    }
+
+    WEBSOCKET_SESSION(ERROR) << LOG_BADGE("obtainNodeID failed");
+    return "";
 }

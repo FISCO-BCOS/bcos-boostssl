@@ -36,10 +36,10 @@ public:
     using ConstPtr = std::shared_ptr<const WsInitializer>;
 
 public:
-    std::shared_ptr<WsMessageFactory> messageFactory() const { return m_messageFactory; }
+    std::shared_ptr<MessageFaceFactory> messageFactory() const { return m_messageFactory; }
     std::shared_ptr<WsConfig> config() const { return m_config; }
 
-    void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
+    void setMessageFactory(std::shared_ptr<MessageFaceFactory> _messageFactory)
     {
         m_messageFactory = _messageFactory;
     }
@@ -50,7 +50,7 @@ public:
     void initWsService(WsService::Ptr _wsService);
 
 private:
-    std::shared_ptr<WsMessageFactory> m_messageFactory;
+    std::shared_ptr<MessageFaceFactory> m_messageFactory;
     std::shared_ptr<WsConfig> m_config;
 };
 }  // namespace ws

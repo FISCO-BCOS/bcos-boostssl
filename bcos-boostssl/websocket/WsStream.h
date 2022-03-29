@@ -269,6 +269,14 @@ public:
         return m_isSsl ? m_sslStream->tcpStream() : m_rawStream->tcpStream();
     }
 
+    void setVerifyCallback(bool _disableSsl, VerifyCallback callback, bool = true)
+    {
+        if (!_disableSsl)
+        {
+            m_sslStream->stream()->next_layer().set_verify_callback(callback);
+        }
+    }
+
 private:
     bool m_isSsl{false};
 

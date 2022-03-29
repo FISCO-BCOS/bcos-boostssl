@@ -72,7 +72,7 @@ private:
     uint16_t m_listenPort;
 
     // list of connected server nodes when ws work as client
-    EndPointsConstPtr m_connectedPeers;
+    EndPointsPtr m_connectedPeers;
 
     // thread pool size
     uint32_t m_threadPoolSize{4};
@@ -139,8 +139,8 @@ public:
     }
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
-    EndPointsConstPtr connectedPeers() const { return m_connectedPeers; }
-    void setConnectedPeers(EndPointsConstPtr _connectedPeers)
+    EndPointsPtr connectedPeers() const { return m_connectedPeers; }
+    void setConnectedPeers(EndPointsPtr _connectedPeers)
     {
         m_connectedPeers = _connectedPeers;
     }

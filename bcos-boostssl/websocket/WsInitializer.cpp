@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <memory>
 
+
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::context;
@@ -62,6 +63,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
     auto builder = std::make_shared<WsStreamDelegateBuilder>();
     auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
+    auto sslCertInfo = std::make_shared<bcos::boostssl::context::SslCertInfo>();
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
@@ -92,12 +94,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         auto httpServer = httpServerFactory->buildHttpServer(
             _config->listenIP(), _config->listenPort(), ioc, ctx);
         httpServer->setDisableSsl(_config->disableSsl());
+        httpServer->setSslCertInfo(sslCertInfo);
+        httpServer->setThreadPool(threadPool);
         httpServer->setWsUpgradeHandler([wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream,
-                                            HttpRequest&& _httpRequest) {
+                                            HttpRequest&& _httpRequest, std::shared_ptr<std::string> _publicKey) {
             auto service = wsServiceWeakPtr.lock();
             if (service)
             {
-                auto session = service->newSession(_httpStream->wsStream());
+                std::string pulicKeyString = _publicKey == nullptr ? "" : *_publicKey.get();
+                auto session = service->newSession(_httpStream->wsStream(), pulicKeyString);
                 session->startAsServer(_httpRequest);
             }
         });
@@ -114,7 +119,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         if (connectedPeers)
         {
-            for (auto const& peer : *connectedPeers)
+            for (auto& peer : *connectedPeers)
             {
                 if (!WsTools::validIP(peer.host))
                 {
@@ -140,6 +145,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     builder->setCtx(ctx);
     connector->setCtx(ctx);
     connector->setBuilder(builder);
+    connector->setSslCertInfo(sslCertInfo);
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);

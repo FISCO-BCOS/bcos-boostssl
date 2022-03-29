@@ -28,7 +28,7 @@ using namespace bcos::boostssl::ws;
 
 // seq field length
 const size_t WsMessage::SEQ_LENGTH;
-/// type(2) + error(2) + seq(32) + data(N)
+/// type(2) + error(2) + seq(32) + + ext(2) + data(N)
 const size_t WsMessage::MESSAGE_MIN_LENGTH;
 
 bool WsMessage::encode(bytes& _buffer)
@@ -36,33 +36,37 @@ bool WsMessage::encode(bytes& _buffer)
     _buffer.clear();
 
     uint16_t type = boost::asio::detail::socket_ops::host_to_network_short(m_type);
-    uint16_t status = boost::asio::detail::socket_ops::host_to_network_short(m_status);
+    int16_t status = boost::asio::detail::socket_ops::host_to_network_short(m_status);
+    uint16_t ext = boost::asio::detail::socket_ops::host_to_network_short(m_ext);
 
     // seq length should be SEQ_LENGTH(32) long
-    if (m_seq->size() != SEQ_LENGTH)
+    if (m_seq.size() != SEQ_LENGTH)
     {
         return false;
     }
 
     _buffer.insert(_buffer.end(), (byte*)&type, (byte*)&type + 2);
     _buffer.insert(_buffer.end(), (byte*)&status, (byte*)&status + 2);
-    _buffer.insert(_buffer.end(), m_seq->begin(), m_seq->end());
+    _buffer.insert(_buffer.end(), m_seq.begin(), m_seq.end());
+    _buffer.insert(_buffer.end(), (byte*)&ext, (byte*)&ext + 2);
     _buffer.insert(_buffer.end(), m_data->begin(), m_data->end());
 
     return true;
 }
 
-int64_t WsMessage::decode(const byte* _buffer, std::size_t _size)
+int64_t WsMessage::decode(bytesConstRef _buffer)
 {
-    if (_size < MESSAGE_MIN_LENGTH)
+    std::size_t size = _buffer.size();
+    if (size < MESSAGE_MIN_LENGTH)
     {
         return -1;
     }
 
-    m_seq->clear();
+    m_seq.clear();
     m_data->clear();
 
-    auto p = _buffer;
+    auto dataBuffer = _buffer.data();
+    auto p = _buffer.data();
     // type field
     m_type = boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)p));
     p += 2;
@@ -72,10 +76,15 @@ int64_t WsMessage::decode(const byte* _buffer, std::size_t _size)
     p += 2;
 
     // seq field
-    m_seq->insert(m_seq->begin(), p, p + SEQ_LENGTH);
+    m_seq.insert(m_seq.begin(), p, p + SEQ_LENGTH);
     p += SEQ_LENGTH;
-    // data field
-    m_data->insert(m_data->begin(), p, _buffer + _size);
 
-    return _size;
+    // ext field
+    m_ext = boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)p));
+    p += 2;
+
+    // data field
+    m_data->insert(m_data->begin(), p, dataBuffer + size);
+
+    return size;
 }
