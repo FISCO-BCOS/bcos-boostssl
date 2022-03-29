@@ -26,6 +26,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <iterator>
 #include <memory>
+#include <string>
 #include <utility>
 
 namespace bcos
@@ -45,10 +46,7 @@ public:
     const static size_t MESSAGE_MIN_LENGTH = 38;
 
 public:
-    WsMessage()
-    {
-        m_data = std::make_shared<bcos::bytes>();
-    }
+    WsMessage() { m_data = std::make_shared<bcos::bytes>(); }
 
     virtual ~WsMessage() {}
 
@@ -71,7 +69,7 @@ public:
 private:
     uint16_t m_type{0};
     int16_t m_status{0};
-    std::string m_seq {SEQ_LENGTH, '0'};
+    std::string m_seq{SEQ_LENGTH, '0'};
     std::shared_ptr<bcos::bytes> m_data;
     uint16_t m_ext = 0;
 };
@@ -94,8 +92,6 @@ public:
     virtual boostssl::MessageFace::Ptr buildMessage() override
     {
         auto msg = std::make_shared<WsMessage>();
-        auto seq = newSeq();
-        msg->setSeq(seq);
         return msg;
     }
 
