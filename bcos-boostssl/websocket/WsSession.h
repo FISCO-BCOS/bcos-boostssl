@@ -49,9 +49,15 @@ public:
     using Ptrs = std::vector<std::shared_ptr<WsSession>>;
 
 public:
-    WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this); }
+    WsSession(std::string _moduleNameForLog) : m_moduleNameForLog(_moduleNameForLog)
+    {
+        WEBSOCKET_SESSION(INFO, m_moduleNameForLog) << LOG_KV("[NEWOBJ][WSSESSION]", this);
+    }
 
-    virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
+    virtual ~WsSession()
+    {
+        WEBSOCKET_SESSION(INFO, m_moduleNameForLog) << LOG_KV("[DELOBJ][WSSESSION]", this);
+    }
 
     void drop(uint32_t _reason);
 
@@ -161,6 +167,12 @@ public:
     nodeID nodeId() { return m_nodeId; }
     void setNodeId(boostssl::nodeID _nodeId) { m_nodeId = _nodeId; }
 
+    std::string moduleNameForLog() { return m_moduleNameForLog; }
+    void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
+    }
+
 public:
     struct CallBack
     {
@@ -177,6 +189,7 @@ private:
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
     std::atomic<uint16_t> m_version = 0;
+    std::string m_moduleNameForLog = "DEFAULT";
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;

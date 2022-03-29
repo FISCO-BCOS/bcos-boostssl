@@ -18,11 +18,11 @@
  * @date 2022-03-07
  */
 
-#include <bcos-boostssl/context/SslCertInfo.h>
 #include <bcos-boostssl/context/Common.h>
+#include <bcos-boostssl/context/SslCertInfo.h>
 #include <bcos-utilities/DataConvertUtility.h>
-#include <boost/exception/diagnostic_information.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 
 using namespace bcos::boostssl::context;
 
@@ -30,7 +30,7 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> SslCertInfo::newVer
     std::shared_ptr<std::string> nodeIDOut)
 {
     auto sslCertInfo = std::weak_ptr<SslCertInfo>(shared_from_this());
-    return [sslCertInfo, nodeIDOut](bool preverified, boost::asio::ssl::verify_context& ctx) {
+    return [this, sslCertInfo, nodeIDOut](bool preverified, boost::asio::ssl::verify_context& ctx) {
         auto sslCertInfoPtr = sslCertInfo.lock();
         if (!sslCertInfoPtr)
         {
@@ -48,7 +48,7 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> SslCertInfo::newVer
             X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
             if (!cert)
             {
-                SSLCERT_LOG(ERROR) << LOG_DESC("Get cert failed");
+                SSLCERT_LOG(ERROR, m_moduleNameForLog) << LOG_DESC("Get cert failed");
                 return preverified;
             }
 
@@ -62,7 +62,7 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> SslCertInfo::newVer
                 (BASIC_CONSTRAINTS*)X509_get_ext_d2i(cert, NID_basic_constraints, &crit, NULL);
             if (!basic)
             {
-                SSLCERT_LOG(ERROR) << LOG_DESC("Get ca basic failed");
+                SSLCERT_LOG(ERROR, m_moduleNameForLog) << LOG_DESC("Get ca basic failed");
                 return preverified;
             }
 
@@ -70,7 +70,7 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> SslCertInfo::newVer
             if (basic->ca)
             {
                 // ca or agency certificate
-                SSLCERT_LOG(TRACE) << LOG_DESC("Ignore CA certificate");
+                SSLCERT_LOG(TRACE, m_moduleNameForLog) << LOG_DESC("Ignore CA certificate");
                 BASIC_CONSTRAINTS_free(basic);
                 return preverified;
             }
@@ -97,7 +97,8 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> SslCertInfo::newVer
         }
         catch (std::exception& e)
         {
-            SSLCERT_LOG(ERROR) << LOG_DESC("Cert verify failed") << boost::diagnostic_information(e);
+            SSLCERT_LOG(ERROR, m_moduleNameForLog)
+                << LOG_DESC("Cert verify failed") << boost::diagnostic_information(e);
             return preverified;
         }
     };
@@ -105,19 +106,19 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> SslCertInfo::newVer
 
 void SslCertInfo::initSSLContextPubHexHandler()
 {
-    auto handler = [](X509* x509, std::string& _pubHex) -> bool {
-    ASN1_BIT_STRING* pubKey =
-    X509_get0_pubkey_bitstr(x509);  // csc->current_cert is an X509 struct
-    if (pubKey == NULL)
-    {
-        return false;
-    }
+    auto handler = [this](X509* x509, std::string& _pubHex) -> bool {
+        ASN1_BIT_STRING* pubKey =
+            X509_get0_pubkey_bitstr(x509);  // csc->current_cert is an X509 struct
+        if (pubKey == NULL)
+        {
+            return false;
+        }
 
-    auto hex = bcos::toHexString(pubKey->data, pubKey->data + pubKey->length, "");
-    _pubHex = *hex.get();
+        auto hex = bcos::toHexString(pubKey->data, pubKey->data + pubKey->length, "");
+        _pubHex = *hex.get();
 
-    SSLCERT_LOG(INFO) << LOG_DESC("[NEW]SSLContext pubHex: " + _pubHex);
-    return true;
+        SSLCERT_LOG(INFO, m_moduleNameForLog) << LOG_DESC("[NEW]SSLContext pubHex: " + _pubHex);
+        return true;
     };
 
     m_sslContextPubHandler = handler;

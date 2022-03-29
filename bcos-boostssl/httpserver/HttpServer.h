@@ -19,8 +19,8 @@
  */
 #pragma once
 
-#include <bcos-boostssl/httpserver/HttpSession.h>
 #include <bcos-boostssl/context/SslCertInfo.h>
+#include <bcos-boostssl/httpserver/HttpSession.h>
 #include <exception>
 #include <thread>
 namespace bcos
@@ -53,7 +53,8 @@ public:
     void onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);
 
 public:
-    HttpSession::Ptr buildHttpSession(HttpStream::Ptr _stream, std::shared_ptr<std::string> _endpointPublicKey);
+    HttpSession::Ptr buildHttpSession(
+        HttpStream::Ptr _stream, std::shared_ptr<std::string> _endpointPublicKey);
 
 public:
     HttpReqHandler httpReqHandler() const { return m_httpReqHandler; }
@@ -92,7 +93,10 @@ public:
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 
-    std::shared_ptr<bcos::boostssl::context::SslCertInfo> sslCertInfo() const { return m_sslCertInfo; }
+    std::shared_ptr<bcos::boostssl::context::SslCertInfo> sslCertInfo() const
+    {
+        return m_sslCertInfo;
+    }
     void setSslCertInfo(std::shared_ptr<bcos::boostssl::context::SslCertInfo> _sslCertInfo)
     {
         m_sslCertInfo = _sslCertInfo;
@@ -133,7 +137,7 @@ public:
      */
     HttpServer::Ptr buildHttpServer(const std::string& _listenIP, uint16_t _listenPort,
         std::shared_ptr<boost::asio::io_context> _ioc,
-        std::shared_ptr<boost::asio::ssl::context> _ctx);
+        std::shared_ptr<boost::asio::ssl::context> _ctx, std::string _moduleNameForLog);
 };
 
 }  // namespace http

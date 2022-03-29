@@ -45,12 +45,15 @@ public:
     using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-    HttpSession() { HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this); }
+    HttpSession(std::string _moduleNameForLog) : m_moduleNameForLog(_moduleNameForLog)
+    {
+        HTTP_SESSION(DEBUG, m_moduleNameForLog) << LOG_KV("[NEWOBJ][HTTPSESSION]", this);
+    }
 
     virtual ~HttpSession()
     {
         doClose();
-        HTTP_SESSION(DEBUG) << LOG_KV("[DELOBJ][HTTPSESSION]", this);
+        HTTP_SESSION(DEBUG, m_moduleNameForLog) << LOG_KV("[DELOBJ][HTTPSESSION]", this);
     }
 
     // start the HttpSession
@@ -80,15 +83,16 @@ public:
         // the peer client closed the connection
         if (ec == boost::beast::http::error::end_of_stream)
         {
-            HTTP_SESSION(TRACE) << LOG_BADGE("onRead") << LOG_DESC("end of stream");
+            HTTP_SESSION(TRACE, m_moduleNameForLog)
+                << LOG_BADGE("onRead") << LOG_DESC("end of stream");
             // return doClose();
             return;
         }
 
         if (ec)
         {
-            HTTP_SESSION(WARNING) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
-                                  << LOG_KV("error", ec);
+            HTTP_SESSION(WARNING, m_moduleNameForLog)
+                << LOG_BADGE("onRead") << LOG_DESC("close the connection") << LOG_KV("error", ec);
             // return doClose();
             return;
         }
@@ -96,7 +100,8 @@ public:
         auto self = std::weak_ptr<HttpSession>(shared_from_this());
         if (boost::beast::websocket::is_upgrade(m_parser->get()))
         {
-            HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
+            HTTP_SESSION(INFO, m_moduleNameForLog)
+                << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
             if (m_wsUpgradeHandler)
             {
                 auto httpSession = self.lock();
@@ -109,7 +114,7 @@ public:
             }
             else
             {
-                HTTP_SESSION(WARNING)
+                HTTP_SESSION(WARNING, m_moduleNameForLog)
                     << LOG_BADGE("onRead")
                     << LOG_DESC("the session will be closed for unsupported websocket upgrade");
                 // doClose();
@@ -118,7 +123,8 @@ public:
             return;
         }
 
-        HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("receive http request");
+        HTTP_SESSION(INFO, m_moduleNameForLog)
+            << LOG_BADGE("onRead") << LOG_DESC("receive http request");
 
         handleRequest(m_parser->release());
 
@@ -134,8 +140,8 @@ public:
 
         if (ec)
         {
-            HTTP_SESSION(WARNING) << LOG_BADGE("onWrite") << LOG_DESC("close the connection")
-                                  << LOG_KV("error", ec);
+            HTTP_SESSION(WARNING, m_moduleNameForLog)
+                << LOG_BADGE("onWrite") << LOG_DESC("close the connection") << LOG_KV("error", ec);
             // return doClose();
             return;
         }
@@ -172,12 +178,12 @@ public:
 
     void handleRequest(HttpRequest&& _httpRequest)
     {
-        HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("request")
-                            << LOG_KV("method", _httpRequest.method_string())
-                            << LOG_KV("target", _httpRequest.target())
-                            << LOG_KV("body", _httpRequest.body())
-                            << LOG_KV("keep_alive", _httpRequest.keep_alive())
-                            << LOG_KV("need_eof", _httpRequest.need_eof());
+        HTTP_SESSION(DEBUG, m_moduleNameForLog)
+            << LOG_BADGE("handleRequest") << LOG_DESC("request")
+            << LOG_KV("method", _httpRequest.method_string())
+            << LOG_KV("target", _httpRequest.target()) << LOG_KV("body", _httpRequest.body())
+            << LOG_KV("keep_alive", _httpRequest.keep_alive())
+            << LOG_KV("need_eof", _httpRequest.need_eof());
 
         std::chrono::high_resolution_clock::time_point start =
             std::chrono::high_resolution_clock::now();
@@ -204,7 +210,7 @@ public:
 
                     auto ms =
                         std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                    HTTP_SESSION(DEBUG)
+                    HTTP_SESSION(DEBUG, m_moduleNameForLog)
                         << LOG_BADGE("handleRequest") << LOG_DESC("response")
                         << LOG_KV("body", resp->body()) << LOG_KV("keep_alive", resp->keep_alive())
                         << LOG_KV("ms", ms);
@@ -223,7 +229,7 @@ public:
                 // put the response into the queue and waiting to be send
                 session->queue()->enqueue(resp);
 
-                HTTP_SESSION(WARNING)
+                HTTP_SESSION(WARNING, m_moduleNameForLog)
                     << LOG_BADGE("handleRequest") << LOG_DESC("unsupported http service")
                     << LOG_KV("body", resp->body());
             }
@@ -273,6 +279,13 @@ public:
         m_endpointPublicKey = _EndpointPublicKey;
     }
 
+    std::string moduleNameForLog() { return m_moduleNameForLog; }
+    void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
+    }
+
+
 private:
     HttpStream::Ptr m_httpStream;
 
@@ -289,6 +302,8 @@ private:
     boost::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> m_parser;
 
     std::shared_ptr<std::string> m_endpointPublicKey;
+
+    std::string m_moduleNameForLog = "DEFAULT";
 };
 
 }  // namespace http

@@ -97,6 +97,8 @@ private:
     // the max message to be send or read
     uint32_t m_maxMsgSize{DEFAULT_MAX_MESSAGE_SIZE};
 
+    std::string m_moduleNameForLog = "DEFAULT";
+
 public:
     void setModel(WsModel _model) { m_model = _model; }
     WsModel model() const { return m_model; }
@@ -140,10 +142,7 @@ public:
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
     EndPointsPtr connectedPeers() const { return m_connectedPeers; }
-    void setConnectedPeers(EndPointsPtr _connectedPeers)
-    {
-        m_connectedPeers = _connectedPeers;
-    }
+    void setConnectedPeers(EndPointsPtr _connectedPeers) { m_connectedPeers = _connectedPeers; }
 
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
@@ -152,6 +151,12 @@ public:
     void setContextConfig(std::shared_ptr<context::ContextConfig> _contextConfig)
     {
         m_contextConfig = _contextConfig;
+    }
+
+    std::string moduleNameForLog() { return m_moduleNameForLog; }
+    void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
     }
 };
 }  // namespace ws

@@ -20,8 +20,8 @@
 #pragma once
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
-#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/interfaces/MessageFace.h>
+#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -50,7 +50,8 @@ namespace boostssl
 namespace ws
 {
 using WsSessions = std::vector<std::shared_ptr<WsSession>>;
-using MsgHandler = std::function<void(std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
+using MsgHandler =
+    std::function<void(std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
 using ConnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using DisconnectHandler = std::function<void(std::shared_ptr<WsSession>)>;
 using HandshakeHandler = std::function<void(
@@ -60,7 +61,7 @@ class WsService : public std::enable_shared_from_this<WsService>
 {
 public:
     using Ptr = std::shared_ptr<WsService>;
-    WsService();
+    WsService(std::string _moduleNameForLog);
     virtual ~WsService();
 
 public:
@@ -82,7 +83,8 @@ public:
     void stopIocThread();
 
 public:
-    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey);
+    std::shared_ptr<WsSession> newSession(
+        std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -95,10 +97,11 @@ public:
     virtual void onRecvMessage(
         std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session);
 
-    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
-        RespCallBack _respFunc = RespCallBack());
-    virtual void asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl::MessageFace> _msg,
+    virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg,
         Options _options = Options(), RespCallBack _respFunc = RespCallBack());
+    virtual void asyncSendMessage(const WsSessions& _ss,
+        std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
+        RespCallBack _respFunc = RespCallBack());
     virtual void asyncSendMessage(const std::set<std::string>& _endPoints,
         std::shared_ptr<boostssl::MessageFace> _msg, Options _options = Options(),
         RespCallBack _respFunc = RespCallBack());
@@ -108,7 +111,8 @@ public:
         RespCallBack _respFunc = RespCallBack());
 
     virtual void broadcastMessage(std::shared_ptr<boostssl::MessageFace> _msg);
-    virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg);
+    virtual void broadcastMessage(
+        const WsSession::Ptrs& _ss, std::shared_ptr<boostssl::MessageFace> _msg);
 
 public:
     std::shared_ptr<MessageFaceFactory> messageFactory() { return m_messageFactory; }
@@ -125,6 +129,12 @@ public:
 
     int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
     void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
+
+    std::string moduleNameForLog() { return m_moduleNameForLog; }
+    void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
+    }
 
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
@@ -181,13 +191,12 @@ public:
 
     std::string obtainCommonNameFromSubject(std::string const& subject);
 
-    // virtual std::shared_ptr<ASIOInterface> faasioInterface() const { return m_asioInterface; }
-    // virtual std::shared_ptr<ASIOInterface> setFaasioInterface(ASIOInterface _asioInterface) const { return m_asioInterface = _asioInterface; }
 
 private:
     bool m_running{false};
 
     int32_t m_waitConnectFinishTimeout = 30000;
+    std::string m_moduleNameForLog;
 
     // MessageFaceFactory
     std::shared_ptr<MessageFaceFactory> m_messageFactory;

@@ -57,15 +57,17 @@ public:
     using Ptr = std::shared_ptr<WsStream>;
     using ConstPtr = std::shared_ptr<const WsStream>;
 
-    WsStream(std::shared_ptr<boost::beast::websocket::stream<STREAM>> _stream) : m_stream(_stream)
+    WsStream(std::shared_ptr<boost::beast::websocket::stream<STREAM>> _stream,
+        std::string _moduleNameForLog)
+      : m_stream(_stream), m_moduleNameForLog(_moduleNameForLog)
     {
         initDefaultOpt();
-        WEBSOCKET_STREAM(INFO) << LOG_KV("[NEWOBJ][WsStream]", this);
+        WEBSOCKET_STREAM(INFO, m_moduleNameForLog) << LOG_KV("[NEWOBJ][WsStream]", this);
     }
 
     virtual ~WsStream()
     {
-        WEBSOCKET_STREAM(INFO) << LOG_KV("[DELOBJ][WsStream]", this);
+        WEBSOCKET_STREAM(INFO, m_moduleNameForLog) << LOG_KV("[DELOBJ][WsStream]", this);
         close();
     }
 
@@ -109,6 +111,12 @@ public:
     //---------------  set opt params for websocket stream  end
     //-------------------------------
 
+    std::string moduleNameForLog() { return m_moduleNameForLog; }
+    void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
+    }
+
 public:
     bool open() { return !m_closed.load() && m_stream->is_open(); }
 
@@ -120,7 +128,7 @@ public:
         {
             auto& ss = boost::beast::get_lowest_layer(*m_stream);
             ws::WsTools::close(ss.socket());
-            WEBSOCKET_STREAM(INFO)
+            WEBSOCKET_STREAM(INFO, m_moduleNameForLog)
                 << LOG_DESC("the real action to close the stream") << LOG_KV("this", this);
         }
         return;
@@ -166,7 +174,8 @@ public:
         }
         catch (const std::exception& e)
         {
-            WEBSOCKET_STREAM(WARNING) << LOG_BADGE("localEndpoint") << LOG_KV("e", e.what());
+            WEBSOCKET_STREAM(WARNING, m_moduleNameForLog)
+                << LOG_BADGE("localEndpoint") << LOG_KV("e", e.what());
         }
 
         return std::string("");
@@ -184,7 +193,8 @@ public:
         }
         catch (const std::exception& e)
         {
-            WEBSOCKET_STREAM(WARNING) << LOG_BADGE("remoteEndpoint") << LOG_KV("e", e.what());
+            WEBSOCKET_STREAM(WARNING, m_moduleNameForLog)
+                << LOG_BADGE("remoteEndpoint") << LOG_KV("e", e.what());
         }
 
         return std::string("");
@@ -193,6 +203,7 @@ public:
 private:
     std::atomic<bool> m_closed{false};
     std::shared_ptr<boost::beast::websocket::stream<STREAM>> m_stream;
+    std::string m_moduleNameForLog = "DEFAULT";
 };
 
 using RawWsStream = WsStream<boost::beast::tcp_stream>;
@@ -294,38 +305,40 @@ public:
     std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
 
 public:
-    WsStreamDelegate::Ptr build(std::shared_ptr<boost::beast::tcp_stream> _tcpStream)
+    WsStreamDelegate::Ptr build(
+        std::shared_ptr<boost::beast::tcp_stream> _tcpStream, std::string _moduleNameForLog)
     {
         auto wsStream = std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
             std::move(*_tcpStream));
-        auto rawWsStream =
-            std::make_shared<bcos::boostssl::ws::WsStream<boost::beast::tcp_stream>>(wsStream);
+        auto rawWsStream = std::make_shared<bcos::boostssl::ws::WsStream<boost::beast::tcp_stream>>(
+            wsStream, _moduleNameForLog);
         return std::make_shared<WsStreamDelegate>(rawWsStream);
     }
 
     WsStreamDelegate::Ptr build(
-        std::shared_ptr<boost::beast::ssl_stream<boost::beast::tcp_stream>> _sslStream)
+        std::shared_ptr<boost::beast::ssl_stream<boost::beast::tcp_stream>> _sslStream,
+        std::string _moduleNameForLog)
     {
         auto wsStream = std::make_shared<
             boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
             std::move(*_sslStream));
         auto sslWsStream = std::make_shared<
             bcos::boostssl::ws::WsStream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
-            wsStream);
+            wsStream, _moduleNameForLog);
         return std::make_shared<WsStreamDelegate>(sslWsStream);
     }
 
-    WsStreamDelegate::Ptr build(
-        bool _disableSsl, std::shared_ptr<boost::beast::tcp_stream> _tcpStream)
+    WsStreamDelegate::Ptr build(bool _disableSsl,
+        std::shared_ptr<boost::beast::tcp_stream> _tcpStream, std::string _moduleNameForLog)
     {
         if (_disableSsl)
         {
-            return build(_tcpStream);
+            return build(_tcpStream, _moduleNameForLog);
         }
 
         auto sslStream = std::make_shared<boost::beast::ssl_stream<boost::beast::tcp_stream>>(
             std::move(*_tcpStream), *m_ctx);
-        return build(sslStream);
+        return build(sslStream, _moduleNameForLog);
     }
 
 private:

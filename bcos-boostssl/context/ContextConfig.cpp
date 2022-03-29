@@ -40,17 +40,18 @@ void ContextConfig::initConfig(std::string const& _configPath)
     {
         boost::filesystem::path currentPath(boost::filesystem::current_path());
 
-        CONTEXT_LOG(WARNING) << LOG_DESC("initConfig failed") << LOG_KV("configPath", _configPath)
-                             << LOG_KV("currentPath", currentPath.string())
-                             << LOG_KV("error", boost::diagnostic_information(e));
+        CONTEXT_LOG(WARNING, m_moduleNameForLog)
+            << LOG_DESC("initConfig failed") << LOG_KV("configPath", _configPath)
+            << LOG_KV("currentPath", currentPath.string())
+            << LOG_KV("error", boost::diagnostic_information(e));
 
 
         BOOST_THROW_EXCEPTION(std::runtime_error("initConfig: currentPath:" + currentPath.string() +
                                                  " ,error:" + boost::diagnostic_information(e)));
     }
 
-    CONTEXT_LOG(INFO) << LOG_DESC("initConfig") << LOG_KV("sslType", m_sslType)
-                      << LOG_KV("configPath", _configPath);
+    CONTEXT_LOG(INFO, m_moduleNameForLog) << LOG_DESC("initConfig") << LOG_KV("sslType", m_sslType)
+                                          << LOG_KV("configPath", _configPath);
 }
 
 /// loads ca configuration items from the configuration file
@@ -61,9 +62,9 @@ void ContextConfig::initCertConfig(const boost::property_tree::ptree& _pt)
     std::string nodeCertFile = caPath + "/" + _pt.get<std::string>("cert.node_cert", "node.crt");
     std::string nodeKeyFile = caPath + "/" + _pt.get<std::string>("cert.node_key", "node.key");
 
-    CONTEXT_LOG(INFO) << LOG_DESC("initCertConfig") << LOG_KV("ca_path", caPath)
-                      << LOG_KV("ca_cert", caCertFile) << LOG_KV("node_cert", nodeCertFile)
-                      << LOG_KV("node_key", nodeKeyFile);
+    CONTEXT_LOG(INFO, m_moduleNameForLog)
+        << LOG_DESC("initCertConfig") << LOG_KV("ca_path", caPath) << LOG_KV("ca_cert", caCertFile)
+        << LOG_KV("node_cert", nodeCertFile) << LOG_KV("node_key", nodeKeyFile);
 
     checkFileExist(caCertFile);
     checkFileExist(nodeCertFile);
@@ -76,9 +77,9 @@ void ContextConfig::initCertConfig(const boost::property_tree::ptree& _pt)
 
     m_certConfig = certConfig;
 
-    CONTEXT_LOG(INFO) << LOG_DESC("initCertConfig") << LOG_KV("ca", certConfig.caCert)
-                      << LOG_KV("node_cert", certConfig.nodeCert)
-                      << LOG_KV("node_key", certConfig.nodeKey);
+    CONTEXT_LOG(INFO, m_moduleNameForLog)
+        << LOG_DESC("initCertConfig") << LOG_KV("ca", certConfig.caCert)
+        << LOG_KV("node_cert", certConfig.nodeCert) << LOG_KV("node_key", certConfig.nodeKey);
 }
 
 // loads sm ca configuration items from the configuration file
@@ -110,12 +111,13 @@ void ContextConfig::initSMCertConfig(const boost::property_tree::ptree& _pt)
 
     m_smCertConfig = smCertConfig;
 
-    CONTEXT_LOG(INFO) << LOG_DESC("initSMCertConfig") << LOG_KV("ca_path", caPath)
-                      << LOG_KV("sm_ca_cert", smCertConfig.caCert)
-                      << LOG_KV("sm_node_cert", smCertConfig.nodeCert)
-                      << LOG_KV("sm_node_key", smCertConfig.nodeKey)
-                      << LOG_KV("sm_ennode_cert", smCertConfig.enNodeCert)
-                      << LOG_KV("sm_ennode_key", smCertConfig.enNodeKey);
+    CONTEXT_LOG(INFO, m_moduleNameForLog)
+        << LOG_DESC("initSMCertConfig") << LOG_KV("ca_path", caPath)
+        << LOG_KV("sm_ca_cert", smCertConfig.caCert)
+        << LOG_KV("sm_node_cert", smCertConfig.nodeCert)
+        << LOG_KV("sm_node_key", smCertConfig.nodeKey)
+        << LOG_KV("sm_ennode_cert", smCertConfig.enNodeCert)
+        << LOG_KV("sm_ennode_key", smCertConfig.enNodeKey);
 }
 
 void ContextConfig::checkFileExist(const std::string& _path)

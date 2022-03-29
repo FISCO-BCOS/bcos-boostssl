@@ -22,19 +22,27 @@
 #include <bcos-boostssl/interfaces/MessageFace.h>
 #include <bcos-utilities/BoostLog.h>
 #include <bcos-utilities/Error.h>
-#include <boost/beast/websocket.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/beast/websocket.hpp>
 
 
-#define WEBSOCKET_TOOL(LEVEL) BCOS_LOG(LEVEL) << "[WS][TOOL]"
-#define WEBSOCKET_CONNECTOR(LEVEL) BCOS_LOG(LEVEL) << "[WS][CONNECTOR]"
-#define WEBSOCKET_VERSION(LEVEL) BCOS_LOG(LEVEL) << "[WS][VERSION]"
-#define WEBSOCKET_SESSION(LEVEL) BCOS_LOG(LEVEL) << "[WS][SESSION]"
-#define WEBSOCKET_MESSAGE(LEVEL) BCOS_LOG(LEVEL) << "[WS][MESSAGE]"
-#define WEBSOCKET_SERVICE(LEVEL) BCOS_LOG(LEVEL) << "[WS][SERVICE]"
-#define WEBSOCKET_STREAM(LEVEL) BCOS_LOG(LEVEL) << "[WS][STREAM]"
-#define WEBSOCKET_SSL_STREAM(LEVEL) BCOS_LOG(LEVEL) << "[WS][SSL][STREAM]"
-#define WEBSOCKET_INITIALIZER(LEVEL) BCOS_LOG(LEVEL) << "[WS][INITIALIZER]"
+#define WEBSOCKET_TOOL(LEVEL, MODULE_NAME) BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][TOOL]"
+#define WEBSOCKET_CONNECTOR(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][CONNECTOR]"
+#define WEBSOCKET_VERSION(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][VERSION]"
+#define WEBSOCKET_SESSION(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][SESSION]"
+#define WEBSOCKET_MESSAGE(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][MESSAGE]"
+#define WEBSOCKET_SERVICE(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][SERVICE]"
+#define WEBSOCKET_STREAM(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][STREAM]"
+#define WEBSOCKET_SSL_STREAM(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][SSL][STREAM]"
+#define WEBSOCKET_INITIALIZER(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][INITIALIZER]"
 
 namespace bcos
 {
@@ -44,8 +52,8 @@ namespace ws
 {
 class WsSession;
 
-using RespCallBack =
-    std::function<void(bcos::Error::Ptr, std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
+using RespCallBack = std::function<void(
+    bcos::Error::Ptr, std::shared_ptr<boostssl::MessageFace>, std::shared_ptr<WsSession>)>;
 
 using WsConnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;
 using WsDisconnectHandler = std::function<void(bcos::Error::Ptr, std::shared_ptr<WsSession>)>;

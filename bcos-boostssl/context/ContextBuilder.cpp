@@ -130,9 +130,9 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
         sslContext->native_handle(), _smCertConfig.enNodeCert.c_str(), SSL_FILETYPE_PEM);
     if (ret <= 0)
     {
-        CONTEXT_LOG(WARNING) << LOG_BADGE("buildSslContext")
-                             << LOG_DESC("SSL_CTX_use_enc_certificate_file")
-                             << LOG_KV("error", ret);
+        CONTEXT_LOG(WARNING, m_moduleNameForLog)
+            << LOG_BADGE("buildSslContext") << LOG_DESC("SSL_CTX_use_enc_certificate_file")
+            << LOG_KV("error", ret);
 
         BOOST_THROW_EXCEPTION(
             std::runtime_error("SSL_CTX_use_enc_certificate_file, error: " + std::to_string(ret)));
@@ -142,8 +142,9 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
         sslContext->native_handle(), _smCertConfig.enNodeKey.c_str(), SSL_FILETYPE_PEM);
     if (ret <= 0)
     {
-        CONTEXT_LOG(WARNING) << LOG_BADGE("buildSslContext")
-                             << LOG_DESC("SSL_CTX_use_enc_PrivateKey_file") << LOG_KV("error", ret);
+        CONTEXT_LOG(WARNING, m_moduleNameForLog)
+            << LOG_BADGE("buildSslContext") << LOG_DESC("SSL_CTX_use_enc_PrivateKey_file")
+            << LOG_KV("error", ret);
 
         BOOST_THROW_EXCEPTION(
             std::runtime_error("SSL_CTX_use_enc_PrivateKey_file, error: " + std::to_string(ret)));
@@ -214,8 +215,9 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCert
         sslContext->native_handle(), toX509(_smCertConfig.enNodeCert.c_str()));
     if (ret <= 0)  // en_node.crt
     {
-        CONTEXT_LOG(WARNING) << LOG_BADGE("buildSslContext")
-                             << LOG_DESC("SSL_CTX_use_enc_certificate") << LOG_KV("error", ret);
+        CONTEXT_LOG(WARNING, m_moduleNameForLog)
+            << LOG_BADGE("buildSslContext") << LOG_DESC("SSL_CTX_use_enc_certificate")
+            << LOG_KV("error", ret);
         BOOST_THROW_EXCEPTION(std::runtime_error(
             "SSL_CTX_use_enc_certificate failed, error: " + std::to_string(ret)));
     }
@@ -224,8 +226,9 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCert
         sslContext->native_handle(), toEvpPkey(_smCertConfig.enNodeKey.c_str()));
     if (ret <= 0)  // en_node.key
     {
-        CONTEXT_LOG(WARNING) << LOG_BADGE("buildSslContext")
-                             << LOG_DESC("SSL_CTX_use_enc_PrivateKey") << LOG_KV("error", ret);
+        CONTEXT_LOG(WARNING, m_moduleNameForLog)
+            << LOG_BADGE("buildSslContext") << LOG_DESC("SSL_CTX_use_enc_PrivateKey")
+            << LOG_KV("error", ret);
         BOOST_THROW_EXCEPTION(
             std::runtime_error("SSL_CTX_use_enc_PrivateKey, error: " + std::to_string(ret)));
     }

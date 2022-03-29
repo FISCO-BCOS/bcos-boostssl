@@ -31,8 +31,9 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 using namespace bcos::boostssl::context;
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
+
+
+#define TEST_LOG(LEVEL, module_name) BCOS_LOG(LEVEL) << LOG_BADGE(module_name) << "[WS][SERVICE]"
 
 void usage()
 {
@@ -55,7 +56,7 @@ int main(int argc, char** argv)
 
     std::string disableSsl = "true";
     uint16_t sizeNum = 1;
-    uint16_t interval = 10;
+    // uint16_t interval = 10;
 
     if (argc > 3)
     {
@@ -67,13 +68,15 @@ int main(int argc, char** argv)
         sizeNum = atoi(argv[4]);
     }
 
-    if (argc > 5)
-    {
-        interval = atoi(argv[5]);
-    }
+    // if (argc > 5)
+    // {
+    //     interval = atoi(argv[5]);
+    // }
 
-    BCOS_LOG(INFO) << LOG_DESC("echo-client-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
-                   << LOG_KV("disableSsl", disableSsl) << LOG_KV("datasize", sizeNum);
+    std::string test_module_name = "testClient";
+    TEST_LOG(INFO, test_module_name)
+        << LOG_DESC("echo-client-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
+        << LOG_KV("disableSsl", disableSsl) << LOG_KV("datasize", sizeNum);
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Client);
@@ -94,8 +97,9 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
+    config->setModuleNameForLog("TEST_CLIENT");
 
-    auto wsService = std::make_shared<ws::WsService>();
+    auto wsService = std::make_shared<ws::WsService>(config->moduleNameForLog());
     auto wsInitializer = std::make_shared<WsInitializer>();
 
     wsInitializer->setConfig(config);
@@ -107,16 +111,12 @@ int main(int argc, char** argv)
     auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
     msg->setPacketType(999);
 
-    // std::string randStr =
-    // boost::uuids::to_string(boost::uuids::random_generator()());
-    // randStr.erase(std::remove(randStr.begin(), randStr.end(), '-'),
-    // randStr.end());
     std::string randStr(sizeNum, 'a');
 
     msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
 
-    BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
-                   << LOG_KV("request size", randStr.size());
+    TEST_LOG(INFO, test_module_name) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
+                                     << LOG_KV("request size", randStr.size());
 
     int i = 0;
     while (true)
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
                 (void)_session;
                 if (_error && _error->errorCode() != 0)
                 {
-                    BCOS_LOG(ERROR)
+                    TEST_LOG(ERROR, "TEST_CLIENT_MODULE")
                         << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("callback response error")
                         << LOG_KV("errorCode", _error->errorCode())
                         << LOG_KV("errorMessage", _error->errorMessage());
@@ -142,10 +142,12 @@ int main(int argc, char** argv)
                 //               << LOG_KV("resp", resp);
             });
 
-        if (i % interval == 0)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
+        // if (i % interval == 0)
+        // {
+        //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         i++;
     }

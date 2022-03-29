@@ -42,6 +42,7 @@ using namespace bcos::boostssl::http;
 void WsInitializer::initWsService(WsService::Ptr _wsService)
 {
     std::shared_ptr<WsConfig> _config = m_config;
+    std::string moduleNameForLog = _config->moduleNameForLog();
     auto messageFactory = m_messageFactory;
     if (!messageFactory)
     {
@@ -65,16 +66,25 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
     auto sslCertInfo = std::make_shared<bcos::boostssl::context::SslCertInfo>();
 
+    // init module_name for log
+    sslCertInfo->setModuleNameForLog(moduleNameForLog);
+    WsTools::setModuleNameForLog(moduleNameForLog);
+
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
     {
         auto contextBuilder = std::make_shared<ContextBuilder>();
+
+        // init module_name for log
+        contextBuilder->setModuleNameForLog(moduleNameForLog);
+        _config->contextConfig()->setModuleNameForLog(moduleNameForLog);
+
         ctx = contextBuilder->buildSslContext(*_config->contextConfig());
     }
 
     if (_config->asServer())
     {
-        WEBSOCKET_INITIALIZER(INFO)
+        WEBSOCKET_INITIALIZER(INFO, moduleNameForLog)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as server");
 
         if (!WsTools::validIP(_config->listenIP()))
@@ -92,20 +102,21 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
         auto httpServer = httpServerFactory->buildHttpServer(
-            _config->listenIP(), _config->listenPort(), ioc, ctx);
+            _config->listenIP(), _config->listenPort(), ioc, ctx, moduleNameForLog);
         httpServer->setDisableSsl(_config->disableSsl());
         httpServer->setSslCertInfo(sslCertInfo);
         httpServer->setThreadPool(threadPool);
-        httpServer->setWsUpgradeHandler([wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream,
-                                            HttpRequest&& _httpRequest, std::shared_ptr<std::string> _publicKey) {
-            auto service = wsServiceWeakPtr.lock();
-            if (service)
-            {
-                std::string pulicKeyString = _publicKey == nullptr ? "" : *_publicKey.get();
-                auto session = service->newSession(_httpStream->wsStream(), pulicKeyString);
-                session->startAsServer(_httpRequest);
-            }
-        });
+        httpServer->setWsUpgradeHandler(
+            [wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream, HttpRequest&& _httpRequest,
+                std::shared_ptr<std::string> _publicKey) {
+                auto service = wsServiceWeakPtr.lock();
+                if (service)
+                {
+                    std::string pulicKeyString = _publicKey == nullptr ? "" : *_publicKey.get();
+                    auto session = service->newSession(_httpStream->wsStream(), pulicKeyString);
+                    session->startAsServer(_httpRequest);
+                }
+            });
 
         _wsService->setHttpServer(httpServer);
     }
@@ -113,7 +124,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     if (_config->asClient())
     {
         auto connectedPeers = _config->connectedPeers();
-        WEBSOCKET_INITIALIZER(INFO)
+        WEBSOCKET_INITIALIZER(INFO, moduleNameForLog)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as client")
             << LOG_KV("connected size", connectedPeers ? connectedPeers->size() : 0);
 
@@ -137,7 +148,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
         else
         {
-            WEBSOCKET_INITIALIZER(WARNING)
+            WEBSOCKET_INITIALIZER(WARNING, moduleNameForLog)
                 << LOG_BADGE("initWsService") << LOG_DESC("there has no connected server config");
         }
     }
@@ -155,18 +166,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     _wsService->setThreadPool(threadPool);
     _wsService->setMessageFactory(messageFactory);
 
-    WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
-                                << LOG_DESC("initializer for websocket service")
-                                << LOG_KV("listenIP", _config->listenIP())
-                                << LOG_KV("listenPort", _config->listenPort())
-                                << LOG_KV("disableSsl", _config->disableSsl())
-                                << LOG_KV("server", _config->asServer())
-                                << LOG_KV("client", _config->asClient())
-                                << LOG_KV("threadPoolSize", _config->threadPoolSize())
-                                << LOG_KV("iocThreadCount", _config->iocThreadCount())
-                                << LOG_KV("maxMsgSize", _config->maxMsgSize())
-                                << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
-                                << LOG_KV("connected peers", _config->connectedPeers() ?
-                                                                 _config->connectedPeers()->size() :
-                                                                 0);
+    WEBSOCKET_INITIALIZER(INFO, moduleNameForLog)
+        << LOG_BADGE("initWsService") << LOG_DESC("initializer for websocket service")
+        << LOG_KV("listenIP", _config->listenIP()) << LOG_KV("listenPort", _config->listenPort())
+        << LOG_KV("disableSsl", _config->disableSsl()) << LOG_KV("server", _config->asServer())
+        << LOG_KV("client", _config->asClient())
+        << LOG_KV("threadPoolSize", _config->threadPoolSize())
+        << LOG_KV("iocThreadCount", _config->iocThreadCount())
+        << LOG_KV("maxMsgSize", _config->maxMsgSize())
+        << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
+        << LOG_KV("connected peers",
+               _config->connectedPeers() ? _config->connectedPeers()->size() : 0);
 }

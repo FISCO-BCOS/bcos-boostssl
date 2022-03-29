@@ -37,6 +37,12 @@ public:
 public:
     std::shared_ptr<std::string> readFileContent(boost::filesystem::path const& _file);
 
+    std::string moduleNameForLog() { return m_moduleNameForLog; }
+    void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
+    }
+
 public:
     std::shared_ptr<boost::asio::ssl::context> buildSslContext(const std::string& _configPath);
     std::shared_ptr<boost::asio::ssl::context> buildSslContext(const ContextConfig& _contextConfig);
@@ -50,6 +56,9 @@ private:
         const ContextConfig::CertConfig& _certConfig);
     std::shared_ptr<boost::asio::ssl::context> buildSslContextByCertContent(
         const ContextConfig::SMCertConfig& _smCertConfig);
+
+private:
+    std::string m_moduleNameForLog = "DEFAULT";
 };
 
 }  // namespace context

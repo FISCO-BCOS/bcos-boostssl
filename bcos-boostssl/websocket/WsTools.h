@@ -34,6 +34,8 @@ namespace boostssl
 {
 namespace ws
 {
+static std::string m_moduleNameForLog = "DEFAULT";
+
 class WsTools
 {
 public:
@@ -53,6 +55,12 @@ public:
     static bool stringToEndPoint(const std::string& peer, EndPoint& _endpoint);
 
     static void close(boost::asio::ip::tcp::socket& skt);
+
+    static std::string moduleNameForLog() { return m_moduleNameForLog; }
+    static void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
+    }
 };
 }  // namespace ws
 }  // namespace boostssl

@@ -44,16 +44,17 @@ void WsSession::drop(uint32_t _reason)
 {
     if (m_isDrop)
     {
-        WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop")
-                                << LOG_DESC("the session has already been dropped")
-                                << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
+        WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+            << LOG_BADGE("drop") << LOG_DESC("the session has already been dropped")
+            << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
         return;
     }
 
     m_isDrop = true;
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
-                            << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
+    WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+        << LOG_BADGE("drop") << LOG_KV("reason", _reason) << LOG_KV("endpoint", m_endPoint)
+        << LOG_KV("session", this);
 
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     // call callbacks
@@ -70,7 +71,7 @@ void WsSession::drop(uint32_t _reason)
                 callback->timer->cancel();
             }
 
-            WEBSOCKET_SESSION(TRACE)
+            WEBSOCKET_SESSION(TRACE, m_moduleNameForLog)
                 << LOG_DESC("the session has been disconnected") << LOG_KV("seq", cbEntry.first);
 
             m_threadPool->enqueue(
@@ -110,16 +111,17 @@ void WsSession::startAsClient()
     // read message
     asyncRead();
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsClient")
-                            << LOG_DESC("websocket handshake successfully")
-                            << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
+    WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+        << LOG_BADGE("startAsClient") << LOG_DESC("websocket handshake successfully")
+        << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 }
 
 // start WsSession as server
 void WsSession::startAsServer(HttpRequest _httpRequest)
 {
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsServer") << LOG_DESC("start websocket handshake")
-                            << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
+    WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+        << LOG_BADGE("startAsServer") << LOG_DESC("start websocket handshake")
+        << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
 
     auto session = shared_from_this();
     m_wsStreamDelegate->asyncAccept(
@@ -130,7 +132,8 @@ void WsSession::onWsAccept(boost::beast::error_code _ec)
 {
     if (_ec)
     {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onWsAccept") << LOG_KV("error", _ec.message());
+        WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
+            << LOG_BADGE("onWsAccept") << LOG_KV("error", _ec.message());
         return drop(WsError::AcceptError);
     }
 
@@ -141,9 +144,9 @@ void WsSession::onWsAccept(boost::beast::error_code _ec)
 
     asyncRead();
 
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("onWsAccept")
-                            << LOG_DESC("websocket handshake successfully")
-                            << LOG_KV("endPoint", endPoint()) << LOG_KV("session", this);
+    WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+        << LOG_BADGE("onWsAccept") << LOG_DESC("websocket handshake successfully")
+        << LOG_KV("endPoint", endPoint()) << LOG_KV("session", this);
 }
 
 void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
@@ -154,8 +157,9 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     auto message = m_messageFactory->buildMessage();
     if (message->decode(bytesConstRef(data, size)) < 0)
     {  // invalid packet, stop this session ?
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
-                                   << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+        WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
+            << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
+            << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
         return drop(WsError::PacketError);
     }
 
@@ -194,13 +198,11 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
         std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastReadReportMS).count();
     if (reportMS1 > 1000)
     {
-        WEBSOCKET_SESSION(INFO) << LOG_BADGE("onRead")
-                                << LOG_KV("msgRecvTimeTotal", m_msgRecvTimeTotal)
-                                << LOG_KV("msgRecvSizeTotal", m_msgRecvSizeTotal)
-                                << LOG_KV(
-                                       "lastSecondRecvMsgSizeTotal", m_lastSecondRecvMsgSizeTotal)
-                                << LOG_KV(
-                                       "lastSecondRecvMsgTimeTotal", m_lastSecondRecvMsgTimeTotal);
+        WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+            << LOG_BADGE("onRead") << LOG_KV("msgRecvTimeTotal", m_msgRecvTimeTotal)
+            << LOG_KV("msgRecvSizeTotal", m_msgRecvSizeTotal)
+            << LOG_KV("lastSecondRecvMsgSizeTotal", m_lastSecondRecvMsgSizeTotal)
+            << LOG_KV("lastSecondRecvMsgTimeTotal", m_lastSecondRecvMsgTimeTotal);
 
         m_lastSecondRecvMsgSizeTotal = 0;
         m_lastSecondRecvMsgTimeTotal = 0;
@@ -217,9 +219,9 @@ void WsSession::asyncRead()
 {
     if (!isConnected())
     {
-        WEBSOCKET_SESSION(TRACE) << LOG_BADGE("asyncRead")
-                                 << LOG_DESC("session has been disconnected")
-                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+        WEBSOCKET_SESSION(TRACE, m_moduleNameForLog)
+            << LOG_BADGE("asyncRead") << LOG_DESC("session has been disconnected")
+            << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
         return;
     }
     try
@@ -229,7 +231,7 @@ void WsSession::asyncRead()
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(WARNING)
+        WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
             << LOG_BADGE("asyncRead") << LOG_DESC("exception") << LOG_KV("endpoint", endPoint())
             << LOG_KV("session", this) << LOG_KV("what", std::string(_e.what()));
         drop(WsError::ReadError);
@@ -240,8 +242,9 @@ void WsSession::onRead(boost::system::error_code _ec, std::size_t)
 {
     if (_ec)
     {
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("asyncRead") << LOG_KV("error", _ec.message())
-                                   << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+        WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
+            << LOG_BADGE("asyncRead") << LOG_KV("error", _ec.message())
+            << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
 
         return drop(WsError::ReadError);
     }
@@ -291,7 +294,7 @@ void WsSession::onWritePacket()
     {
         if (m_msgDelayCount > 0)
         {
-            WEBSOCKET_SESSION(WARNING)
+            WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
                 << LOG_BADGE("onWrite") << LOG_DESC("message sending in large delay")
                 << LOG_KV("endpoint", endPoint()) << LOG_KV("nDelayCount", m_msgDelayCount)
                 << LOG_KV("nMsgQueueSize", nMsgQueueSize) << LOG_KV("timeInterval", reportMS);
@@ -306,13 +309,12 @@ void WsSession::onWritePacket()
 
     if (reportMS1 > 1000)
     {
-        WEBSOCKET_SESSION(INFO) << LOG_BADGE("onWrite") << LOG_DESC("send report")
-                                << LOG_KV("msgWriteTimeTotal", m_msgWriteTimeTotal)
-                                << LOG_KV("msgWriteSizeTotal", m_msgWriteSizeTotal)
-                                << LOG_KV(
-                                       "lastSecondWriteMsgTimeTotal", m_lastSecondWriteMsgTimeTotal)
-                                << LOG_KV("lastSecondWriteMsgSizeTotal",
-                                       m_lastSecondWriteMsgSizeTotal);
+        WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+            << LOG_BADGE("onWrite") << LOG_DESC("send report")
+            << LOG_KV("msgWriteTimeTotal", m_msgWriteTimeTotal)
+            << LOG_KV("msgWriteSizeTotal", m_msgWriteSizeTotal)
+            << LOG_KV("lastSecondWriteMsgTimeTotal", m_lastSecondWriteMsgTimeTotal)
+            << LOG_KV("lastSecondWriteMsgSizeTotal", m_lastSecondWriteMsgSizeTotal);
 
         m_lastSecondWriteMsgSizeTotal = 0;
         m_lastSecondWriteMsgTimeTotal = 0;
@@ -332,9 +334,9 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
 {
     if (!isConnected())
     {
-        WEBSOCKET_SESSION(TRACE) << LOG_BADGE("asyncWrite")
-                                 << LOG_DESC("session has been disconnected")
-                                 << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+        WEBSOCKET_SESSION(TRACE, m_moduleNameForLog)
+            << LOG_BADGE("asyncWrite") << LOG_DESC("session has been disconnected")
+            << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
         return;
     }
 
@@ -343,10 +345,10 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
         auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
         m_wsStreamDelegate->asyncWrite(
-            *_buffer, [session, _buffer](boost::beast::error_code _ec, std::size_t) {
+            *_buffer, [this, session, _buffer](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
-                    WEBSOCKET_SESSION(WARNING)
+                    WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
                         << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
                         << LOG_KV("endpoint", session->endPoint());
                     return session->drop(WsError::WriteError);
@@ -357,7 +359,7 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
     }
     catch (const std::exception& _e)
     {
-        WEBSOCKET_SESSION(WARNING)
+        WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
             << LOG_BADGE("asyncWrite") << LOG_DESC("async_write throw exception")
             << LOG_KV("session", this) << LOG_KV("endpoint", endPoint())
             << LOG_KV("what", std::string(_e.what()));
@@ -403,7 +405,7 @@ void WsSession::asyncSendMessage(
 
     if (!isConnected())
     {
-        WEBSOCKET_SESSION(WARNING)
+        WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("the session has been disconnected")
             << LOG_KV("seq", seq) << LOG_KV("endpoint", endPoint());
 
@@ -426,7 +428,7 @@ void WsSession::asyncSendMessage(
             _respFunc(error, nullptr, nullptr);
         }
 
-        WEBSOCKET_SESSION(WARNING)
+        WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("send message size overflow")
             << LOG_KV("endpoint", endPoint()) << LOG_KV("seq", seq)
             << LOG_KV("msgSize", _msg->payload()->size())
@@ -506,7 +508,8 @@ void WsSession::onRespTimeout(const boost::system::error_code& _error, const std
         return;
     }
 
-    WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onRespTimeout") << LOG_KV("seq", _seq);
+    WEBSOCKET_SESSION(WARNING, m_moduleNameForLog)
+        << LOG_BADGE("onRespTimeout") << LOG_KV("seq", _seq);
 
     auto error =
         std::make_shared<Error>(WsError::TimeOut, "waiting for message response timed out");
@@ -520,10 +523,11 @@ nodeID WsSession::obtainNodeID(std::string const& _publicKey)
     if (!node_info_vec.empty())
     {
         auto nodeid = node_info_vec[0];
-        WEBSOCKET_SESSION(INFO) << LOG_BADGE("obtainNodeID") << LOG_KV("nodeID", nodeid);
+        WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+            << LOG_BADGE("obtainNodeID") << LOG_KV("nodeID", nodeid);
         return nodeid;
     }
 
-    WEBSOCKET_SESSION(ERROR) << LOG_BADGE("obtainNodeID failed");
+    WEBSOCKET_SESSION(ERROR, m_moduleNameForLog) << LOG_BADGE("obtainNodeID failed");
     return "";
 }

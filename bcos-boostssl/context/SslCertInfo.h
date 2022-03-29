@@ -20,8 +20,8 @@
 #pragma once
 #include <openssl/x509.h>
 #include <boost/asio/ssl.hpp>
-#include <memory>
 #include <functional>
+#include <memory>
 
 namespace bcos
 {
@@ -32,15 +32,12 @@ namespace context
 class SslCertInfo : public std::enable_shared_from_this<SslCertInfo>
 {
 public:
-	using Ptr = std::shared_ptr<SslCertInfo>;
+    using Ptr = std::shared_ptr<SslCertInfo>;
     using ConstPtr = std::shared_ptr<const SslCertInfo>;
-	
-	SslCertInfo()
-	{
-		initSSLContextPubHexHandler();
-	}
-	
-	void initSSLContextPubHexHandler();
+
+    SslCertInfo() { initSSLContextPubHexHandler(); }
+
+    void initSSLContextPubHexHandler();
 
     std::function<bool(X509* x509, std::string& pubHex)> sslContextPubHandler()
     {
@@ -49,9 +46,16 @@ public:
 
     std::function<bool(bool, boost::asio::ssl::verify_context&)> newVerifyCallback(
         std::shared_ptr<std::string> nodeIDOut);
-        
+
+    std::string moduleNameForLog() { return m_moduleNameForLog; }
+    void setModuleNameForLog(std::string _moduleNameForLog)
+    {
+        m_moduleNameForLog = _moduleNameForLog;
+    }
+
 private:
     std::function<bool(X509* cert, std::string& pubHex)> m_sslContextPubHandler;
+    std::string m_moduleNameForLog = "DEFAULT";
 };
 
 }  // namespace context

@@ -56,8 +56,8 @@ bool WsTools::stringToEndPoint(const std::string& _peer, EndPoint& _endpoint)
 
     if (!valid)
     {
-        WEBSOCKET_TOOL(WARNING) << LOG_DESC("peer is not valid ip:port format")
-                                << LOG_KV("peer", _peer);
+        WEBSOCKET_TOOL(WARNING, m_moduleNameForLog)
+            << LOG_DESC("peer is not valid ip:port format") << LOG_KV("peer", _peer);
     }
 
     if (valid)
