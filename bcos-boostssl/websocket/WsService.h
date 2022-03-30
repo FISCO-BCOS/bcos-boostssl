@@ -152,6 +152,8 @@ public:
         m_listenHost = host;
         m_listenPort = port;
     }
+    std::string listenHost() { return m_listenHost; }
+    uint16_t listenPort() { return m_listenPort; }
 
     WsConfig::Ptr config() const { return m_config; }
     void setConfig(WsConfig::Ptr _config) { m_config = _config; }
