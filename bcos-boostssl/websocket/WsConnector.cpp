@@ -109,11 +109,6 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                     wsStreamDelegate->setVerifyCallback(
                         _disableSsl, sslCertInfo->newVerifyCallback(endpointPublicKey));
 
-                    std::shared_ptr<std::string> endpointPublicKey =
-                        std::make_shared<std::string>();
-                    wsStreamDelegate->setVerifyCallback(
-                        _disableSsl, sslCertInfo->newVerifyCallback(endpointPublicKey));
-
                     // start ssl handshake
                     wsStreamDelegate->asyncHandshake([wsStreamDelegate, connector, _host, _port,
                                                          endpoint, _ep, _callback,

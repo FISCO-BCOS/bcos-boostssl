@@ -64,9 +64,9 @@ void WsSession::drop(uint32_t _reason)
 
         std::shared_lock<std::shared_mutex> lock(x_callback);
 
-        WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
-                                << LOG_KV("endpoint", m_endPoint)
-                                << LOG_KV("cb size", m_callbacks.size()) << LOG_KV("session", this);
+        WEBSOCKET_SESSION(INFO, m_moduleNameForLog)
+            << LOG_BADGE("drop") << LOG_KV("reason", _reason) << LOG_KV("endpoint", m_endPoint)
+            << LOG_KV("cb size", m_callbacks.size()) << LOG_KV("session", this);
 
         for (auto& cbEntry : m_callbacks)
         {
