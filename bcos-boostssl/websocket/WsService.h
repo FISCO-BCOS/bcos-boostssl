@@ -21,7 +21,6 @@
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
 #include <bcos-boostssl/interfaces/MessageFace.h>
-#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -184,11 +183,6 @@ public:
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
 
-    NodeInfo nodeInfo();
-
-    std::string obtainCommonNameFromSubject(std::string const& subject);
-
-
 private:
     bool m_running{false};
 
@@ -236,9 +230,6 @@ private:
     // handshake handlers, the handers will be called when ws session
     // disconnected
     std::vector<HandshakeHandler> m_handshakeHandlers;
-
-    // std::shared_ptr<ASIOInterface> m_asioInterface;
-    NodeInfo m_nodeInfo;
 };
 
 }  // namespace ws

@@ -19,7 +19,6 @@
  */
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
-#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsStream.h>
@@ -41,8 +40,9 @@ namespace boostssl
 {
 namespace ws
 {
-class WsService;
+using nodeID = std::string;
 
+class WsService;
 // The websocket session for connection
 class WsSession : public std::enable_shared_from_this<WsSession>
 {
@@ -167,7 +167,7 @@ public:
     nodeID obtainNodeID(std::string const& _publicKey);
 
     nodeID nodeId() { return m_nodeId; }
-    void setNodeId(boostssl::nodeID _nodeId) { m_nodeId = _nodeId; }
+    void setNodeId(nodeID _nodeId) { m_nodeId = _nodeId; }
 
     std::string moduleNameForLog() { return m_moduleNameForLog; }
     void setModuleNameForLog(std::string _moduleNameForLog)
@@ -199,7 +199,7 @@ private:
     std::string m_endPoint;
     std::string m_connectedEndPoint;
     std::string m_publicKey;
-    boostssl::nodeID m_nodeId;
+    nodeID m_nodeId;
 
     //
     int32_t m_sendMsgTimeout = -1;
