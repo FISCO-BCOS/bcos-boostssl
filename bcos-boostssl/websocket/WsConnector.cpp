@@ -18,6 +18,7 @@
  * @date 2021-08-23
  */
 
+#include <bcos-boostssl/context/NodeInfoTools.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
 #include <bcos-boostssl/websocket/WsTools.h>
@@ -32,6 +33,7 @@
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
+using namespace bcos::boostssl::context;
 
 // TODO: how to set timeout for connect to wsServer ???
 void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bool _disableSsl,
@@ -55,12 +57,11 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
 
     auto resolver = m_resolver;
     auto builder = m_builder;
-    auto sslCertInfo = m_sslCertInfo;
     auto connector = shared_from_this();
-   
+
     // resolve host
     resolver->async_resolve(_host.c_str(), std::to_string(_port).c_str(),
-        [_host, _port, _disableSsl, endpoint, ioc, ctx, connector, builder, sslCertInfo, _callback](
+        [this, _host, _port, _disableSsl, endpoint, ioc, ctx, connector, builder, _callback](
             boost::beast::error_code _ec, boost::asio::ip::tcp::resolver::results_type _results) {
             if (_ec)
             {
@@ -84,8 +85,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
 
             // async connect
             rawStream->async_connect(_results,
-                [_host, _port, _disableSsl, endpoint, connector, builder, sslCertInfo, rawStream, _callback](
-                    boost::beast::error_code _ec,
+                [this, _host, _port, _disableSsl, endpoint, connector, builder, rawStream,
+                    _callback](boost::beast::error_code _ec,
                     boost::asio::ip::tcp::resolver::results_type::endpoint_type _ep) mutable {
                     if (_ec)
                     {
@@ -101,15 +102,16 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                         << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect success")
                         << LOG_KV("endpoint", endpoint);
 
-                    auto wsStreamDelegate = builder->build(_disableSsl, rawStream);
+                    auto wsStreamDelegate = builder->build(_disableSsl, rawStream, m_moduleName);
 
-                    std::shared_ptr<std::string> endpointPublicKey = std::make_shared<std::string>();
-                    wsStreamDelegate->setVerifyCallback(_disableSsl, sslCertInfo->newVerifyCallback(endpointPublicKey));
+                    std::shared_ptr<std::string> nodeId = std::make_shared<std::string>();
+                    wsStreamDelegate->setVerifyCallback(
+                        _disableSsl, NodeInfoTools::newVerifyCallback(nodeId));
 
                     // start ssl handshake
-                    wsStreamDelegate->asyncHandshake([wsStreamDelegate, connector, _host, _port,
-                                                         endpoint, _ep,
-                                                         _callback, endpointPublicKey](boost::beast::error_code _ec) {
+                    wsStreamDelegate->asyncHandshake([this, wsStreamDelegate, connector, _host,
+                                                         _port, endpoint, _ep, _callback,
+                                                         nodeId](boost::beast::error_code _ec) {
                         if (_ec)
                         {
                             WEBSOCKET_CONNECTOR(WARNING)
@@ -133,8 +135,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
 
                         // websocket async handshake
                         wsStreamDelegate->asyncWsHandshake(tmpHost, "/",
-                            [connector, _host, _port, endpoint, _callback, wsStreamDelegate, endpointPublicKey](
-                                boost::beast::error_code _ec) mutable {
+                            [this, connector, _host, _port, endpoint, _callback, wsStreamDelegate,
+                                nodeId](boost::beast::error_code _ec) mutable {
                                 if (_ec)
                                 {
                                     WEBSOCKET_CONNECTOR(WARNING)
@@ -151,7 +153,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                                     << LOG_BADGE("connectToWsServer")
                                     << LOG_DESC("websocket handshake successfully")
                                     << LOG_KV("host", _host) << LOG_KV("port", _port);
-                                _callback(_ec, "", wsStreamDelegate, endpointPublicKey);
+                                _callback(_ec, "", wsStreamDelegate, nodeId);
                                 connector->erasePendingConns(endpoint);
                             });
                     });

@@ -18,6 +18,7 @@
  * @date 2021-09-29
  */
 #include <bcos-boostssl/context/ContextBuilder.h>
+#include <bcos-boostssl/context/NodeInfoTools.h>
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
@@ -32,7 +33,6 @@
 #include <cstddef>
 #include <memory>
 
-
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::context;
@@ -42,6 +42,7 @@ using namespace bcos::boostssl::http;
 void WsInitializer::initWsService(WsService::Ptr _wsService)
 {
     std::shared_ptr<WsConfig> _config = m_config;
+    std::string m_moduleName = _config->moduleName();
     auto messageFactory = m_messageFactory;
     if (!messageFactory)
     {
@@ -63,12 +64,21 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
     auto builder = std::make_shared<WsStreamDelegateBuilder>();
     auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
-    auto sslCertInfo = std::make_shared<bcos::boostssl::context::SslCertInfo>();
+
+    // init module_name for log
+    WsTools::setModuleName(m_moduleName);
+    NodeInfoTools::setModuleName(m_moduleName);
+    connector->setModuleName(m_moduleName);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
     {
         auto contextBuilder = std::make_shared<ContextBuilder>();
+
+        // init module_name for log
+        contextBuilder->setModuleName(m_moduleName);
+        _config->contextConfig()->setModuleName(m_moduleName);
+
         ctx = contextBuilder->buildSslContext(*_config->contextConfig());
     }
 
@@ -92,20 +102,20 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
         auto httpServer = httpServerFactory->buildHttpServer(
-            _config->listenIP(), _config->listenPort(), ioc, ctx);
+            _config->listenIP(), _config->listenPort(), ioc, ctx, m_moduleName);
         httpServer->setDisableSsl(_config->disableSsl());
-        httpServer->setSslCertInfo(sslCertInfo);
         httpServer->setThreadPool(threadPool);
-        httpServer->setWsUpgradeHandler([wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream,
-                                            HttpRequest&& _httpRequest, std::shared_ptr<std::string> _publicKey) {
-            auto service = wsServiceWeakPtr.lock();
-            if (service)
-            {
-                std::string pulicKeyString = _publicKey == nullptr ? "" : *_publicKey.get();
-                auto session = service->newSession(_httpStream->wsStream(), pulicKeyString);
-                session->startAsServer(_httpRequest);
-            }
-        });
+        httpServer->setWsUpgradeHandler(
+            [wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream, HttpRequest&& _httpRequest,
+                std::shared_ptr<std::string> _nodeId) {
+                auto service = wsServiceWeakPtr.lock();
+                if (service)
+                {
+                    std::string nodeIdString = _nodeId == nullptr ? "" : *_nodeId.get();
+                    auto session = service->newSession(_httpStream->wsStream(), nodeIdString);
+                    session->startAsServer(_httpRequest);
+                }
+            });
 
         _wsService->setHttpServer(httpServer);
     }
@@ -145,7 +155,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     builder->setCtx(ctx);
     connector->setCtx(ctx);
     connector->setBuilder(builder);
-    connector->setSslCertInfo(sslCertInfo);
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);

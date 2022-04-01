@@ -39,7 +39,8 @@ enum WsError
     NoActiveCons = -4009,
     EndPointNotExist = -4010,
     MessageOverflow = -4011,
-    UndefinedException = -4099
+    UndefinedException = -4012,
+    MessageEncodeError = -4013
 };
 
 inline bool notRetryAgain(int _wsError)

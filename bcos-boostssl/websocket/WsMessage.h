@@ -40,25 +40,27 @@ class WsMessage : public boostssl::MessageFace
 {
 public:
     using Ptr = std::shared_ptr<WsMessage>;
-    // seq field length
-    const static size_t SEQ_LENGTH = 32;
-    /// type(2) + status(2) + seq(32) + ext(2) + data(N)
-    const static size_t MESSAGE_MIN_LENGTH = 38;
+    // version(2) + type(2) + status(2) + seqLength(1) + ext(2) + payload(N)
+    const static size_t MESSAGE_MIN_LENGTH = 9;
 
 public:
-    WsMessage() { m_data = std::make_shared<bcos::bytes>(); }
-
+    WsMessage() { m_payload = std::make_shared<bcos::bytes>(); }
     virtual ~WsMessage() {}
 
 public:
-    virtual uint16_t packetType() const override { return m_type; }
-    virtual void setPacketType(uint16_t _type) override { m_type = _type; }
+    virtual uint16_t version() const override { return m_version; }
+    virtual void setVersion(uint16_t) override {}
+    virtual uint16_t packetType() const override { return m_packetType; }
+    virtual void setPacketType(uint16_t _packetType) override { m_packetType = _packetType; }
     virtual int16_t status() { return m_status; }
     virtual void setStatus(int16_t _status) { m_status = _status; }
     virtual std::string seq() const override { return m_seq; }
     virtual void setSeq(std::string _seq) override { m_seq = _seq; }
-    virtual std::shared_ptr<bcos::bytes> payload() const override { return m_data; }
-    virtual void setPayload(std::shared_ptr<bcos::bytes> _data) override { m_data = _data; }
+    virtual std::shared_ptr<bcos::bytes> payload() const override { return m_payload; }
+    virtual void setPayload(std::shared_ptr<bcos::bytes> _payload) override
+    {
+        m_payload = _payload;
+    }
     virtual uint16_t ext() const override { return m_ext; }
     virtual void setExt(uint16_t _ext) override { m_ext = _ext; }
 
@@ -67,11 +69,7 @@ public:
     virtual int64_t decode(bytesConstRef _buffer) override;
 
 private:
-    uint16_t m_type{0};
     int16_t m_status{0};
-    std::string m_seq{SEQ_LENGTH, '0'};
-    std::shared_ptr<bcos::bytes> m_data;
-    uint16_t m_ext = 0;
 };
 
 class WsMessageFactory : public boostssl::MessageFaceFactory

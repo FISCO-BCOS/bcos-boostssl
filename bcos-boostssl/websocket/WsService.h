@@ -21,7 +21,6 @@
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
 #include <bcos-boostssl/interfaces/MessageFace.h>
-#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -61,7 +60,7 @@ class WsService : public std::enable_shared_from_this<WsService>
 {
 public:
     using Ptr = std::shared_ptr<WsService>;
-    WsService();
+    WsService(std::string _moduleName);
     virtual ~WsService();
 
 public:
@@ -84,7 +83,7 @@ public:
 
 public:
     std::shared_ptr<WsSession> newSession(
-        std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey);
+        std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _nodeId);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -127,6 +126,9 @@ public:
     int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
     void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
 
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
+
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
     {
@@ -147,6 +149,8 @@ public:
         m_listenHost = host;
         m_listenPort = port;
     }
+    std::string listenHost() { return m_listenHost; }
+    uint16_t listenPort() { return m_listenPort; }
 
     WsConfig::Ptr config() const { return m_config; }
     void setConfig(WsConfig::Ptr _config) { m_config = _config; }
@@ -178,18 +182,11 @@ public:
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
 
-    NodeInfo nodeInfo();
-
-    std::string obtainCommonNameFromSubject(std::string const& subject);
-
-    // virtual std::shared_ptr<ASIOInterface> faasioInterface() const { return m_asioInterface; }
-    // virtual std::shared_ptr<ASIOInterface> setFaasioInterface(ASIOInterface _asioInterface) const
-    // { return m_asioInterface = _asioInterface; }
-
 private:
     bool m_running{false};
 
     int32_t m_waitConnectFinishTimeout = 30000;
+    std::string m_moduleName;
 
     // MessageFaceFactory
     std::shared_ptr<MessageFaceFactory> m_messageFactory;
@@ -232,9 +229,6 @@ private:
     // handshake handlers, the handers will be called when ws session
     // disconnected
     std::vector<HandshakeHandler> m_handshakeHandlers;
-
-    // std::shared_ptr<ASIOInterface> m_asioInterface;
-    NodeInfo m_nodeInfo;
 };
 
 }  // namespace ws

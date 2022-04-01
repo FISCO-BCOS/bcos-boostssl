@@ -43,7 +43,7 @@ using namespace std::chrono_literals;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
-WsService::WsService()
+WsService::WsService(std::string _moduleName) : m_moduleName(_moduleName)
 {
     WEBSOCKET_SERVICE(INFO) << LOG_KV("[NEWOBJ][WsService]", this);
 }
@@ -304,7 +304,7 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
             [p, self, connectedEndPoint](boost::beast::error_code _ec,
                 const std::string& _extErrorMsg,
                 std::shared_ptr<WsStreamDelegate> _wsStreamDelegate,
-                std::shared_ptr<std::string> _endpointPublicKey) {
+                std::shared_ptr<std::string> _nodeId) {
                 auto service = self.lock();
                 if (!service)
                 {
@@ -319,7 +319,7 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
                     return;
                 }
 
-                auto session = service->newSession(_wsStreamDelegate, *_endpointPublicKey.get());
+                auto session = service->newSession(_wsStreamDelegate, *_nodeId.get());
                 session->setConnectedEndPoint(connectedEndPoint);
                 session->startAsClient();
             });
@@ -344,7 +344,6 @@ void WsService::reconnect()
         auto connectedPeers = std::make_shared<std::vector<EndPoint>>();
 
         // select all disconnected nodes
-        // todo: connectedPeers p2pservice去重后要更新该配置信息 ip + port, update方法
         auto peers = m_config->connectedPeers();
         for (auto& peer : *peers)
         {
@@ -397,82 +396,13 @@ void WsService::eraseMsgHandler(uint32_t _type)
     m_msgType2Method.erase(_type);
 }
 
-NodeInfo WsService::nodeInfo()
-{
-    try
-    {
-        if (m_nodeInfo.nodeID.empty())
-        {
-            /// get certificate
-            auto sslContext = m_ctx->native_handle();
-            X509* cert = SSL_CTX_get0_certificate(sslContext);
-
-            /// get issuer name
-            const char* issuer = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
-            std::string issuerName(issuer);
-
-            /// get subject name
-            const char* subject = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
-            std::string subjectName(subject);
-
-            /// get nodeID
-            std::string nodeIDOut;
-            auto sslContextPubHandler = m_connector->sslCertInfo()->sslContextPubHandler();
-            if (sslContextPubHandler(cert, nodeIDOut))
-            {
-                m_nodeInfo.nodeID = boost::to_upper_copy(nodeIDOut);
-                WEBSOCKET_SERVICE(INFO) << LOG_DESC("Get node information from cert")
-                                        << LOG_KV("nodeID", m_nodeInfo.nodeID);
-            }
-
-            /// fill in the node informations
-            m_nodeInfo.agencyName = obtainCommonNameFromSubject(issuerName);
-            m_nodeInfo.nodeName = obtainCommonNameFromSubject(subjectName);
-            m_nodeInfo.nodeIPEndpoint = NodeIPEndpoint(m_listenHost, m_listenPort);
-            /// free resources
-            OPENSSL_free((void*)issuer);
-            OPENSSL_free((void*)subject);
-        }
-    }
-    catch (std::exception& e)
-    {
-        WEBSOCKET_SERVICE(ERROR) << LOG_DESC("Get node information from cert failed.")
-                                 << boost::diagnostic_information(e);
-        return m_nodeInfo;
-    }
-    return m_nodeInfo;
-}
-
-std::string WsService::obtainCommonNameFromSubject(std::string const& subject)
-{
-    std::vector<std::string> fields;
-    boost::split(fields, subject, boost::is_any_of("/"), boost::token_compress_on);
-    for (auto field : fields)
-    {
-        std::size_t pos = field.find("CN");
-        if (pos != std::string::npos)
-        {
-            std::vector<std::string> cn_fields;
-            boost::split(cn_fields, field, boost::is_any_of("="), boost::token_compress_on);
-            /// use the whole fields as the common name
-            if (cn_fields.size() < 2)
-            {
-                return field;
-            }
-            /// return real common name
-            return cn_fields[1];
-        }
-    }
-    return subject;
-}
-
 std::shared_ptr<WsSession> WsService::newSession(
-    std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey)
+    std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _nodeId)
 {
     _wsStreamDelegate->setMaxReadMsgSize(m_config->maxMsgSize());
 
     std::string endPoint = _wsStreamDelegate->remoteEndpoint();
-    auto wsSession = std::make_shared<WsSession>();
+    auto wsSession = std::make_shared<WsSession>(m_moduleName);
     wsSession->setWsStreamDelegate(_wsStreamDelegate);
     wsSession->setIoc(ioc());
     wsSession->setThreadPool(threadPool());
@@ -481,9 +411,7 @@ std::shared_ptr<WsSession> WsService::newSession(
     wsSession->setConnectedEndPoint(endPoint);
     wsSession->setMaxWriteMsgSize(m_config->maxMsgSize());
     wsSession->setSendMsgTimeout(m_config->sendMsgTimeout());
-    wsSession->setPublicKey(_publicKey);
-    auto nodeID = wsSession->obtainNodeID(_publicKey);
-    wsSession->setNodeId(nodeID);
+    wsSession->setNodeId(_nodeId);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
     wsSession->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {
@@ -576,8 +504,6 @@ WsSessions WsService::sessions()
         }
     }
 
-    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("sessions") << LOG_KV("size",
-    // sessions.size());
     return sessions;
 }
 
@@ -742,6 +668,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != 0)
                     {
+                        std::string m_moduleName = session->moduleName();
                         WEBSOCKET_SERVICE(WARNING)
                             << LOG_BADGE("asyncSendMessage") << LOG_DESC("callback error")
                             << LOG_KV("endpoint", session->endPoint())
@@ -782,7 +709,8 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
     // auto seq = _msg->seq();
     // int32_t timeout = _options.timeout > 0 ? _options.timeout : m_config->sendMsgTimeout();
 
-    // WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncSendMessage") << LOG_KV("seq", seq)
+    // WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncSendMessage") <<
+    // LOG_KV("seq", seq)
     //                          << LOG_KV("size", size) << LOG_KV("timeout", timeout);
 }
 

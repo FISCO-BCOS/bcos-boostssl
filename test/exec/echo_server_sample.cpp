@@ -34,6 +34,11 @@ using namespace bcos::boostssl::context;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
+std::string MODULE_NAME = "DEFAULT";
+
+#define TEST_SERVER_LOG(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][SERVICE]"
+
 void usage()
 {
     std::cerr << "Usage: echo-server-sample <listenIP> <listenPort> <ssl>\n"
@@ -61,8 +66,9 @@ int main(int argc, char** argv)
         disableSsl = argv[3];
     }
 
-    BCOS_LOG(INFO) << LOG_DESC("echo-server-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
-                   << LOG_KV("disableSsl", disableSsl);
+    MODULE_NAME = "TEST_SERVER_MODULE";
+    TEST_SERVER_LOG(INFO, MODULE_NAME) << LOG_DESC("echo-server-sample") << LOG_KV("ip", host)
+                                       << LOG_KV("port", port) << LOG_KV("disableSsl", disableSsl);
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Server);
@@ -77,8 +83,9 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
+    config->setModuleName("TEST_SERVER");
 
-    auto wsService = std::make_shared<ws::WsService>();
+    auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
 
     wsInitializer->setConfig(config);
@@ -108,7 +115,7 @@ int main(int argc, char** argv)
     int i = 0;
     while (true)
     {
-        BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ");
+        TEST_SERVER_LOG(INFO, MODULE_NAME) << LOG_BADGE(" [Main] ===>>>> ");
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         i++;
     }

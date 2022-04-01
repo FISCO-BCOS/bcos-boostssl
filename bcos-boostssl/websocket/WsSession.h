@@ -19,7 +19,6 @@
  */
 #pragma once
 #include <bcos-boostssl/httpserver/Common.h>
-#include <bcos-boostssl/interfaces/NodeInfo.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsStream.h>
@@ -42,7 +41,6 @@ namespace boostssl
 namespace ws
 {
 class WsService;
-
 // The websocket session for connection
 class WsSession : public std::enable_shared_from_this<WsSession>
 {
@@ -51,7 +49,10 @@ public:
     using Ptrs = std::vector<std::shared_ptr<WsSession>>;
 
 public:
-    WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this); }
+    WsSession(std::string _moduleName) : m_moduleName(_moduleName)
+    {
+        WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
+    }
 
     virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
 
@@ -155,13 +156,11 @@ public:
         return m_msgQueue.size();
     }
 
-    std::string publicKey() const { return m_publicKey; }
-    void setPublicKey(std::string const& _publicKey) { m_publicKey = _publicKey; }
+    std::string nodeId() { return m_nodeId; }
+    void setNodeId(std::string _nodeId) { m_nodeId = _nodeId; }
 
-    nodeID obtainNodeID(std::string const& _publicKey);
-
-    nodeID nodeId() { return m_nodeId; }
-    void setNodeId(boostssl::nodeID _nodeId) { m_nodeId = _nodeId; }
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
 public:
     struct CallBack
@@ -179,14 +178,14 @@ private:
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
     std::atomic<uint16_t> m_version = 0;
+    std::string m_moduleName = "DEFAULT";
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;
 
     std::string m_endPoint;
     std::string m_connectedEndPoint;
-    std::string m_publicKey;
-    boostssl::nodeID m_nodeId;
+    std::string m_nodeId;
 
     //
     int32_t m_sendMsgTimeout = -1;

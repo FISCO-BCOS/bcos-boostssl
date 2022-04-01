@@ -52,6 +52,9 @@ void WsSession::drop(uint32_t _reason)
 
     m_isDrop = true;
 
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
+                            << LOG_KV("endpoint", m_endPoint) << LOG_KV("session", this);
+
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     // call callbacks
     {
@@ -349,7 +352,7 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
         auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
         m_wsStreamDelegate->asyncWrite(
-            *_buffer, [session, _buffer](boost::beast::error_code _ec, std::size_t) {
+            *_buffer, [this, session, _buffer](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
                     WEBSOCKET_SESSION(WARNING)
@@ -441,7 +444,23 @@ void WsSession::asyncSendMessage(
     }
 
     auto buffer = std::make_shared<bytes>();
-    _msg->encode(*buffer);
+    auto r = _msg->encode(*buffer);
+    if (!r)
+    {
+        if (_respFunc)
+        {
+            auto error =
+                std::make_shared<Error>(WsError::MessageEncodeError, "Message encode failed");
+            _respFunc(error, nullptr, nullptr);
+        }
+
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("asyncSendMessage") << LOG_DESC("message encode failed")
+            << LOG_KV("endpoint", endPoint()) << LOG_KV("seq", seq)
+            << LOG_KV("msgSize", _msg->payload()->size())
+            << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
+        return;
+    }
 
     if (_respFunc)
     {  // callback
@@ -517,19 +536,4 @@ void WsSession::onRespTimeout(const boost::system::error_code& _error, const std
     auto error =
         std::make_shared<Error>(WsError::TimeOut, "waiting for message response timed out");
     m_threadPool->enqueue([callback, error]() { callback->respCallBack(error, nullptr, nullptr); });
-}
-
-nodeID WsSession::obtainNodeID(std::string const& _publicKey)
-{
-    std::vector<std::string> node_info_vec;
-    boost::split(node_info_vec, _publicKey, boost::is_any_of("#"), boost::token_compress_on);
-    if (!node_info_vec.empty())
-    {
-        auto nodeid = node_info_vec[0];
-        WEBSOCKET_SESSION(INFO) << LOG_BADGE("obtainNodeID") << LOG_KV("nodeID", nodeid);
-        return nodeid;
-    }
-
-    WEBSOCKET_SESSION(ERROR) << LOG_BADGE("obtainNodeID failed");
-    return "";
 }

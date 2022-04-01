@@ -24,10 +24,10 @@
 #include <boost/beast/http.hpp>
 
 
-#define HTTP_LISTEN(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][LISTEN]"
-#define HTTP_SESSION(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][SESSION]"
-#define HTTP_SERVER(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][SERVER]"
-#define HTTP_STREAM(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][STREAM]"
+#define HTTP_LISTEN(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][LISTEN]"
+#define HTTP_SESSION(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][SESSION]"
+#define HTTP_SERVER(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][SERVER]"
+#define HTTP_STREAM(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][STREAM]"
 
 
 namespace bcos

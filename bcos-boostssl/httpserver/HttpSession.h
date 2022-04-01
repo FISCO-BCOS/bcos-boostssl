@@ -45,7 +45,10 @@ public:
     using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-    HttpSession() { HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this); }
+    HttpSession(std::string _moduleName) : m_moduleName(_moduleName)
+    {
+        HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this);
+    }
 
     virtual ~HttpSession()
     {
@@ -104,8 +107,7 @@ public:
                 {
                     return;
                 }
-                m_wsUpgradeHandler(
-                    m_httpStream, m_parser->release(), httpSession->endpointPublicKey());
+                m_wsUpgradeHandler(m_httpStream, m_parser->release(), httpSession->nodeId());
             }
             else
             {
@@ -274,11 +276,12 @@ public:
         m_threadPool = _threadPool;
     }
 
-    std::shared_ptr<std::string> endpointPublicKey() { return m_endpointPublicKey; }
-    void setEndpointPublicKey(std::shared_ptr<std::string> _EndpointPublicKey)
-    {
-        m_endpointPublicKey = _EndpointPublicKey;
-    }
+    std::shared_ptr<std::string> nodeId() { return m_nodeId; }
+    void setNodeId(std::shared_ptr<std::string> _nodeId) { m_nodeId = _nodeId; }
+
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
+
 
 private:
     HttpStream::Ptr m_httpStream;
@@ -295,7 +298,9 @@ private:
     // construct it from scratch it at the beginning of each new message.
     boost::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> m_parser;
 
-    std::shared_ptr<std::string> m_endpointPublicKey;
+    std::shared_ptr<std::string> m_nodeId;
+
+    std::string m_moduleName = "DEFAULT";
 };
 
 }  // namespace http
