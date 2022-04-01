@@ -172,7 +172,7 @@ HttpSession::Ptr HttpServer::buildHttpSession(
 
     auto queue = std::make_shared<Queue>();
     auto self = std::weak_ptr<HttpSession>(session);
-    queue->setSender([this, self](HttpResponsePtr _httpResp) {
+    queue->setSender([self](HttpResponsePtr _httpResp) {
         auto session = self.lock();
         if (!session)
         {
