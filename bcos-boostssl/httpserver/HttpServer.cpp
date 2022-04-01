@@ -125,7 +125,13 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     {  // non ssl , start http session
         auto httpStream = m_httpStreamFactory->buildHttpStream(
             std::make_shared<boost::beast::tcp_stream>(std::move(socket)));
-        buildHttpSession(httpStream, nullptr)->run();
+
+        auto self = std::weak_ptr<HttpServer>(shared_from_this());
+        auto server = self.lock();
+        if (server)
+        {
+            server->buildHttpSession(httpStream, nullptr)->run();
+        }
 
         return doAccept();
     }
@@ -162,8 +168,8 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     return doAccept();
 }
 
-
-HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream, std::shared_ptr<std::string> _endpointPublicKey)
+HttpSession::Ptr HttpServer::buildHttpSession(
+    HttpStream::Ptr _httpStream, std::shared_ptr<std::string> _endpointPublicKey)
 {
     auto session = std::make_shared<HttpSession>();
 
@@ -176,7 +182,8 @@ HttpSession::Ptr HttpServer::buildHttpSession(HttpStream::Ptr _httpStream, std::
             return;
         }
 
-        // HTTP_SESSION(TRACE) << LOG_BADGE("Queue::Write") << LOG_KV("resp", _httpResp->body())
+        // HTTP_SESSION(TRACE) << LOG_BADGE("Queue::Write") << LOG_KV("resp",
+        // _httpResp->body())
         //                     << LOG_KV("keep_alive", _httpResp->keep_alive());
 
         session->httpStream()->asyncWrite(*_httpResp,

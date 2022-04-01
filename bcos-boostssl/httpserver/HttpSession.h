@@ -109,9 +109,10 @@ public:
             }
             else
             {
-                HTTP_SESSION(WARNING)
-                    << LOG_BADGE("onRead")
-                    << LOG_DESC("the session will be closed for unsupported websocket upgrade");
+                HTTP_SESSION(WARNING) << LOG_BADGE("onRead")
+                                      << LOG_DESC(
+                                             "the session will be closed for "
+                                             "unsupported websocket upgrade");
                 // doClose();
                 return;
             }
@@ -185,6 +186,12 @@ public:
         unsigned version = _httpRequest.version();
         auto self = std::weak_ptr<HttpSession>(shared_from_this());
         m_threadPool->enqueue([this, self, version, _httpRequest, start]() {
+            auto session = self.lock();
+            if (!session)
+            {
+                return;
+            }
+
             if (m_httpReqHandler)
             {
                 std::string request = _httpRequest.body();
