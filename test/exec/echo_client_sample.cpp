@@ -97,9 +97,9 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
-    config->setModuleNameForLog("TEST_CLIENT");
+    config->setModuleName("TEST_CLIENT");
 
-    auto wsService = std::make_shared<ws::WsService>(config->moduleNameForLog());
+    auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
 
     wsInitializer->setConfig(config);
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
                 (void)_session;
                 if (_error && _error->errorCode() != 0)
                 {
-                    TEST_LOG(ERROR, "TEST_CLIENT_MODULE")
+                    TEST_LOG(WARNING, "TEST_CLIENT_MODULE")
                         << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("callback response error")
                         << LOG_KV("errorCode", _error->errorCode())
                         << LOG_KV("errorMessage", _error->errorMessage());

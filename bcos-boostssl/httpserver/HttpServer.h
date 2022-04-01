@@ -19,7 +19,6 @@
  */
 #pragma once
 
-#include <bcos-boostssl/context/SslCertInfo.h>
 #include <bcos-boostssl/httpserver/HttpSession.h>
 #include <exception>
 #include <thread>
@@ -36,8 +35,8 @@ public:
     using Ptr = std::shared_ptr<HttpServer>;
 
 public:
-    HttpServer(const std::string& _listenIP, uint16_t _listenPort)
-      : m_listenIP(_listenIP), m_listenPort(_listenPort)
+    HttpServer(const std::string& _listenIP, uint16_t _listenPort, std::string _moduleName)
+      : m_listenIP(_listenIP), m_listenPort(_listenPort), m_moduleName(_moduleName)
     {}
 
     ~HttpServer() { stop(); }
@@ -54,7 +53,7 @@ public:
 
 public:
     HttpSession::Ptr buildHttpSession(
-        HttpStream::Ptr _stream, std::shared_ptr<std::string> _endpointPublicKey);
+        HttpStream::Ptr _stream, std::shared_ptr<std::string> _nodeId);
 
 public:
     HttpReqHandler httpReqHandler() const { return m_httpReqHandler; }
@@ -93,19 +92,13 @@ public:
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 
-    std::shared_ptr<bcos::boostssl::context::SslCertInfo> sslCertInfo() const
-    {
-        return m_sslCertInfo;
-    }
-    void setSslCertInfo(std::shared_ptr<bcos::boostssl::context::SslCertInfo> _sslCertInfo)
-    {
-        m_sslCertInfo = _sslCertInfo;
-    }
+    std::string moduleName() { return m_moduleName; }
 
 private:
     std::string m_listenIP;
     uint16_t m_listenPort;
     bool m_disableSsl;
+    std::string m_moduleName;
 
     HttpReqHandler m_httpReqHandler;
     WsUpgradeHandler m_wsUpgradeHandler;
@@ -114,9 +107,7 @@ private:
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ssl::context> m_ctx;
 
-    std::shared_ptr<bcos::boostssl::context::SslCertInfo> m_sslCertInfo;
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
-
     std::shared_ptr<HttpStreamFactory> m_httpStreamFactory;
 };
 
@@ -137,7 +128,7 @@ public:
      */
     HttpServer::Ptr buildHttpServer(const std::string& _listenIP, uint16_t _listenPort,
         std::shared_ptr<boost::asio::io_context> _ioc,
-        std::shared_ptr<boost::asio::ssl::context> _ctx, std::string _moduleNameForLog);
+        std::shared_ptr<boost::asio::ssl::context> _ctx, std::string _moduleName);
 };
 
 }  // namespace http

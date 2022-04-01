@@ -83,9 +83,9 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
-    config->setModuleNameForLog("TEST_SERVER");
+    config->setModuleName("TEST_SERVER");
 
-    auto wsService = std::make_shared<ws::WsService>(config->moduleNameForLog());
+    auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
 
     wsInitializer->setConfig(config);

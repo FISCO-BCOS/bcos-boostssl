@@ -19,12 +19,11 @@
  */
 #pragma once
 #include <bcos-boostssl/websocket/WsStream.h>
-#include <bcos-boostssl/context/SslCertInfo.h>
 #include <bcos-utilities/DataConvertUtility.h>
+#include <boost/asio/ssl.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/websocket.hpp>
-#include <boost/asio/ssl.hpp>
 #include <functional>
 #include <mutex>
 #include <set>
@@ -46,8 +45,7 @@ public:
     WsConnector(std::shared_ptr<boost::asio::ip::tcp::resolver> _resolver,
         std::shared_ptr<boost::asio::io_context> _ioc)
       : m_resolver(_resolver), m_ioc(_ioc)
-    {
-    }
+    {}
 
 public:
     /**
@@ -93,11 +91,8 @@ public:
     void setBuilder(std::shared_ptr<WsStreamDelegateBuilder> _builder) { m_builder = _builder; }
     std::shared_ptr<WsStreamDelegateBuilder> builder() const { return m_builder; }
 
-    std::shared_ptr<boostssl::context::SslCertInfo> sslCertInfo() const { return m_sslCertInfo; }
-    void setSslCertInfo(std::shared_ptr<bcos::boostssl::context::SslCertInfo> _sslCertInfo)
-    {
-        m_sslCertInfo = _sslCertInfo;
-    }
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
 private:
     std::shared_ptr<WsStreamDelegateBuilder> m_builder;
@@ -108,7 +103,7 @@ private:
     mutable std::mutex x_pendingConns;
     std::set<std::string> m_pendingConns;
 
-    std::shared_ptr<bcos::boostssl::context::SslCertInfo> m_sslCertInfo;
+    std::string m_moduleName = "DEFAULT";
 };
 }  // namespace ws
 }  // namespace boostssl

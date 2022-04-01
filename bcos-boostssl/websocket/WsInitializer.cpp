@@ -18,6 +18,7 @@
  * @date 2021-09-29
  */
 #include <bcos-boostssl/context/ContextBuilder.h>
+#include <bcos-boostssl/context/NodeInfoTools.h>
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
@@ -32,7 +33,6 @@
 #include <cstddef>
 #include <memory>
 
-
 using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::context;
@@ -42,7 +42,7 @@ using namespace bcos::boostssl::http;
 void WsInitializer::initWsService(WsService::Ptr _wsService)
 {
     std::shared_ptr<WsConfig> _config = m_config;
-    std::string moduleNameForLog = _config->moduleNameForLog();
+    std::string m_moduleName = _config->moduleName();
     auto messageFactory = m_messageFactory;
     if (!messageFactory)
     {
@@ -64,11 +64,11 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto connector = std::make_shared<WsConnector>(resolver, ioc);
     auto builder = std::make_shared<WsStreamDelegateBuilder>();
     auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
-    auto sslCertInfo = std::make_shared<bcos::boostssl::context::SslCertInfo>();
 
     // init module_name for log
-    sslCertInfo->setModuleNameForLog(moduleNameForLog);
-    WsTools::setModuleNameForLog(moduleNameForLog);
+    WsTools::setModuleName(m_moduleName);
+    NodeInfoTools::setModuleName(m_moduleName);
+    connector->setModuleName(m_moduleName);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
@@ -76,15 +76,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         auto contextBuilder = std::make_shared<ContextBuilder>();
 
         // init module_name for log
-        contextBuilder->setModuleNameForLog(moduleNameForLog);
-        _config->contextConfig()->setModuleNameForLog(moduleNameForLog);
+        contextBuilder->setModuleName(m_moduleName);
+        _config->contextConfig()->setModuleName(m_moduleName);
 
         ctx = contextBuilder->buildSslContext(*_config->contextConfig());
     }
 
     if (_config->asServer())
     {
-        WEBSOCKET_INITIALIZER(INFO, moduleNameForLog)
+        WEBSOCKET_INITIALIZER(INFO)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as server");
 
         if (!WsTools::validIP(_config->listenIP()))
@@ -102,18 +102,17 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
         auto httpServer = httpServerFactory->buildHttpServer(
-            _config->listenIP(), _config->listenPort(), ioc, ctx, moduleNameForLog);
+            _config->listenIP(), _config->listenPort(), ioc, ctx, m_moduleName);
         httpServer->setDisableSsl(_config->disableSsl());
-        httpServer->setSslCertInfo(sslCertInfo);
         httpServer->setThreadPool(threadPool);
         httpServer->setWsUpgradeHandler(
             [wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream, HttpRequest&& _httpRequest,
-                std::shared_ptr<std::string> _publicKey) {
+                std::shared_ptr<std::string> _nodeId) {
                 auto service = wsServiceWeakPtr.lock();
                 if (service)
                 {
-                    std::string pulicKeyString = _publicKey == nullptr ? "" : *_publicKey.get();
-                    auto session = service->newSession(_httpStream->wsStream(), pulicKeyString);
+                    std::string nodeIdString = _nodeId == nullptr ? "" : *_nodeId.get();
+                    auto session = service->newSession(_httpStream->wsStream(), nodeIdString);
                     session->startAsServer(_httpRequest);
                 }
             });
@@ -124,7 +123,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     if (_config->asClient())
     {
         auto connectedPeers = _config->connectedPeers();
-        WEBSOCKET_INITIALIZER(INFO, moduleNameForLog)
+        WEBSOCKET_INITIALIZER(INFO)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as client")
             << LOG_KV("connected size", connectedPeers ? connectedPeers->size() : 0);
 
@@ -148,7 +147,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
         else
         {
-            WEBSOCKET_INITIALIZER(WARNING, moduleNameForLog)
+            WEBSOCKET_INITIALIZER(WARNING)
                 << LOG_BADGE("initWsService") << LOG_DESC("there has no connected server config");
         }
     }
@@ -156,7 +155,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     builder->setCtx(ctx);
     connector->setCtx(ctx);
     connector->setBuilder(builder);
-    connector->setSslCertInfo(sslCertInfo);
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
@@ -166,15 +164,18 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     _wsService->setThreadPool(threadPool);
     _wsService->setMessageFactory(messageFactory);
 
-    WEBSOCKET_INITIALIZER(INFO, moduleNameForLog)
-        << LOG_BADGE("initWsService") << LOG_DESC("initializer for websocket service")
-        << LOG_KV("listenIP", _config->listenIP()) << LOG_KV("listenPort", _config->listenPort())
-        << LOG_KV("disableSsl", _config->disableSsl()) << LOG_KV("server", _config->asServer())
-        << LOG_KV("client", _config->asClient())
-        << LOG_KV("threadPoolSize", _config->threadPoolSize())
-        << LOG_KV("iocThreadCount", _config->iocThreadCount())
-        << LOG_KV("maxMsgSize", _config->maxMsgSize())
-        << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
-        << LOG_KV("connected peers",
-               _config->connectedPeers() ? _config->connectedPeers()->size() : 0);
+    WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
+                                << LOG_DESC("initializer for websocket service")
+                                << LOG_KV("listenIP", _config->listenIP())
+                                << LOG_KV("listenPort", _config->listenPort())
+                                << LOG_KV("disableSsl", _config->disableSsl())
+                                << LOG_KV("server", _config->asServer())
+                                << LOG_KV("client", _config->asClient())
+                                << LOG_KV("threadPoolSize", _config->threadPoolSize())
+                                << LOG_KV("iocThreadCount", _config->iocThreadCount())
+                                << LOG_KV("maxMsgSize", _config->maxMsgSize())
+                                << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
+                                << LOG_KV("connected peers", _config->connectedPeers() ?
+                                                                 _config->connectedPeers()->size() :
+                                                                 0);
 }

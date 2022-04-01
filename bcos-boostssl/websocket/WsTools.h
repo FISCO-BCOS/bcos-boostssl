@@ -34,8 +34,7 @@ namespace boostssl
 {
 namespace ws
 {
-static std::string m_moduleNameForLog = "DEFAULT";
-
+static std::string m_moduleName = "DEFAULT";
 class WsTools
 {
 public:
@@ -56,11 +55,8 @@ public:
 
     static void close(boost::asio::ip::tcp::socket& skt);
 
-    static std::string moduleNameForLog() { return m_moduleNameForLog; }
-    static void setModuleNameForLog(std::string _moduleNameForLog)
-    {
-        m_moduleNameForLog = _moduleNameForLog;
-    }
+    static std::string moduleName() { return m_moduleName; }
+    static void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 };
 }  // namespace ws
 }  // namespace boostssl

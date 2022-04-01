@@ -40,8 +40,6 @@ namespace boostssl
 {
 namespace ws
 {
-using nodeID = std::string;
-
 class WsService;
 // The websocket session for connection
 class WsSession : public std::enable_shared_from_this<WsSession>
@@ -51,15 +49,12 @@ public:
     using Ptrs = std::vector<std::shared_ptr<WsSession>>;
 
 public:
-    WsSession(std::string _moduleNameForLog) : m_moduleNameForLog(_moduleNameForLog)
+    WsSession(std::string _moduleName) : m_moduleName(_moduleName)
     {
-        WEBSOCKET_SESSION(INFO, m_moduleNameForLog) << LOG_KV("[NEWOBJ][WSSESSION]", this);
+        WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
     }
 
-    virtual ~WsSession()
-    {
-        WEBSOCKET_SESSION(INFO, m_moduleNameForLog) << LOG_KV("[DELOBJ][WSSESSION]", this);
-    }
+    virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
 
     void drop(uint32_t _reason);
 
@@ -161,19 +156,11 @@ public:
         return m_msgQueue.size();
     }
 
-    std::string publicKey() const { return m_publicKey; }
-    void setPublicKey(std::string const& _publicKey) { m_publicKey = _publicKey; }
+    std::string nodeId() { return m_nodeId; }
+    void setNodeId(std::string _nodeId) { m_nodeId = _nodeId; }
 
-    nodeID obtainNodeID(std::string const& _publicKey);
-
-    nodeID nodeId() { return m_nodeId; }
-    void setNodeId(nodeID _nodeId) { m_nodeId = _nodeId; }
-
-    std::string moduleNameForLog() { return m_moduleNameForLog; }
-    void setModuleNameForLog(std::string _moduleNameForLog)
-    {
-        m_moduleNameForLog = _moduleNameForLog;
-    }
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
 public:
     struct CallBack
@@ -191,15 +178,14 @@ private:
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
     std::atomic<uint16_t> m_version = 0;
-    std::string m_moduleNameForLog = "DEFAULT";
+    std::string m_moduleName = "DEFAULT";
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;
 
     std::string m_endPoint;
     std::string m_connectedEndPoint;
-    std::string m_publicKey;
-    nodeID m_nodeId;
+    std::string m_nodeId;
 
     //
     int32_t m_sendMsgTimeout = -1;

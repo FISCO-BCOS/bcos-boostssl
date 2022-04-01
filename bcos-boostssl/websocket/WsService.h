@@ -60,7 +60,7 @@ class WsService : public std::enable_shared_from_this<WsService>
 {
 public:
     using Ptr = std::shared_ptr<WsService>;
-    WsService(std::string _moduleNameForLog);
+    WsService(std::string _moduleName);
     virtual ~WsService();
 
 public:
@@ -83,7 +83,7 @@ public:
 
 public:
     std::shared_ptr<WsSession> newSession(
-        std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _publicKey);
+        std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _nodeId);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -126,11 +126,8 @@ public:
     int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
     void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
 
-    std::string moduleNameForLog() { return m_moduleNameForLog; }
-    void setModuleNameForLog(std::string _moduleNameForLog)
-    {
-        m_moduleNameForLog = _moduleNameForLog;
-    }
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
@@ -189,7 +186,7 @@ private:
     bool m_running{false};
 
     int32_t m_waitConnectFinishTimeout = 30000;
-    std::string m_moduleNameForLog;
+    std::string m_moduleName;
 
     // MessageFaceFactory
     std::shared_ptr<MessageFaceFactory> m_messageFactory;

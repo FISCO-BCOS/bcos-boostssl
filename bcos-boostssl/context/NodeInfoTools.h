@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file SslCertInfo.h
+ * @file NodeInfoTools.h
  * @author: lucasli
  * @date 2022-03-07
  */
@@ -29,34 +29,24 @@ namespace boostssl
 {
 namespace context
 {
-class SslCertInfo : public std::enable_shared_from_this<SslCertInfo>
+static std::string m_moduleName = "DEFAULT";
+
+class NodeInfoTools
 {
 public:
-    using Ptr = std::shared_ptr<SslCertInfo>;
-    using ConstPtr = std::shared_ptr<const SslCertInfo>;
+    // register the function fetch pub hex from the cert
+    static std::function<bool(const std::string& priKey, std::string& pubHex)>
+    initCert2PubHexHandler();
+    // register the function fetch public key from the ssl context
+    static std::function<bool(X509* cert, std::string& pubHex)> initSSLContextPubHexHandler();
 
-    SslCertInfo() { initSSLContextPubHexHandler(); }
-
-    void initSSLContextPubHexHandler();
-
-    std::function<bool(X509* x509, std::string& pubHex)> sslContextPubHandler()
-    {
-        return m_sslContextPubHandler;
-    }
-
-    std::function<bool(bool, boost::asio::ssl::verify_context&)> newVerifyCallback(
+    static std::function<bool(bool, boost::asio::ssl::verify_context&)> newVerifyCallback(
         std::shared_ptr<std::string> nodeIDOut);
 
-    std::string moduleNameForLog() { return m_moduleNameForLog; }
-    void setModuleNameForLog(std::string _moduleNameForLog)
-    {
-        m_moduleNameForLog = _moduleNameForLog;
-    }
-
-private:
-    std::function<bool(X509* cert, std::string& pubHex)> m_sslContextPubHandler;
-    std::string m_moduleNameForLog = "DEFAULT";
+    static std::string moduleName() { return m_moduleName; }
+    static void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 };
+
 }  // namespace context
 }  // namespace boostssl
 }  // namespace bcos

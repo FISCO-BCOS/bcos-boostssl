@@ -37,17 +37,26 @@ public:
 public:
     virtual ~MessageFace() {}
 
+    virtual uint16_t version() const = 0;
+    virtual void setVersion(uint16_t) = 0;
     virtual uint16_t packetType() const = 0;
     virtual void setPacketType(uint16_t) = 0;
     virtual std::string seq() const = 0;
     virtual void setSeq(std::string) = 0;
-    virtual std::shared_ptr<bytes> payload() const = 0;
-    virtual void setPayload(std::shared_ptr<bcos::bytes>) = 0;
     virtual uint16_t ext() const = 0;
     virtual void setExt(uint16_t) = 0;
+    virtual std::shared_ptr<bytes> payload() const = 0;
+    virtual void setPayload(std::shared_ptr<bcos::bytes>) = 0;
 
     virtual bool encode(bcos::bytes& _buffer) = 0;
     virtual int64_t decode(bytesConstRef _buffer) = 0;
+
+protected:
+    uint16_t m_version = 0;
+    uint16_t m_packetType = 0;
+    std::string m_seq;
+    uint16_t m_ext = 0;
+    std::shared_ptr<bcos::bytes> m_payload;
 };
 
 class MessageFaceFactory

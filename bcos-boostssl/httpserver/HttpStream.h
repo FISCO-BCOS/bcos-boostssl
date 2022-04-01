@@ -92,16 +92,13 @@ public:
         return std::string("");
     }
 
-    virtual std::string moduleNameForLog() { return m_moduleNameForLog; }
-    virtual void setModuleNameForLog(std::string _moduleNameForLog)
-    {
-        m_moduleNameForLog = _moduleNameForLog;
-    }
+    virtual std::string moduleName() { return m_moduleName; }
+    virtual void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
 
 protected:
     std::atomic<bool> m_closed{false};
-    std::string m_moduleNameForLog = "DEFAULT";
+    std::string m_moduleName = "DEFAULT";
 };
 
 // The http stream
@@ -111,15 +108,15 @@ public:
     using Ptr = std::shared_ptr<HttpStreamImpl>;
 
 public:
-    HttpStreamImpl(std::shared_ptr<boost::beast::tcp_stream> _stream, std::string _moduleNameForLog)
+    HttpStreamImpl(std::shared_ptr<boost::beast::tcp_stream> _stream, std::string _moduleName)
       : m_stream(_stream)
     {
-        setModuleNameForLog(_moduleNameForLog);
-        HTTP_STREAM(DEBUG, m_moduleNameForLog) << LOG_KV("[NEWOBJ][HttpStreamImpl]", this);
+        setModuleName(_moduleName);
+        HTTP_STREAM(DEBUG) << LOG_KV("[NEWOBJ][HttpStreamImpl]", this);
     }
     virtual ~HttpStreamImpl()
     {
-        HTTP_STREAM(DEBUG, m_moduleNameForLog) << LOG_KV("[DELOBJ][HttpStreamImpl]", this);
+        HTTP_STREAM(DEBUG) << LOG_KV("[DELOBJ][HttpStreamImpl]", this);
         close();
     }
 
@@ -130,7 +127,7 @@ public:
     {
         m_closed.store(true);
         auto builder = std::make_shared<ws::WsStreamDelegateBuilder>();
-        return builder->build(m_stream, m_moduleNameForLog);
+        return builder->build(m_stream, m_moduleName);
     }
 
     virtual bool open() override
@@ -152,8 +149,7 @@ public:
         bool falseValue = false;
         if (m_closed.compare_exchange_strong(falseValue, trueValue))
         {
-            HTTP_STREAM(INFO, m_moduleNameForLog)
-                << LOG_DESC("close the stream") << LOG_KV("this", this);
+            HTTP_STREAM(INFO) << LOG_DESC("close the stream") << LOG_KV("this", this);
             ws::WsTools::close(m_stream->socket());
         }
     }
@@ -184,16 +180,16 @@ public:
 
 public:
     HttpStreamSslImpl(std::shared_ptr<boost::beast::ssl_stream<boost::beast::tcp_stream>> _stream,
-        std::string _moduleNameForLog)
+        std::string _moduleName)
       : m_stream(_stream)
     {
-        setModuleNameForLog(_moduleNameForLog);
-        HTTP_STREAM(DEBUG, m_moduleNameForLog) << LOG_KV("[NEWOBJ][HttpStreamSslImpl]", this);
+        setModuleName(_moduleName);
+        HTTP_STREAM(DEBUG) << LOG_KV("[NEWOBJ][HttpStreamSslImpl]", this);
     }
 
     virtual ~HttpStreamSslImpl()
     {
-        HTTP_STREAM(DEBUG, m_moduleNameForLog) << LOG_KV("[DELOBJ][HttpStreamSslImpl]", this);
+        HTTP_STREAM(DEBUG) << LOG_KV("[DELOBJ][HttpStreamSslImpl]", this);
         close();
     }
 
@@ -204,7 +200,7 @@ public:
     {
         m_closed.store(true);
         auto builder = std::make_shared<ws::WsStreamDelegateBuilder>();
-        return builder->build(m_stream, m_moduleNameForLog);
+        return builder->build(m_stream, m_moduleName);
     }
 
     virtual bool open() override
@@ -228,8 +224,7 @@ public:
         bool falseValue = false;
         if (m_closed.compare_exchange_strong(falseValue, trueValue))
         {
-            HTTP_STREAM(INFO, m_moduleNameForLog)
-                << LOG_DESC("close the ssl stream") << LOG_KV("this", this);
+            HTTP_STREAM(INFO) << LOG_DESC("close the ssl stream") << LOG_KV("this", this);
             ws::WsTools::close(m_stream->next_layer().socket());
         }
     }
@@ -258,16 +253,16 @@ public:
 
 public:
     HttpStream::Ptr buildHttpStream(
-        std::shared_ptr<boost::beast::tcp_stream> _stream, std::string _moduleNameForLog)
+        std::shared_ptr<boost::beast::tcp_stream> _stream, std::string _moduleName)
     {
-        return std::make_shared<HttpStreamImpl>(_stream, _moduleNameForLog);
+        return std::make_shared<HttpStreamImpl>(_stream, _moduleName);
     }
 
     HttpStream::Ptr buildHttpStream(
         std::shared_ptr<boost::beast::ssl_stream<boost::beast::tcp_stream>> _stream,
-        std::string _moduleNameForLog)
+        std::string _moduleName)
     {
-        return std::make_shared<HttpStreamSslImpl>(_stream, _moduleNameForLog);
+        return std::make_shared<HttpStreamSslImpl>(_stream, _moduleName);
     }
 };
 }  // namespace http

@@ -24,10 +24,8 @@
 #include <openssl/pem.h>
 
 
-#define CONTEXT_LOG(LEVEL, MODULE_NAME) \
-    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[BOOSTSSL][CTX]"
-#define SSLCERT_LOG(LEVEL, MODULE_NAME) \
-    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[BOOSTSSL][SSLCERT]"
+#define CONTEXT_LOG(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[BOOSTSSL][CTX]"
+#define NODEINFO_LOG(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[BOOSTSSL][NODEINFO]"
 
 namespace bcos
 {  // namespace bcos

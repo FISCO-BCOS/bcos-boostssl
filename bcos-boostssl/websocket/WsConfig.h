@@ -97,7 +97,7 @@ private:
     // the max message to be send or read
     uint32_t m_maxMsgSize{DEFAULT_MAX_MESSAGE_SIZE};
 
-    std::string m_moduleNameForLog = "DEFAULT";
+    std::string m_moduleName = "DEFAULT";
 
 public:
     void setModel(WsModel _model) { m_model = _model; }
@@ -153,11 +153,8 @@ public:
         m_contextConfig = _contextConfig;
     }
 
-    std::string moduleNameForLog() { return m_moduleNameForLog; }
-    void setModuleNameForLog(std::string _moduleNameForLog)
-    {
-        m_moduleNameForLog = _moduleNameForLog;
-    }
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 };
 }  // namespace ws
 }  // namespace boostssl

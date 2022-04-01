@@ -70,11 +70,8 @@ public:
     const SMCertConfig& smCertConfig() const { return m_smCertConfig; }
     void setSmCertConfig(const SMCertConfig& _smCertConfig) { m_smCertConfig = _smCertConfig; }
 
-    std::string moduleNameForLog() { return m_moduleNameForLog; }
-    void setModuleNameForLog(std::string _moduleNameForLog)
-    {
-        m_moduleNameForLog = _moduleNameForLog;
-    }
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
 
 private:
@@ -85,7 +82,7 @@ private:
     // cert config for ssl
     CertConfig m_certConfig;
     SMCertConfig m_smCertConfig;
-    std::string m_moduleNameForLog = "DEFAULT";
+    std::string m_moduleName = "DEFAULT";
 };
 
 }  // namespace context
