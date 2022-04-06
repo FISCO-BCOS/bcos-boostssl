@@ -93,20 +93,25 @@ int main(int argc, char** argv)
 
     wsService->registerMsgHandler(
         999, [](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
-            /*auto seq = _msg->seq();
+            auto seq = _msg->seq();
             auto data = std::string(_msg->payload()->begin(), _msg->payload()->end());
-            BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst seq ")
-                           << LOG_KV("seq", seq);
-            BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst message ")
+            // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
+            // requst seq ")
+            //                << LOG_KV("seq", seq);
+            // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
+            // requst message ")
+            //                << LOG_KV("data", data);
+            BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst msg")
+                           << LOG_KV("version", _msg->version()) << LOG_KV("seq", _msg->seq())
+                           << LOG_KV("packetType", _msg->packetType()) << LOG_KV("ext", _msg->ext())
                            << LOG_KV("data", data);
-                           */
             _session->asyncSendMessage(_msg);
         });
 
     auto handler = wsService->getMsgHandler(999);
     if (!handler)
     {
-        std::cout << "msg handler not found";
+        BCOS_LOG(WARNING) << "msg handler not found";
         return EXIT_SUCCESS;
     }
 

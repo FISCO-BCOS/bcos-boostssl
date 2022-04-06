@@ -78,6 +78,7 @@ void WsService::start()
         if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
         {
             // Connect to peers and wait for at least one connection to be successfully established
+            //
             syncConnectToEndpoints(m_config->connectedPeers());
         }
 
@@ -207,13 +208,11 @@ void WsService::reportConnectedNodes()
 }
 
 std::string WsService::genConnectError(
-    const std::string& _error, const std::string& _host, uint16_t port, bool end)
+    const std::string& _error, const std::string& endpoint, bool end)
 {
     std::string msg = _error;
     msg += ":/";
-    msg += _host;
-    msg += ":";
-    msg += std::to_string(port);
+    msg += endpoint;
     if (!end)
     {
         msg += ", ";
@@ -233,25 +232,23 @@ void WsService::syncConnectToEndpoints(EndPointsPtr _peers)
         auto fut = (*vPromise)[i]->get_future();
 
         auto status = fut.wait_for(std::chrono::milliseconds(m_waitConnectFinishTimeout));
+        auto [errCode, errMsg, endpoint] = fut.get();
         switch (status)
         {
         case std::future_status::deferred:
             break;
         case std::future_status::timeout:
-            errorMsg += genConnectError("connection timeout", (*_peers)[i].host, (*_peers)[i].port,
-                i == vPromise->size() - 1);
+            errorMsg += genConnectError("connection timeout", endpoint, i == vPromise->size() - 1);
             break;
         case std::future_status::ready:
 
             try
             {
-                auto result = fut.get();
-                if (result.first)
+                if (errCode)
                 {
-                    errorMsg += genConnectError(result.second.empty() ?
-                                                    result.first.message() :
-                                                    result.second + " " + result.first.message(),
-                        (*_peers)[i].host, (*_peers)[i].port, i == vPromise->size() - 1);
+                    errorMsg += genConnectError(
+                        errMsg.empty() ? errCode.message() : errMsg + " " + errCode.message(),
+                        endpoint, i == vPromise->size() - 1);
                 }
                 else
                 {
@@ -276,28 +273,29 @@ void WsService::syncConnectToEndpoints(EndPointsPtr _peers)
     }
 }
 
-std::shared_ptr<
-    std::vector<std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
+std::shared_ptr<std::vector<
+    std::shared_ptr<std::promise<std::tuple<boost::beast::error_code, std::string, std::string>>>>>
 WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
 {
-    auto vPromise = std::make_shared<std::vector<
-        std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>();
+    auto vPromise = std::make_shared<std::vector<std::shared_ptr<
+        std::promise<std::tuple<boost::beast::error_code, std::string, std::string>>>>>();
 
     for (auto& peer : *_peers)
     {
-        std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
+        std::string connectedEndPoint = peer.address() + ":" + std::to_string(peer.port());
 
         /*
         WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncConnect")
                                  << LOG_DESC("try to connect to endpoint")
-                                 << LOG_KV("host", peer.host) << LOG_KV("port", peer.port);
+                                 << LOG_KV("host", (peer.address())) << LOG_KV("port", peer.port());
         */
 
-        auto p = std::make_shared<std::promise<std::pair<boost::beast::error_code, std::string>>>();
+        auto p = std::make_shared<
+            std::promise<std::tuple<boost::beast::error_code, std::string, std::string>>>();
         vPromise->push_back(p);
 
-        std::string host = peer.host;
-        uint16_t port = peer.port;
+        std::string host = peer.address();
+        uint16_t port = peer.port();
 
         auto self = std::weak_ptr<WsService>(shared_from_this());
         m_connector->connectToWsServer(host, port, m_config->disableSsl(),
@@ -311,7 +309,7 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
                     return;
                 }
 
-                auto futResult = std::make_pair(_ec, _extErrorMsg);
+                auto futResult = std::make_tuple(_ec, _extErrorMsg, connectedEndPoint);
                 p->set_value(futResult);
 
                 if (_ec)
@@ -341,20 +339,19 @@ void WsService::reconnect()
             return;
         }
 
-        auto connectedPeers = std::make_shared<std::vector<EndPoint>>();
+        auto connectedPeers = std::make_shared<std::set<NodeIPEndpoint>>();
 
         // select all disconnected nodes
-        auto peers = m_config->connectedPeers();
-        for (auto& peer : *peers)
+        RecursiveGuard l(x_peers);
+        for (auto& peer : *m_reconnectedPeers)
         {
-            std::string connectedEndPoint = peer.host + ":" + std::to_string(peer.port);
+            std::string connectedEndPoint = peer.address() + ":" + std::to_string(peer.port());
             auto session = getSession(connectedEndPoint);
             if (session)
             {
                 continue;
             }
-
-            connectedPeers->push_back(peer);
+            connectedPeers->insert(peer);
         }
 
         if (!connectedPeers->empty())
@@ -366,20 +363,20 @@ void WsService::reconnect()
     });
 }
 
-bool WsService::registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler)
+void WsService::registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler)
 {
-    auto it = m_msgType2Method.find(_msgType);
-    if (it == m_msgType2Method.end())
+    UpgradableGuard l(x_msgTypeHandlers);
+    if (m_msgType2Method.count(_msgType) || !_msgHandler)
     {
-        m_msgType2Method[_msgType] = _msgHandler;
-        return true;
+        return;
     }
-    return false;
+    UpgradeGuard ul(l);
+    m_msgType2Method[_msgType] = _msgHandler;
 }
 
-MsgHandler WsService::getMsgHandler(uint32_t _type)
+MsgHandler WsService::getMsgHandler(uint16_t _type)
 {
-    // todo: m_wsservice->registerMsgHandler 考虑对变量m_msgType2Method加锁
+    ReadGuard l(x_msgTypeHandlers);
     if (m_msgType2Method.count(_type))
     {
         return m_msgType2Method[_type];
@@ -387,13 +384,16 @@ MsgHandler WsService::getMsgHandler(uint32_t _type)
     return nullptr;
 }
 
-void WsService::eraseMsgHandler(uint32_t _type)
+bool WsService::eraseMsgHandler(uint16_t _type)
 {
+    UpgradableGuard l(x_msgTypeHandlers);
     if (!m_msgType2Method.count(_type))
     {
-        return;
+        return false;
     }
+    UpgradeGuard ul(l);
     m_msgType2Method.erase(_type);
+    return true;
 }
 
 std::shared_ptr<WsSession> WsService::newSession(
@@ -573,11 +573,13 @@ void WsService::onRecvMessage(
     //                          << LOG_KV("data size", _msg->payload()->size())
     //                          << LOG_KV("use_count", _session.use_count());
 
-    auto it = m_msgType2Method.find(_msg->packetType());
-    if (it != m_msgType2Method.end())
+    // todo: 改成封装的 getMsgHandler
+    // ReadGuard l(x_msgTypeHandlers);
+    auto typeHandler = getMsgHandler(_msg->packetType());
+    // auto it = m_msgType2Method.find(_msg->packetType());
+    if (typeHandler)
     {
-        auto callback = it->second;
-        callback(_msg, _session);
+        typeHandler(_msg, _session);
     }
     else
     {

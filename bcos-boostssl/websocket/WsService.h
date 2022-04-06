@@ -69,12 +69,11 @@ public:
     virtual void reconnect();
     virtual void reportConnectedNodes();
 
-    std::shared_ptr<std::vector<
-        std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
+    std::shared_ptr<std::vector<std::shared_ptr<
+        std::promise<std::tuple<boost::beast::error_code, std::string, std::string>>>>>
     asyncConnectToEndpoints(EndPointsPtr _peers);
 
-    std::string genConnectError(
-        const std::string& _error, const std::string& _host, uint16_t port, bool end);
+    std::string genConnectError(const std::string& _error, const std::string& endpoint, bool end);
     void syncConnectToEndpoints(EndPointsPtr _peers);
 
 public:
@@ -144,14 +143,6 @@ public:
     std::shared_ptr<WsConnector> connector() const { return m_connector; }
     void setConnector(std::shared_ptr<WsConnector> _connector) { m_connector = _connector; }
 
-    void setHostPort(std::string host, uint16_t port)
-    {
-        m_listenHost = host;
-        m_listenPort = port;
-    }
-    std::string listenHost() { return m_listenHost; }
-    uint16_t listenPort() { return m_listenPort; }
-
     WsConfig::Ptr config() const { return m_config; }
     void setConfig(WsConfig::Ptr _config) { m_config = _config; }
 
@@ -161,11 +152,11 @@ public:
         m_httpServer = _httpServer;
     }
 
-    bool registerMsgHandler(uint32_t _msgType, MsgHandler _msgHandler);
+    void registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler);
 
-    MsgHandler getMsgHandler(uint32_t _type);
+    MsgHandler getMsgHandler(uint16_t _type);
 
-    void eraseMsgHandler(uint32_t _msgType);
+    bool eraseMsgHandler(uint16_t _msgType);
 
     void registerConnectHandler(ConnectHandler _connectHandler)
     {
@@ -182,6 +173,12 @@ public:
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
 
+    void setReconnectedPeers(EndPointsPtr _reconnectedPeers)
+    {
+        m_reconnectedPeers = _reconnectedPeers;
+    }
+    EndPointsPtr reconnectedPeers() const { return m_reconnectedPeers; }
+
 private:
     bool m_running{false};
 
@@ -192,11 +189,13 @@ private:
     std::shared_ptr<MessageFaceFactory> m_messageFactory;
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
-    // listen host port
-    std::string m_listenHost = "";
-    uint16_t m_listenPort = 0;
     // Config
     std::shared_ptr<WsConfig> m_config;
+
+    // list of reconnected server nodes updated by upper module, such as p2pservice
+    EndPointsPtr m_reconnectedPeers;
+    bcos::RecursiveMutex x_peers;
+
     // ws connector
     std::shared_ptr<WsConnector> m_connector;
     // io context
@@ -219,7 +218,8 @@ private:
     // all active sessions
     std::unordered_map<std::string, std::shared_ptr<WsSession>> m_sessions;
     // type => handler
-    std::unordered_map<uint32_t, MsgHandler> m_msgType2Method;
+    std::unordered_map<uint16_t, MsgHandler> m_msgType2Method;
+    mutable SharedMutex x_msgTypeHandlers;
     // connected handlers, the handers will be called after ws protocol handshake
     // is complete
     std::vector<ConnectHandler> m_connectHandlers;

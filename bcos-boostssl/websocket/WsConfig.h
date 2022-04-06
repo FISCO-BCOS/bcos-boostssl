@@ -20,6 +20,7 @@
 #pragma once
 
 #include <bcos-boostssl/context/ContextConfig.h>
+#include <bcos-boostssl/interfaces/NodeInfoDef.h>
 #include <bcos-utilities/BoostLog.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <cstdint>
@@ -38,15 +39,10 @@ namespace boostssl
 {
 namespace ws
 {
-struct EndPoint
-{
-    std::string host;
-    uint16_t port;
-};
 
-using EndPoints = std::vector<EndPoint>;
-using EndPointsPtr = std::shared_ptr<std::vector<EndPoint>>;
-using EndPointsConstPtr = std::shared_ptr<const std::vector<EndPoint>>;
+using EndPoints = std::set<NodeIPEndpoint>;
+using EndPointsPtr = std::shared_ptr<std::set<NodeIPEndpoint>>;
+using EndPointsConstPtr = std::shared_ptr<const std::set<NodeIPEndpoint>>;
 
 enum WsModel : uint16_t
 {
@@ -70,6 +66,9 @@ private:
     std::string m_listenIP;
     // the listen port when ws work as server
     uint16_t m_listenPort;
+
+    // whether smSSL or not, default not
+    bool m_smSSL = false;
 
     // list of connected server nodes when ws work as client
     EndPointsPtr m_connectedPeers;
@@ -112,6 +111,9 @@ public:
     void setListenPort(uint16_t _listenPort) { m_listenPort = _listenPort; }
     uint16_t listenPort() const { return m_listenPort; }
 
+    void setSmSSL(bool _isSmSSL) { m_smSSL = _isSmSSL; }
+    bool smSSL() { return m_smSSL; }
+
     void setMaxMsgSize(uint32_t _maxMsgSize) { m_maxMsgSize = _maxMsgSize; }
     uint32_t maxMsgSize() const { return m_maxMsgSize; }
 
@@ -143,7 +145,6 @@ public:
 
     EndPointsPtr connectedPeers() const { return m_connectedPeers; }
     void setConnectedPeers(EndPointsPtr _connectedPeers) { m_connectedPeers = _connectedPeers; }
-
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 

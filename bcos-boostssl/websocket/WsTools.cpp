@@ -26,10 +26,10 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
-bool WsTools::stringToEndPoint(const std::string& _peer, EndPoint& _endpoint)
+bool WsTools::stringToEndPoint(const std::string& _peer, NodeIPEndpoint& _endpoint)
 {
-    // ipv4: 127.0.0.1:12345 => EndPoint
-    // ipv6: [0:1]:12345 => EndPoint
+    // ipv4: 127.0.0.1:12345 => NodeIPEndpoint
+    // ipv6: [0:1]:12345 => NodeIPEndpoint
 
     std::string ip;
     uint16_t port = 0;
@@ -62,8 +62,7 @@ bool WsTools::stringToEndPoint(const std::string& _peer, EndPoint& _endpoint)
 
     if (valid)
     {
-        _endpoint.host = ip;
-        _endpoint.port = port;
+        _endpoint = NodeIPEndpoint(ip, port);
     }
 
     return valid;
