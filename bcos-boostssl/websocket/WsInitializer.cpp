@@ -118,6 +118,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
             });
 
         _wsService->setHttpServer(httpServer);
+        _wsService->setHostPort(_config->listenIP(), _config->listenPort());
     }
 
     if (_config->asClient())

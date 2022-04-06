@@ -143,6 +143,14 @@ public:
     std::shared_ptr<WsConnector> connector() const { return m_connector; }
     void setConnector(std::shared_ptr<WsConnector> _connector) { m_connector = _connector; }
 
+    void setHostPort(std::string host, uint16_t port)
+    {
+        m_listenHost = host;
+        m_listenPort = port;
+    }
+    std::string listenHost() { return m_listenHost; }
+    uint16_t listenPort() { return m_listenPort; }
+
     WsConfig::Ptr config() const { return m_config; }
     void setConfig(WsConfig::Ptr _config) { m_config = _config; }
 
@@ -189,6 +197,9 @@ private:
     std::shared_ptr<MessageFaceFactory> m_messageFactory;
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
+    // listen host port
+    std::string m_listenHost = "";
+    uint16_t m_listenPort = 0;
     // Config
     std::shared_ptr<WsConfig> m_config;
 
