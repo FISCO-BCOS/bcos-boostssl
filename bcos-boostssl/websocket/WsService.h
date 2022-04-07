@@ -160,7 +160,7 @@ public:
         m_httpServer = _httpServer;
     }
 
-    void registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler);
+    bool registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler);
 
     MsgHandler getMsgHandler(uint16_t _type);
 

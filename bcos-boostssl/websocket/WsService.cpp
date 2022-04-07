@@ -363,15 +363,16 @@ void WsService::reconnect()
     });
 }
 
-void WsService::registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler)
+bool WsService::registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler)
 {
     UpgradableGuard l(x_msgTypeHandlers);
     if (m_msgType2Method.count(_msgType) || !_msgHandler)
     {
-        return;
+        return false;
     }
     UpgradeGuard ul(l);
     m_msgType2Method[_msgType] = _msgHandler;
+    return true;
 }
 
 MsgHandler WsService::getMsgHandler(uint16_t _type)
@@ -573,10 +574,7 @@ void WsService::onRecvMessage(
     //                          << LOG_KV("data size", _msg->payload()->size())
     //                          << LOG_KV("use_count", _session.use_count());
 
-    // todo: 改成封装的 getMsgHandler
-    // ReadGuard l(x_msgTypeHandlers);
     auto typeHandler = getMsgHandler(_msg->packetType());
-    // auto it = m_msgType2Method.find(_msg->packetType());
     if (typeHandler)
     {
         typeHandler(_msg, _session);
