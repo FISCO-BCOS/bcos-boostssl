@@ -132,6 +132,7 @@ public:
         m_threadPool = _threadPool;
     }
 
+
     void setVersion(uint16_t _version) { m_version.store(_version); }
     uint16_t version() const { return m_version.load(); }
 

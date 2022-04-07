@@ -70,16 +70,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     NodeInfoTools::setModuleName(m_moduleName);
     connector->setModuleName(m_moduleName);
 
-    // get myself pub id
-    std::string pubHex;
-    std::string nodeCert = (_config->smSSL() ? _config->contextConfig()->smCertConfig().nodeCert :
-                                               _config->contextConfig()->certConfig().nodeCert);
-    auto certPubHexHandler = NodeInfoTools::initCert2PubHexHandler();
-    if (!certPubHexHandler(nodeCert, pubHex))
-    {
-        WEBSOCKET_INITIALIZER(WARNING) << LOG_DESC("init unable parse myself pub id");
-    }
-
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
     {
@@ -173,7 +163,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
     _wsService->setIocThreadCount(iocThreadCount);
-    _wsService->setId(pubHex);
     _wsService->setConfig(_config);
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);
