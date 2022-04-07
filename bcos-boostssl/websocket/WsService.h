@@ -151,6 +151,9 @@ public:
     std::string listenHost() { return m_listenHost; }
     uint16_t listenPort() { return m_listenPort; }
 
+    std::string id() const { return m_nodeID; }
+    void setId(std::string& _nodeID) { m_nodeID = _nodeID; }
+
     WsConfig::Ptr config() const { return m_config; }
     void setConfig(WsConfig::Ptr _config) { m_config = _config; }
 
@@ -200,6 +203,8 @@ private:
     // listen host port
     std::string m_listenHost = "";
     uint16_t m_listenPort = 0;
+    // nodeID
+    std::string m_nodeID;
     // Config
     std::shared_ptr<WsConfig> m_config;
 
