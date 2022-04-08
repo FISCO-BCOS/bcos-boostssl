@@ -132,7 +132,6 @@ public:
         m_threadPool = _threadPool;
     }
 
-
     void setVersion(uint16_t _version) { m_version.store(_version); }
     uint16_t version() const { return m_version.load(); }
 
@@ -174,7 +173,7 @@ public:
     CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true);
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
-private:
+protected:
     //
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
