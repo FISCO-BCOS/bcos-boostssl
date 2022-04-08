@@ -13,9 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file boostssl_delay_perf.cpp
+ * @file boostssl_throughput_perf.cpp
  * @author: octopus
- * @date 2021-10-31
+ * @date 2022-04-08
  */
 
 #include <bcos-boostssl/websocket/Common.h>
@@ -25,10 +25,14 @@
 #include <bcos-utilities/BoostLogInitializer.h>
 #include <bcos-utilities/Common.h>
 #include <bcos-utilities/ThreadPool.h>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <thread>
 
 using namespace bcos;
 using namespace bcos::boostssl;
@@ -41,12 +45,12 @@ using namespace bcos::boostssl::context;
 void usage()
 {
     std::cerr << "Usage: \n"
-              << " \t boostssl-delay-perf server <ip> <port> <disable_ssl> \n "
-              << " \t boostssl-delay-perf client <ip> <port> <disable_ssl> <echo_count> "
-                 "<msg_size> \n"
+              << " \t boostssl-throughput-perf server <ip> <port> <disable_ssl> <thread_count>\n "
+              << " \t boostssl-throughput-perf client <ip> <port> <disable_ssl> <thread_count> "
+                 "<msg_size> <send rate>\n"
               << "Example:\n"
-              << " \t ./boostssl-delay-perf server 127.0.0.1 20200 true \n"
-              << " \t ./boostssl-delay-perf client 127.0.0.1 20200 true 100000 1024 \n";
+              << " \t ./boostssl-throughput-perf server 127.0.0.1 20200 true 16\n"
+              << " \t ./boostssl-throughput-perf client 127.0.0.1 20200 true 16 1024 1000\n";
     std::exit(0);
 }
 
@@ -78,15 +82,16 @@ void initLog(const std::string& _configPath = "./clog.ini")
 
 const static int DELAY_PERF_MSGTYPE = 9999;
 
-void workAsClient(
-    std::string serverIp, uint16_t serverPort, bool disableSsl, uint64_t echoC, uint64_t msgSize)
+void workAsClient(std::string serverIp, uint16_t serverPort, bool disableSsl, uint64_t sendRate,
+    uint64_t msgSize, uint32_t threadCount)
 {
-    std::cerr << " ==> boostssl_delay_perf work as client. \n"
-              << " \t serverIp: " << serverIp << "\n"
-              << " \t serverPort: " << serverPort << "\n"
-              << " \t disableSsl: " << disableSsl << "\n"
-              << " \t echoC: " << echoC << "\n"
-              << " \t msgSize: " << msgSize << "\n\n\n";
+    std::cerr << " boostssl_throughput_perf work as client." << std::endl
+              << " \t serverIp: " << serverIp << std::endl
+              << " \t serverPort: " << serverPort << std::endl
+              << " \t disableSsl: " << disableSsl << std::endl
+              << " \t sendRate: " << sendRate << std::endl
+              << " \t msgSize: " << msgSize << std::endl
+              << " \t threadCount: " << threadCount << "\n\n\n";
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Client);
@@ -99,7 +104,7 @@ void workAsClient(
     peers->push_back(endpoint);
     config->setConnectedPeers(peers);
 
-    config->setThreadPoolSize(4);
+    config->setThreadPoolSize(threadCount);
     config->setDisableSsl(disableSsl);
     if (!config->disableSsl())
     {
@@ -115,73 +120,95 @@ void workAsClient(
     wsInitializer->initWsService(wsService);
     wsService->start();
 
-
     std::string strMsg(msgSize, 'a');
     auto msg = wsService->messageFactory()->buildMessage();
     msg->setPacketType(DELAY_PERF_MSGTYPE);
     msg->setPayload(std::make_shared<bytes>(strMsg.begin(), strMsg.end()));
-    // msg->setSeq(wsService->messageFactory()->newSeq());
 
-    uint64_t nSucC = 0;
-    uint64_t nFailedC = 0;
+    std::atomic<uint64_t> nSucC = 0;
+    std::atomic<uint64_t> nFailedC = 0;
+    std::atomic<uint64_t> nLastSucC = 0;
+    std::atomic<uint64_t> nLastFailedC = 0;
 
-    uint64_t i = 0;
-    uint64_t _10Per = echoC / 10;
-    auto startPoint = std::chrono::high_resolution_clock::now();
-    while (i++ < echoC)
+    std::atomic<uint64_t> nThisSendCount = 0;
+    std::atomic<uint64_t> nLastSendCount = 0;
+
+    uint64_t sendMsgCountPerMS = sendRate / 1000;
+    sendMsgCountPerMS = sendMsgCountPerMS > 0 ? sendMsgCountPerMS : 1;
+    // auto startPoint = std::chrono::high_resolution_clock::now();
+
+    // report thread;
+    auto reportThread = std::make_shared<std::thread>(
+        [&wsService, &nLastSendCount, &nSucC, &nFailedC, &nLastSucC, &nLastFailedC]() {
+            uint32_t nSleepMS = 1000;
+            while (true)
+            {
+                int64_t nQueueSize = -1;
+                auto ss = wsService->sessions();
+                if (!ss.empty())
+                {
+                    nQueueSize = ss[0]->msgQueueSize();
+                }
+
+                std::cerr << " boostssl throughput perf working as client: " << std::endl;
+                std::cerr << " \tnQueueSize: " << nQueueSize << ", nSucC: " << nSucC
+                          << ", nFailedC: " << nFailedC << ", nLastSucC: " << nLastSucC
+                          << ", nLastFailedC: " << nLastFailedC
+                          << ", nLastSendCount: " << nLastSendCount << std::endl;
+
+                nLastFailedC = 0;
+                nLastSucC = 0;
+                nLastSendCount = 0;
+                std::this_thread::sleep_for(std::chrono::milliseconds(nSleepMS));
+            }
+        });
+    reportThread->detach();
+
+
+    while (true)
     {
-        std::promise<bool> p;
-        auto f = p.get_future();
-
-        if (i % _10Per == 0)
-        {
-            std::cerr << "\t...process: " << ((double)i / echoC) * 100 << "%" << std::endl;
-        }
-
+        nThisSendCount++;
+        nLastSendCount++;
         msg->setSeq(wsService->messageFactory()->newSeq());
         wsService->asyncSendMessage(msg, Options(-1),
-            [&p, &nFailedC, &nSucC](Error::Ptr _error, std::shared_ptr<MessageFace> _msg,
-                std::shared_ptr<WsSession> _session) {
+            [&nFailedC, &nSucC, &nLastFailedC, &nLastSucC](Error::Ptr _error,
+                std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsSession> _session) {
                 (void)_error;
                 (void)_session;
                 (void)_msg;
                 if (_error && _error->errorCode() != 0)
                 {
                     nFailedC++;
+                    nLastFailedC++;
                     return;
                 }
-                p.set_value(true);
 
+                nLastSucC++;
                 nSucC++;
             });
-        f.get();
+
+        if (nThisSendCount > sendMsgCountPerMS)
+        {
+            nThisSendCount = 0;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
     }
-    auto endPoint = std::chrono::high_resolution_clock::now();
-
-    auto totalTime =
-        std::chrono::duration_cast<std::chrono::microseconds>(endPoint - startPoint).count();
-
-    std::cerr << std::endl << std::endl;
-    std::cerr << " ==> boostssl_delay_perf result: " << std::endl;
-    std::cerr << " \t total time(us): " << totalTime << std::endl;
-    std::cerr << " \t average time(us): " << ((double)totalTime / echoC) << std::endl;
-    std::cerr << " \t nSucC: " << nSucC << std::endl;
-    std::cerr << " \t nFailedC: " << nFailedC << std::endl;
 }
 
-void workAsServer(std::string listenIp, uint16_t listenPort, bool disableSsl)
+void workAsServer(std::string listenIp, uint16_t listenPort, bool disableSsl, uint32_t threadCount)
 {
-    std::cerr << " ==> boostssl_delay_perf work as server." << std::endl
+    std::cerr << " boostssl_throughput_perf work as server." << std::endl
               << " \t listenIp: " << listenIp << std::endl
               << " \t listenPort: " << listenPort << std::endl
-              << " \t disableSsl: " << disableSsl << "\n";
+              << " \t disableSsl: " << disableSsl << std::endl
+              << " \t threadCount: " << threadCount << std::endl;
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Server);
 
     config->setListenIP(listenIp);
     config->setListenPort(listenPort);
-    config->setThreadPoolSize(4);
+    config->setThreadPoolSize(threadCount);
     config->setDisableSsl(disableSsl);
     if (!config->disableSsl())
     {
@@ -196,25 +223,36 @@ void workAsServer(std::string listenIp, uint16_t listenPort, bool disableSsl)
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
+    std::atomic<uint64_t> totalRecvDataSize = {0};
+    std::atomic<uint64_t> lastSecTotalRecvDataSize = {0};
     wsService->registerMsgHandler(DELAY_PERF_MSGTYPE,
-        [](std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsSession> _session) {
+        [&totalRecvDataSize, &lastSecTotalRecvDataSize](
+            std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsSession> _session) {
+            totalRecvDataSize += _msg->payload()->size();
+            lastSecTotalRecvDataSize += _msg->payload()->size();
             _session->asyncSendMessage(_msg);
         });
 
     wsService->start();
 
-    int i = 0;
+    uint32_t nSleepMS = 1000;
     while (true)
     {
-        // std::cerr << " boostssl deplay perf server working ..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-        i++;
+        std::cerr << " boostssl throughput perf working as server: " << std::endl;
+        std::cerr << " \t ClientCount: " << wsService->sessions().size()
+                  << ", TotalRecvDataSize(Bytes): " << totalRecvDataSize
+                  << ", LastRecvDataSize(Bytes): " << lastSecTotalRecvDataSize
+                  << ", LastRecvDataRate(MBit/s): "
+                  << (((double)lastSecTotalRecvDataSize * 8 * 1000) / nSleepMS / (1024 * 1024))
+                  << std::endl;
+        lastSecTotalRecvDataSize = 0;
+        std::this_thread::sleep_for(std::chrono::milliseconds(nSleepMS));
     }
 }
 
 int main(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 5)
     {
         usage();
     }
@@ -223,27 +261,30 @@ int main(int argc, char** argv)
     std::string host = argv[2];
     uint16_t port = atoi(argv[3]);
     bool disableSsl = ("true" == std::string(argv[4])) ? true : false;
+    uint32_t threadCount = atoi(argv[5]);
 
     initLog();
 
     if (workModel == "server")
     {
-        workAsServer(host, port, disableSsl);
+        workAsServer(host, port, disableSsl, threadCount);
     }
     else if (workModel == "client")
     {
-        uint64_t echoCount = 100;
+        uint64_t sendRate = 1000;
         uint64_t msgSize = 1024;
-        if (argc > 5)
-        {
-            echoCount = std::stoull(std::string(argv[5]));
-        }
 
         if (argc > 6)
         {
             msgSize = std::stoull(std::string(argv[6]));
         }
-        workAsClient(host, port, disableSsl, echoCount, msgSize);
+
+        if (argc > 7)
+        {
+            sendRate = std::stoull(std::string(argv[7]));
+        }
+
+        workAsClient(host, port, disableSsl, sendRate, msgSize, threadCount);
     }
     else
     {
