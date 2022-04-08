@@ -403,26 +403,27 @@ std::shared_ptr<WsSession> WsService::newSession(
     _wsStreamDelegate->setMaxReadMsgSize(m_config->maxMsgSize());
 
     std::string endPoint = _wsStreamDelegate->remoteEndpoint();
-    auto wsSession = std::make_shared<WsSession>(m_moduleName);
-    wsSession->setWsStreamDelegate(_wsStreamDelegate);
-    wsSession->setIoc(ioc());
-    wsSession->setThreadPool(threadPool());
-    wsSession->setMessageFactory(messageFactory());
-    wsSession->setEndPoint(endPoint);
-    wsSession->setConnectedEndPoint(endPoint);
-    wsSession->setMaxWriteMsgSize(m_config->maxMsgSize());
-    wsSession->setSendMsgTimeout(m_config->sendMsgTimeout());
-    wsSession->setNodeId(_nodeId);
+    auto session = m_sessionFactory->createSession(m_moduleName);
+
+    session->setWsStreamDelegate(_wsStreamDelegate);
+    session->setIoc(ioc());
+    session->setThreadPool(threadPool());
+    session->setMessageFactory(messageFactory());
+    session->setEndPoint(endPoint);
+    session->setConnectedEndPoint(endPoint);
+    session->setMaxWriteMsgSize(m_config->maxMsgSize());
+    session->setSendMsgTimeout(m_config->sendMsgTimeout());
+    session->setNodeId(_nodeId);
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
-    wsSession->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {
+    session->setConnectHandler([self](Error::Ptr _error, std::shared_ptr<WsSession> _session) {
         auto wsService = self.lock();
         if (wsService)
         {
             wsService->onConnect(_error, _session);
         }
     });
-    wsSession->setDisconnectHandler(
+    session->setDisconnectHandler(
         [self](Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
             auto wsService = self.lock();
             if (wsService)
@@ -430,7 +431,7 @@ std::shared_ptr<WsSession> WsService::newSession(
                 wsService->onDisconnect(_error, _session);
             }
         });
-    wsSession->setRecvMessageHandler(
+    session->setRecvMessageHandler(
         [self](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
             auto wsService = self.lock();
             if (wsService)
@@ -441,7 +442,7 @@ std::shared_ptr<WsSession> WsService::newSession(
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("newSession") << LOG_DESC("start the session")
                             << LOG_KV("endPoint", endPoint);
-    return wsSession;
+    return session;
 }
 
 void WsService::addSession(std::shared_ptr<WsSession> _session)

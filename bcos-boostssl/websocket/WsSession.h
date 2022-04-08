@@ -241,6 +241,21 @@ protected:
     std::atomic<int64_t> m_lastSecondWriteMsgTimeTotal = 0;
 };
 
+class WsSessionFactory
+{
+public:
+    using Ptr = std::shared_ptr<WsSessionFactory>;
+    WsSessionFactory() = default;
+    virtual ~WsSessionFactory() {}
+
+public:
+    virtual WsSession::Ptr createSession(std::string _moduleName)
+    {
+        auto session = std::make_shared<WsSession>(_moduleName);
+        return session;
+    }
+};
+
 }  // namespace ws
 }  // namespace boostssl
 }  // namespace bcos

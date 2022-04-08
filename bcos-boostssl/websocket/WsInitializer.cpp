@@ -49,6 +49,12 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         messageFactory = std::make_shared<WsMessageFactory>();
     }
 
+    auto sessionFactory = m_sessionFactory;
+    if (!sessionFactory)
+    {
+        sessionFactory = std::make_shared<WsSessionFactory>();
+    }
+
     auto threadPoolSize = _config->threadPoolSize() > 0 ? _config->threadPoolSize() :
                                                           std::thread::hardware_concurrency();
     if (!threadPoolSize)
@@ -167,6 +173,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);
     _wsService->setMessageFactory(messageFactory);
+    _wsService->setSessionFactory(sessionFactory);
 
     WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
                                 << LOG_DESC("initializer for websocket service")

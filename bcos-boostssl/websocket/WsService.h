@@ -119,6 +119,12 @@ public:
         m_messageFactory = _messageFactory;
     }
 
+    std::shared_ptr<WsSessionFactory> sessionFactory() { return m_sessionFactory; }
+    void setSessionFactory(std::shared_ptr<WsSessionFactory> _sessionFactory)
+    {
+        m_sessionFactory = _sessionFactory;
+    }
+
     std::size_t iocThreadCount() const { return m_iocThreadCount; }
     void setIocThreadCount(std::size_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
 
@@ -242,6 +248,8 @@ private:
     // handshake handlers, the handers will be called when ws session
     // disconnected
     std::vector<HandshakeHandler> m_handshakeHandlers;
+    // sessionFactory
+    WsSessionFactory::Ptr m_sessionFactory;
 };
 
 }  // namespace ws
