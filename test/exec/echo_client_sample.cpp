@@ -100,6 +100,9 @@ int main(int argc, char** argv)
     auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
 
+    auto sessionFactory = std::make_shared<WsSessionFactory>();
+    wsInitializer->setSessionFactory(sessionFactory);
+
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
