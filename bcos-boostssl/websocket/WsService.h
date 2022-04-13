@@ -189,9 +189,14 @@ public:
 
     void setReconnectedPeers(EndPointsPtr _reconnectedPeers)
     {
+        WriteGuard l(x_peers);
         m_reconnectedPeers = _reconnectedPeers;
     }
-    EndPointsPtr reconnectedPeers() const { return m_reconnectedPeers; }
+    EndPointsPtr reconnectedPeers() const
+    {
+        ReadGuard l(x_peers);
+        return m_reconnectedPeers;
+    }
 
 private:
     bool m_running{false};
@@ -213,7 +218,7 @@ private:
 
     // list of reconnected server nodes updated by upper module, such as p2pservice
     EndPointsPtr m_reconnectedPeers;
-    bcos::RecursiveMutex x_peers;
+    mutable bcos::SharedMutex x_peers;
 
     // ws connector
     std::shared_ptr<WsConnector> m_connector;

@@ -342,7 +342,7 @@ void WsService::reconnect()
         auto connectedPeers = std::make_shared<std::set<NodeIPEndpoint>>();
 
         // select all disconnected nodes
-        RecursiveGuard l(x_peers);
+        ReadGuard l(x_peers);
         for (auto& peer : *m_reconnectedPeers)
         {
             std::string connectedEndPoint = peer.address() + ":" + std::to_string(peer.port());
