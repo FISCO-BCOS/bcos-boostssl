@@ -67,13 +67,20 @@ public:
     virtual void reconnect();
     virtual void heartbeat();
 
-    void asyncConnectOnce(EndPointsConstPtr _peers);
+    std::shared_ptr<std::vector<
+        std::shared_ptr<std::promise<std::pair<boost::beast::error_code, std::string>>>>>
+    asyncConnectToEndpoints(EndPointsConstPtr _peers);
+
+    std::string genConnectError(
+        const std::string& _error, const std::string& _host, uint16_t port, bool end);
+    void syncConnectToEndpoints(EndPointsConstPtr _peers);
 
 public:
     void startIocThread();
+    void stopIocThread();
 
 public:
-    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStream> _stream);
+    std::shared_ptr<WsSession> newSession(std::shared_ptr<WsStreamDelegate> _wsStreamDelegate);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
     void addSession(std::shared_ptr<WsSession> _session);
     void removeSession(const std::string& _endPoint);
@@ -102,32 +109,26 @@ public:
     virtual void broadcastMessage(const WsSession::Ptrs& _ss, std::shared_ptr<WsMessage> _msg);
 
 public:
-    std::shared_ptr<WsStreamFactory> wsStreamFactory() { return m_wsStreamFactory; }
-    void setWsStreamFactory(std::shared_ptr<WsStreamFactory> _wsStreamFactory)
-    {
-        m_wsStreamFactory = _wsStreamFactory;
-    }
-
     std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
     void setMessageFactory(std::shared_ptr<WsMessageFactory> _messageFactory)
     {
         m_messageFactory = _messageFactory;
     }
 
+    // TODO: remove in the future , just for compile
+    void setWaitConnectFinish(bool) {}
+
+    std::size_t iocThreadCount() const { return m_iocThreadCount; }
+    void setIocThreadCount(std::size_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
+
+    int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
+    void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
+
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
     {
         m_threadPool = _threadPool;
     }
-
-    bool disableSsl() const { return m_disableSsl; }
-    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
-
-    bool waitConnectFinish() const { return m_waitConnectFinish; }
-    void setWaitConnectFinish(bool _b) { m_waitConnectFinish = _b; }
-
-    int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
-    void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
 
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
@@ -138,8 +139,8 @@ public:
     std::shared_ptr<WsConnector> connector() const { return m_connector; }
     void setConnector(std::shared_ptr<WsConnector> _connector) { m_connector = _connector; }
 
-    std::shared_ptr<WsConfig> config() const { return m_config; }
-    void setConfig(std::shared_ptr<WsConfig> _config) { m_config = _config; }
+    WsConfig::ConstPtr config() const { return m_config; }
+    void setConfig(WsConfig::ConstPtr _config) { m_config = _config; }
 
     std::shared_ptr<bcos::boostssl::http::HttpServer> httpServer() const { return m_httpServer; }
     void setHttpServer(std::shared_ptr<bcos::boostssl::http::HttpServer> _httpServer)
@@ -164,29 +165,17 @@ public:
         m_handshakeHandlers.push_back(_handshakeHandler);
     }
 
-    int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
-    void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
-
-public:
-    void waitForConnectionEstablish();
-
 private:
     bool m_running{false};
-    bool m_disableSsl{false};
-    bool m_waitConnectFinish{false};
-    //
-    int32_t m_sendMsgTimeout = -1;
-    // default timeout , 30s
+
     int32_t m_waitConnectFinishTimeout = 30000;
 
     // WsMessageFactory
     std::shared_ptr<WsMessageFactory> m_messageFactory;
-    // WsStreamFactory
-    std::shared_ptr<WsStreamFactory> m_wsStreamFactory;
     // ThreadPool
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // Config
-    std::shared_ptr<WsConfig> m_config;
+    std::shared_ptr<const WsConfig> m_config;
     // ws connector
     std::shared_ptr<WsConnector> m_connector;
     // io context
@@ -194,7 +183,7 @@ private:
     // ssl context
     std::shared_ptr<boost::asio::ssl::context> m_ctx = nullptr;
     // thread for ioc
-    std::shared_ptr<std::thread> m_iocThread;
+    std::shared_ptr<std::vector<std::thread>> m_iocThreads;
     // reconnect timer
     std::shared_ptr<boost::asio::deadline_timer> m_reconnect;
     // heartbeat timer
@@ -203,17 +192,21 @@ private:
     std::shared_ptr<bcos::boostssl::http::HttpServer> m_httpServer;
 
 private:
+    std::size_t m_iocThreadCount;
     // mutex for m_sessions
     mutable boost::shared_mutex x_mutex;
     // all active sessions
     std::unordered_map<std::string, std::shared_ptr<WsSession>> m_sessions;
     // type => handler
     std::unordered_map<uint32_t, MsgHandler> m_msgType2Method;
-    // connected handlers, the handers will be called after ws protocol handshake is complete
+    // connected handlers, the handers will be called after ws protocol handshake
+    // is complete
     std::vector<ConnectHandler> m_connectHandlers;
-    // disconnected handlers, the handers will be called when ws session disconnected
+    // disconnected handlers, the handers will be called when ws session
+    // disconnected
     std::vector<DisconnectHandler> m_disconnectHandlers;
-    // disconnected handlers, the handers will be called when ws session disconnected
+    // handshake handlers, the handers will be called when ws session
+    // disconnected
     std::vector<HandshakeHandler> m_handshakeHandlers;
 };
 

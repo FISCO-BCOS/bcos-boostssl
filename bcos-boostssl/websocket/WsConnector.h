@@ -50,35 +50,13 @@ public:
      * @brief: connect to the server
      * @param _host: the remote server host, support ipv4, ipv6, domain name
      * @param _port: the remote server port
+     * @param _disableSsl: disable ssl
      * @param _callback:
      * @return void:
      */
-    void connectToWsServer(const std::string& _host, uint16_t _port,
-        std::function<void(boost::beast::error_code, std::shared_ptr<WsStream>)> _callback);
-
-    /**
-     * @brief: connect to the server
-     * @param _host: the remote server host, support ipv4, ipv6, domain name
-     * @param _port: the remote server port
-     * @param _callback:
-     * @return void:
-     */
-    void connectToWsServer(const std::string& _host, uint16_t _port,
-        std::function<void(boost::beast::error_code _ec,
-            std::shared_ptr<boost::beast::websocket::stream<boost::beast::tcp_stream>>)>
-            _callback);
-
-    /**
-     * @brief: connect to the server with ssl
-     * @param _host: the remote server host, support ipv4, ipv6, domain name
-     * @param _port: the remote server port
-     * @param _callback:
-     * @return void:
-     */
-    void connectToWsServer(const std::string& _host, uint16_t _port,
-        std::function<void(
-            boost::beast::error_code _ec, std::shared_ptr<boost::beast::websocket::stream<
-                                              boost::beast::ssl_stream<boost::beast::tcp_stream>>>)>
+    void connectToWsServer(const std::string& _host, uint16_t _port, bool _disableSsl,
+        std::function<void(boost::beast::error_code, const std::string& extErrorMsg,
+            std::shared_ptr<WsStreamDelegate>)>
             _callback);
 
 public:
@@ -108,23 +86,14 @@ public:
     void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
     std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
 
-    std::shared_ptr<WsStreamFactory> wsStreamFactory() { return m_wsStreamFactory; }
-    void setWsStreamFactory(std::shared_ptr<WsStreamFactory> _wsStreamFactory)
-    {
-        m_wsStreamFactory = _wsStreamFactory;
-    }
-
-    bool disableSsl() const { return m_disableSsl; }
-    void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
+    void setBuilder(std::shared_ptr<WsStreamDelegateBuilder> _builder) { m_builder = _builder; }
+    std::shared_ptr<WsStreamDelegateBuilder> builder() const { return m_builder; }
 
 private:
-    bool m_disableSsl;
-
+    std::shared_ptr<WsStreamDelegateBuilder> m_builder;
     std::shared_ptr<boost::asio::ip::tcp::resolver> m_resolver;
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ssl::context> m_ctx;
-    // WsStreamFactory
-    std::shared_ptr<WsStreamFactory> m_wsStreamFactory;
 
     mutable std::mutex x_pendingConns;
     std::set<std::string> m_pendingConns;

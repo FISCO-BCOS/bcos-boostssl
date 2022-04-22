@@ -47,14 +47,21 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         messageFactory = std::make_shared<WsMessageFactory>();
     }
 
-    auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
-    auto ioc = std::make_shared<boost::asio::io_context>();
-    auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(*ioc);
-    auto connector = std::make_shared<WsConnector>(resolver, ioc);
-    auto wsStreamFactory = std::make_shared<WsStreamFactory>();
+    auto threadPoolSize = _config->threadPoolSize() > 0 ? _config->threadPoolSize() :
+                                                          std::thread::hardware_concurrency();
+    if (!threadPoolSize)
+    {
+        threadPoolSize = 16;
+    }
 
-    auto threadPool = std::make_shared<ThreadPool>(
-        "t_ws", _config->threadPoolSize() > 0 ? _config->threadPoolSize() : 4);
+    uint32_t iocThreadCount = threadPoolSize;
+    auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
+    auto ioc = std::make_shared<boost::asio::io_context>(iocThreadCount);
+    auto resolver =
+        std::make_shared<boost::asio::ip::tcp::resolver>((boost::asio::make_strand(*ioc)));
+    auto connector = std::make_shared<WsConnector>(resolver, ioc);
+    auto builder = std::make_shared<WsStreamDelegateBuilder>();
+    auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
@@ -85,15 +92,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         auto httpServer = httpServerFactory->buildHttpServer(
             _config->listenIP(), _config->listenPort(), ioc, ctx);
         httpServer->setDisableSsl(_config->disableSsl());
-        httpServer->setWsUpgradeHandler(
-            [wsServiceWeakPtr](HttpStream::Ptr _httpStream, HttpRequest&& _httpRequest) {
-                auto service = wsServiceWeakPtr.lock();
-                if (service)
-                {
-                    auto session = service->newSession(_httpStream->wsStream());
-                    session->startAsServer(_httpRequest);
-                }
-            });
+        httpServer->setWsUpgradeHandler([wsServiceWeakPtr](std::shared_ptr<HttpStream> _httpStream,
+                                            HttpRequest&& _httpRequest) {
+            auto service = wsServiceWeakPtr.lock();
+            if (service)
+            {
+                auto session = service->newSession(_httpStream->wsStream());
+                session->startAsServer(_httpRequest);
+            }
+        });
 
         _wsService->setHttpServer(httpServer);
     }
@@ -130,18 +137,17 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
     }
 
+    builder->setCtx(ctx);
     connector->setCtx(ctx);
-    connector->setDisableSsl(_config->disableSsl());
+    connector->setBuilder(builder);
 
     _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
+    _wsService->setIocThreadCount(iocThreadCount);
     _wsService->setConfig(_config);
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);
-    _wsService->setWsStreamFactory(wsStreamFactory);
     _wsService->setMessageFactory(messageFactory);
-    _wsService->setDisableSsl(_config->disableSsl());
-    _wsService->setSendMsgTimeout(_config->sendMsgTimeout());
 
     WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
                                 << LOG_DESC("initializer for websocket service")
@@ -151,6 +157,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                                 << LOG_KV("server", _config->asServer())
                                 << LOG_KV("client", _config->asClient())
                                 << LOG_KV("threadPoolSize", _config->threadPoolSize())
+                                << LOG_KV("iocThreadCount", _config->iocThreadCount())
+                                << LOG_KV("maxMsgSize", _config->maxMsgSize())
                                 << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
                                 << LOG_KV("connected peers", _config->connectedPeers() ?
                                                                  _config->connectedPeers()->size() :

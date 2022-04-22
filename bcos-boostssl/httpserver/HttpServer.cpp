@@ -45,7 +45,7 @@ void HttpServer::start()
     if (ec)
     {
         HTTP_SERVER(WARNING) << LOG_BADGE("open") << LOG_KV("error", ec)
-                           << LOG_KV("message", ec.message());
+                             << LOG_KV("message", ec.message());
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor open failed"));
     }
 
@@ -54,7 +54,7 @@ void HttpServer::start()
     if (ec)
     {
         HTTP_SERVER(WARNING) << LOG_BADGE("set_option") << LOG_KV("error", ec)
-                           << LOG_KV("message", ec.message());
+                             << LOG_KV("message", ec.message());
 
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor set_option failed"));
     }
@@ -63,7 +63,7 @@ void HttpServer::start()
     if (ec)
     {
         HTTP_SERVER(WARNING) << LOG_BADGE("bind") << LOG_KV("error", ec)
-                           << LOG_KV("message", ec.message());
+                             << LOG_KV("message", ec.message());
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor bind failed"));
     }
 
@@ -71,7 +71,7 @@ void HttpServer::start()
     if (ec)
     {
         HTTP_SERVER(WARNING) << LOG_BADGE("listen") << LOG_KV("error", ec)
-                           << LOG_KV("message", ec.message());
+                             << LOG_KV("message", ec.message());
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor listen failed"));
     }
 
@@ -109,8 +109,8 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     if (ec)
     {
         HTTP_SERVER(WARNING) << LOG_BADGE("accept") << LOG_KV("error", ec)
-                           << LOG_KV("message", ec.message());
-        return;
+                             << LOG_KV("message", ec.message());
+        return doAccept();
     }
 
     auto localEndpoint = socket.local_endpoint();

@@ -38,8 +38,14 @@ enum WsError
     TimeOut = -4008,
     NoActiveCons = -4009,
     EndPointNotExist = -4010,
+    MessageOverflow = -4011,
     UndefinedException = -4099
 };
+
+inline bool notRetryAgain(int _wsError)
+{
+    return (_wsError == boostssl::ws::WsError::MessageOverflow);
+}
 
 }  // namespace ws
 }  // namespace boostssl
