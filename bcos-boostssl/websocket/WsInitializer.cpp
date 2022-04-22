@@ -49,6 +49,12 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         messageFactory = std::make_shared<WsMessageFactory>();
     }
 
+    auto sessionFactory = m_sessionFactory;
+    if (!sessionFactory)
+    {
+        sessionFactory = std::make_shared<WsSessionFactory>();
+    }
+
     auto threadPoolSize = _config->threadPoolSize() > 0 ? _config->threadPoolSize() :
                                                           std::thread::hardware_concurrency();
     if (!threadPoolSize)
@@ -118,6 +124,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
             });
 
         _wsService->setHttpServer(httpServer);
+        _wsService->setHostPort(_config->listenIP(), _config->listenPort());
     }
 
     if (_config->asClient())
@@ -131,19 +138,22 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         {
             for (auto& peer : *connectedPeers)
             {
-                if (!WsTools::validIP(peer.host))
+                if (!WsTools::validIP(peer.address()))
                 {
                     BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                              "invalid connected peer, value: " + peer.host));
+                                              "invalid connected peer, value: " + peer.address()));
                 }
 
-                if (!WsTools::validPort(peer.port))
+                if (!WsTools::validPort(peer.port()))
                 {
                     BOOST_THROW_EXCEPTION(
                         InvalidParameter() << errinfo_comment(
-                            "invalid connect port, value: " + std::to_string(peer.port)));
+                            "invalid connect port, value: " + std::to_string(peer.port())));
                 }
             }
+
+            // connectedPeers info is valid then set connectedPeers info into wsService
+            _wsService->setReconnectedPeers(connectedPeers);
         }
         else
         {
@@ -163,6 +173,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);
     _wsService->setMessageFactory(messageFactory);
+    _wsService->setSessionFactory(sessionFactory);
 
     WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
                                 << LOG_DESC("initializer for websocket service")

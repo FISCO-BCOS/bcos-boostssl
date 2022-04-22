@@ -81,12 +81,10 @@ int main(int argc, char** argv)
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Client);
 
-    EndPoint endpoint;
-    endpoint.host = host;
-    endpoint.port = port;
+    NodeIPEndpoint endpoint = NodeIPEndpoint(host, port);
 
     auto peers = std::make_shared<EndPoints>();
-    peers->push_back(endpoint);
+    peers->insert(endpoint);
     config->setConnectedPeers(peers);
 
     config->setThreadPoolSize(1);
@@ -101,6 +99,9 @@ int main(int argc, char** argv)
 
     auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
+
+    auto sessionFactory = std::make_shared<WsSessionFactory>();
+    wsInitializer->setSessionFactory(sessionFactory);
 
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
@@ -123,10 +124,19 @@ int main(int argc, char** argv)
     {
         auto seq = wsService->messageFactory()->newSeq();
         msg->setSeq(seq);
+        TEST_LOG(INFO, "TEST_CLIENT_MODULE") << LOG_BADGE(" [msg] ===>>>> ") << LOG_KV("seq", seq)
+                                             << LOG_KV("msg_seq()", msg->seq());
         wsService->asyncSendMessage(msg, Options(-1),
-            [](Error::Ptr _error, std::shared_ptr<boostssl::MessageFace>,
+            [msg](Error ::Ptr _error, std::shared_ptr<boostssl::MessageFace>,
                 std::shared_ptr<WsSession> _session) {
                 (void)_session;
+                BCOS_LOG(INFO) << LOG_BADGE(" [send message] ===>>>> ")
+                               << LOG_DESC(" send requst msg") << LOG_KV("version", msg->version())
+                               << LOG_KV("seq", msg->seq())
+                               << LOG_KV("packetType", msg->packetType())
+                               << LOG_KV("ext", msg->ext())
+                               << LOG_KV("data",
+                                      std::string(msg->payload()->begin(), msg->payload()->end()));
                 if (_error && _error->errorCode() != 0)
                 {
                     TEST_LOG(WARNING, "TEST_CLIENT_MODULE")

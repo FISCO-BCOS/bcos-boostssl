@@ -51,7 +51,7 @@ public:
 
     static bool validPort(uint16_t _port) { return _port > 1024; }
 
-    static bool stringToEndPoint(const std::string& peer, EndPoint& _endpoint);
+    static bool stringToEndPoint(const std::string& peer, NodeIPEndpoint& _endpoint);
 
     static void close(boost::asio::ip::tcp::socket& skt);
 

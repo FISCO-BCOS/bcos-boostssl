@@ -169,10 +169,8 @@ public:
     /**
      * @brief: handle http request and send the response
      * @param req: http request object
-     * @param send: http response sender
      * @return void:
      */
-
     void handleRequest(HttpRequest&& _httpRequest)
     {
         HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("request")
@@ -187,43 +185,14 @@ public:
 
         unsigned version = _httpRequest.version();
         auto self = std::weak_ptr<HttpSession>(shared_from_this());
-        m_threadPool->enqueue([this, self, version, _httpRequest, start]() {
-            auto session = self.lock();
-            if (!session)
-            {
-                return;
-            }
+        if (m_httpReqHandler)
+        {
+            std::string request = _httpRequest.body();
+            m_httpReqHandler(request, [this, self, version, start](const std::string& _content) {
+                std::chrono::high_resolution_clock::time_point end =
+                    std::chrono::high_resolution_clock::now();
 
-            if (m_httpReqHandler)
-            {
-                std::string request = _httpRequest.body();
-                m_httpReqHandler(request, [this, self, version, start](
-                                              const std::string& _content) {
-                    std::chrono::high_resolution_clock::time_point end =
-                        std::chrono::high_resolution_clock::now();
-
-                    auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
-                    auto session = self.lock();
-                    if (!session)
-                    {
-                        return;
-                    }
-                    // put the response into the queue and waiting to be send
-                    session->queue()->enqueue(resp);
-
-                    auto ms =
-                        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                    HTTP_SESSION(DEBUG)
-                        << LOG_BADGE("handleRequest") << LOG_DESC("response")
-                        << LOG_KV("body", resp->body()) << LOG_KV("keep_alive", resp->keep_alive())
-                        << LOG_KV("ms", ms);
-                });
-            }
-            else
-            {
-                // unsupported http service
-                auto resp = buildHttpResp(
-                    boost::beast::http::status::http_version_not_supported, version, "");
+                auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
                 auto session = self.lock();
                 if (!session)
                 {
@@ -232,11 +201,30 @@ public:
                 // put the response into the queue and waiting to be send
                 session->queue()->enqueue(resp);
 
-                HTTP_SESSION(WARNING)
-                    << LOG_BADGE("handleRequest") << LOG_DESC("unsupported http service")
-                    << LOG_KV("body", resp->body());
+                auto ms =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("response")
+                                    << LOG_KV("body", resp->body())
+                                    << LOG_KV("keep_alive", resp->keep_alive()) << LOG_KV("ms", ms);
+            });
+        }
+        else
+        {
+            // unsupported http service
+            auto resp =
+                buildHttpResp(boost::beast::http::status::http_version_not_supported, version, "");
+            auto session = self.lock();
+            if (!session)
+            {
+                return;
             }
-        });
+            // put the response into the queue and waiting to be send
+            session->queue()->enqueue(resp);
+
+            HTTP_SESSION(WARNING) << LOG_BADGE("handleRequest")
+                                  << LOG_DESC("unsupported http service")
+                                  << LOG_KV("body", resp->body());
+        }
     }
 
     /**

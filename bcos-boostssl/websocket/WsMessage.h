@@ -40,8 +40,8 @@ class WsMessage : public boostssl::MessageFace
 {
 public:
     using Ptr = std::shared_ptr<WsMessage>;
-    // version(2) + type(2) + status(2) + seqLength(1) + ext(2) + payload(N)
-    const static size_t MESSAGE_MIN_LENGTH = 9;
+    // version(2) + type(2) + status(2) + seqLength(2) + ext(2) + payload(N)
+    const static size_t MESSAGE_MIN_LENGTH = 10;
 
 public:
     WsMessage() { m_payload = std::make_shared<bcos::bytes>(); }

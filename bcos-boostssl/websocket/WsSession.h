@@ -173,7 +173,7 @@ public:
     CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true);
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
-private:
+protected:
     //
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
@@ -239,6 +239,21 @@ private:
     std::atomic<int64_t> m_msgWriteTimeTotal = 0;
     std::atomic<int64_t> m_lastSecondWriteMsgSizeTotal = 0;
     std::atomic<int64_t> m_lastSecondWriteMsgTimeTotal = 0;
+};
+
+class WsSessionFactory
+{
+public:
+    using Ptr = std::shared_ptr<WsSessionFactory>;
+    WsSessionFactory() = default;
+    virtual ~WsSessionFactory() {}
+
+public:
+    virtual WsSession::Ptr createSession(std::string _moduleName)
+    {
+        auto session = std::make_shared<WsSession>(_moduleName);
+        return session;
+    }
 };
 
 }  // namespace ws

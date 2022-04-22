@@ -26,7 +26,7 @@ using namespace bcos;
 using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
-/// type(2) + error(2) + seq(32) + + ext(2) + data(N)
+// version(2) + type(2) + status(2) + seqLength(2) + ext(2) + payload(N)
 const size_t WsMessage::MESSAGE_MIN_LENGTH;
 
 bool WsMessage::encode(bytes& _buffer)
@@ -36,13 +36,13 @@ bool WsMessage::encode(bytes& _buffer)
     uint16_t version = boost::asio::detail::socket_ops::host_to_network_short(m_version);
     uint16_t type = boost::asio::detail::socket_ops::host_to_network_short(m_packetType);
     int16_t status = boost::asio::detail::socket_ops::host_to_network_short(m_status);
-    uint8_t seqLength = boost::asio::detail::socket_ops::host_to_network_short(m_seq.size());
+    uint16_t seqLength = boost::asio::detail::socket_ops::host_to_network_short(m_seq.size());
     uint16_t ext = boost::asio::detail::socket_ops::host_to_network_short(m_ext);
 
     _buffer.insert(_buffer.end(), (byte*)&version, (byte*)&version + 2);
     _buffer.insert(_buffer.end(), (byte*)&type, (byte*)&type + 2);
     _buffer.insert(_buffer.end(), (byte*)&status, (byte*)&status + 2);
-    _buffer.insert(_buffer.end(), (byte*)&seqLength, (byte*)&seqLength + 1);
+    _buffer.insert(_buffer.end(), (byte*)&seqLength, (byte*)&seqLength + 2);
     _buffer.insert(_buffer.end(), m_seq.begin(), m_seq.end());
     _buffer.insert(_buffer.end(), (byte*)&ext, (byte*)&ext + 2);
     _buffer.insert(_buffer.end(), m_payload->begin(), m_payload->end());
@@ -77,8 +77,8 @@ int64_t WsMessage::decode(bytesConstRef _buffer)
     p += 2;
 
     // seqLength
-    uint8_t seqLength = boost::asio::detail::socket_ops::network_to_host_short(*((uint8_t*)p));
-    p += 1;
+    uint16_t seqLength = boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)p));
+    p += 2;
 
     // seq field
     m_seq.insert(m_seq.begin(), p, p + seqLength);
