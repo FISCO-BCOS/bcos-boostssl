@@ -91,12 +91,8 @@ void workAsClient(
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Client);
 
-    EndPoint endpoint;
-    endpoint.host = serverIp;
-    endpoint.port = serverPort;
-
     auto peers = std::make_shared<EndPoints>();
-    peers->push_back(endpoint);
+    peers->insert(NodeIPEndpoint(serverIp, serverPort));
     config->setConnectedPeers(peers);
 
     config->setThreadPoolSize(4);
@@ -108,7 +104,7 @@ void workAsClient(
         config->setContextConfig(contextConfig);
     }
 
-    auto wsService = std::make_shared<ws::WsService>();
+    auto wsService = std::make_shared<ws::WsService>("boostssl-delay-perf-client");
     auto wsInitializer = std::make_shared<WsInitializer>();
 
     wsInitializer->setConfig(config);
@@ -190,7 +186,7 @@ void workAsServer(std::string listenIp, uint16_t listenPort, bool disableSsl)
         config->setContextConfig(contextConfig);
     }
 
-    auto wsService = std::make_shared<ws::WsService>();
+    auto wsService = std::make_shared<ws::WsService>("boostssl-delay-perf-server");
     auto wsInitializer = std::make_shared<WsInitializer>();
 
     wsInitializer->setConfig(config);
