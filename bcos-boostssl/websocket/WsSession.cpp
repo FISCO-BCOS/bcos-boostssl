@@ -178,7 +178,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
         {
             return;
         }
-        if (callback)
+        if (callback && message->isRespPacket())
         {
             if (callback->timer)
             {

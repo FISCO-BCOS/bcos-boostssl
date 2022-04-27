@@ -568,12 +568,12 @@ void WsService::onRecvMessage(
 {
     auto seq = _msg->seq();
 
-    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
-    //                          << LOG_DESC("receive message from server")
-    //                          << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
-    //                          << LOG_KV("endpoint", _session->endPoint())
-    //                          << LOG_KV("data size", _msg->payload()->size())
-    //                          << LOG_KV("use_count", _session.use_count());
+    WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
+                             << LOG_DESC("receive message from server")
+                             << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
+                             << LOG_KV("endpoint", _session->endPoint())
+                             << LOG_KV("data size", _msg->payload()->size())
+                             << LOG_KV("use_count", _session.use_count());
 
     auto typeHandler = getMsgHandler(_msg->packetType());
     if (typeHandler)
