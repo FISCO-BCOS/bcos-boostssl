@@ -162,6 +162,12 @@ public:
     std::string moduleName() { return m_moduleName; }
     void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
+    bool needCheckRspPacket() { return m_needCheckRspPacket; }
+    void setNeedCheckRspPacket(bool _needCheckRespPacket)
+    {
+        m_needCheckRspPacket = _needCheckRespPacket;
+    }
+
 public:
     struct CallBack
     {
@@ -174,6 +180,8 @@ public:
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
 protected:
+    // flag for message that need to check respond packet like p2pmessage
+    bool m_needCheckRspPacket = false;
     //
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
