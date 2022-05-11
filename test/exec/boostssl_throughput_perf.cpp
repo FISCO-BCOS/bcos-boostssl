@@ -99,7 +99,7 @@ void workAsClient(std::string serverIp, uint16_t serverPort, bool disableSsl, ui
     auto peers = std::make_shared<EndPoints>();
     peers->insert(NodeIPEndpoint(serverIp, serverPort));
 
-    config->setConnectedPeers(peers);
+    config->setConnectPeers(peers);
 
     config->setThreadPoolSize(threadCount);
     config->setDisableSsl(disableSsl);

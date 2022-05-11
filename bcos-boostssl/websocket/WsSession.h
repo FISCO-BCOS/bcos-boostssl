@@ -49,10 +49,7 @@ public:
     using Ptrs = std::vector<std::shared_ptr<WsSession>>;
 
 public:
-    WsSession(std::string _moduleName) : m_moduleName(_moduleName)
-    {
-        WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
-    }
+    WsSession(std::string _moduleName = "DEFAULT");
 
     virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
 
@@ -186,7 +183,7 @@ protected:
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
     std::atomic<uint16_t> m_version = 0;
-    std::string m_moduleName = "DEFAULT";
+    std::string m_moduleName;
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;

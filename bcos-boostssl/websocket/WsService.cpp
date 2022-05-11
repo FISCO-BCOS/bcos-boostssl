@@ -75,11 +75,18 @@ void WsService::start()
     // start as client
     if (m_config->asClient())
     {
-        if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
+        if (m_config->connectPeers() && !m_config->connectPeers()->empty())
         {
-            // Connect to peers and wait for at least one connection to be successfully established
+            for (auto connectPeer : *m_config->connectPeers())
+            {
+                WEBSOCKET_SERVICE(INFO) << ("#### start as client 0000")
+                                        << LOG_KV("connectPeer host", connectPeer.address())
+                                        << LOG_KV("connectPeer port", connectPeer.port());
+            }
+            // Connect to peers and wait for at least one connection to be successfully
+            // established
             //
-            syncConnectToEndpoints(m_config->connectedPeers());
+            syncConnectToEndpoints(m_config->connectPeers());
         }
 
         reconnect();
@@ -356,6 +363,13 @@ void WsService::reconnect()
 
         if (!connectedPeers->empty())
         {
+            for (auto reconnectPeer : *connectedPeers)
+            {
+                WEBSOCKET_SERVICE(INFO)
+                    << ("###### reconnect") << LOG_KV("reconnectPeer host", reconnectPeer.address())
+                    << LOG_KV("reconnectPeer port", reconnectPeer.port());
+            }
+
             asyncConnectToEndpoints(connectedPeers);
         }
 

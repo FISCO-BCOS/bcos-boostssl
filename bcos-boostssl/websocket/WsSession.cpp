@@ -40,6 +40,11 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 
+WsSession::WsSession(std::string _moduleName) : m_moduleName(_moduleName)
+{
+    WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
+}
+
 void WsSession::drop(uint32_t _reason)
 {
     if (m_isDrop)
@@ -178,6 +183,8 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
         {
             return;
         }
+        //  call callback function when message don't need respond, or it's a respond packet message
+        //  and it need a respond
         if (((session->needCheckRspPacket() && message->isRespPacket()) ||
                 !session->needCheckRspPacket()) &&
             callback)
