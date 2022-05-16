@@ -174,7 +174,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     auto session = shared_from_this();
     auto seq = message->seq();
     auto self = std::weak_ptr<WsSession>(session);
-    auto callback = getAndRemoveRespCallback(seq);
+    auto callback = getAndRemoveRespCallback(seq, true, message);
 
     // task enqueue
     m_threadPool->enqueue([message, self, callback]() {
@@ -183,11 +183,8 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
         {
             return;
         }
-        //  call callback function when message don't need respond, or it's a respond packet message
-        //  and it need a respond
-        if (((session->needCheckRspPacket() && message->isRespPacket()) ||
-                !session->needCheckRspPacket()) &&
-            callback)
+
+        if (callback)
         {
             if (callback->timer)
             {
@@ -459,8 +456,17 @@ void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback
     m_callbacks[_seq] = _callback;
 }
 
-WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& _seq, bool _remove)
+WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(
+    const std::string& _seq, bool _remove, std::shared_ptr<MessageFace> _message)
 {
+    auto session = shared_from_this();
+    // Sesseion need check response packet and message isn't a respond packet, so message don't have
+    // a callback. Otherwise message has a callback.
+    if (session->needCheckRspPacket() && _message && !_message->isRespPacket())
+    {
+        return nullptr;
+    }
+
     CallBack::Ptr callback = nullptr;
     {
         std::unique_lock<std::shared_mutex> lock(x_callback);

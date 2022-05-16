@@ -173,7 +173,8 @@ public:
         std::shared_ptr<boost::asio::deadline_timer> timer;
     };
     void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
-    CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true);
+    CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true,
+        std::shared_ptr<MessageFace> _message = nullptr);
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
 protected:
