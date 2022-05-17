@@ -77,15 +77,8 @@ void WsService::start()
     {
         if (m_config->connectPeers() && !m_config->connectPeers()->empty())
         {
-            for (auto connectPeer : *m_config->connectPeers())
-            {
-                WEBSOCKET_SERVICE(INFO) << ("#### start as client 0000")
-                                        << LOG_KV("connectPeer host", connectPeer.address())
-                                        << LOG_KV("connectPeer port", connectPeer.port());
-            }
             // Connect to peers and wait for at least one connection to be successfully
             // established
-            //
             syncConnectToEndpoints(m_config->connectPeers());
         }
 
