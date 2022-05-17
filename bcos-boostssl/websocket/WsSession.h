@@ -49,10 +49,7 @@ public:
     using Ptrs = std::vector<std::shared_ptr<WsSession>>;
 
 public:
-    WsSession(std::string _moduleName) : m_moduleName(_moduleName)
-    {
-        WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
-    }
+    WsSession(std::string _moduleName = "DEFAULT");
 
     virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
 
@@ -162,6 +159,12 @@ public:
     std::string moduleName() { return m_moduleName; }
     void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
+    bool needCheckRspPacket() { return m_needCheckRspPacket; }
+    void setNeedCheckRspPacket(bool _needCheckRespPacket)
+    {
+        m_needCheckRspPacket = _needCheckRespPacket;
+    }
+
 public:
     struct CallBack
     {
@@ -170,15 +173,18 @@ public:
         std::shared_ptr<boost::asio::deadline_timer> timer;
     };
     void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
-    CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true);
+    CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true,
+        std::shared_ptr<MessageFace> _message = nullptr);
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
 protected:
+    // flag for message that need to check respond packet like p2pmessage
+    bool m_needCheckRspPacket = false;
     //
     std::atomic_bool m_isDrop = false;
     // websocket protocol version
     std::atomic<uint16_t> m_version = 0;
-    std::string m_moduleName = "DEFAULT";
+    std::string m_moduleName;
 
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;

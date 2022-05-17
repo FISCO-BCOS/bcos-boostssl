@@ -93,7 +93,7 @@ void workAsClient(
 
     auto peers = std::make_shared<EndPoints>();
     peers->insert(NodeIPEndpoint(serverIp, serverPort));
-    config->setConnectedPeers(peers);
+    config->setConnectPeers(peers);
 
     config->setThreadPoolSize(4);
     config->setDisableSsl(disableSsl);

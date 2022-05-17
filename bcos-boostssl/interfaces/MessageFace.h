@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <bcos-boostssl/interfaces/Common.h>
 #include <bcos-utilities/Common.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -50,6 +51,10 @@ public:
 
     virtual bool encode(bcos::bytes& _buffer) = 0;
     virtual int64_t decode(bytesConstRef _buffer) = 0;
+
+public:
+    virtual bool isRespPacket() const { return (m_ext & MessageExtFieldFlag::Response) != 0; }
+    virtual void setRespPacket() { m_ext |= MessageExtFieldFlag::Response; }
 
 protected:
     uint16_t m_version = 0;

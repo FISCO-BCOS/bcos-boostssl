@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 
     auto peers = std::make_shared<EndPoints>();
     peers->insert(endpoint);
-    config->setConnectedPeers(peers);
+    config->setConnectPeers(peers);
 
     config->setThreadPoolSize(1);
     config->setDisableSsl(0 == disableSsl.compare("true"));

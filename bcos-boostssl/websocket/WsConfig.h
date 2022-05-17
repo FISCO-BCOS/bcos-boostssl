@@ -71,7 +71,7 @@ private:
     bool m_smSSL = false;
 
     // list of connected server nodes when ws work as client
-    EndPointsPtr m_connectedPeers;
+    EndPointsPtr m_connectPeers;
 
     // thread pool size
     uint32_t m_threadPoolSize{4};
@@ -143,8 +143,8 @@ public:
     }
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
-    EndPointsPtr connectedPeers() const { return m_connectedPeers; }
-    void setConnectedPeers(EndPointsPtr _connectedPeers) { m_connectedPeers = _connectedPeers; }
+    EndPointsPtr connectPeers() const { return m_connectPeers; }
+    void setConnectPeers(EndPointsPtr _connectedPeers) { m_connectPeers = _connectedPeers; }
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 

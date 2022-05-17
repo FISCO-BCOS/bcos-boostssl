@@ -75,11 +75,11 @@ void WsService::start()
     // start as client
     if (m_config->asClient())
     {
-        if (m_config->connectedPeers() && !m_config->connectedPeers()->empty())
+        if (m_config->connectPeers() && !m_config->connectPeers()->empty())
         {
-            // Connect to peers and wait for at least one connection to be successfully established
-            //
-            syncConnectToEndpoints(m_config->connectedPeers());
+            // Connect to peers and wait for at least one connection to be successfully
+            // established
+            syncConnectToEndpoints(m_config->connectPeers());
         }
 
         reconnect();
@@ -191,8 +191,7 @@ void WsService::stopIocThread()
 void WsService::reportConnectedNodes()
 {
     auto ss = sessions();
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("reportConnectedNodes") << LOG_DESC("connected nodes")
-                            << LOG_KV("count", ss.size());
+    WEBSOCKET_SERVICE(INFO) << LOG_DESC("connected nodes") << LOG_KV("count", ss.size());
 
     m_heartbeat = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
         boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
@@ -356,6 +355,13 @@ void WsService::reconnect()
 
         if (!connectedPeers->empty())
         {
+            for (auto reconnectPeer : *connectedPeers)
+            {
+                WEBSOCKET_SERVICE(INFO)
+                    << ("###### reconnect") << LOG_KV("reconnectPeer host", reconnectPeer.address())
+                    << LOG_KV("reconnectPeer port", reconnectPeer.port());
+            }
+
             asyncConnectToEndpoints(connectedPeers);
         }
 
@@ -568,12 +574,12 @@ void WsService::onRecvMessage(
 {
     auto seq = _msg->seq();
 
-    // WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
-    //                          << LOG_DESC("receive message from server")
-    //                          << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
-    //                          << LOG_KV("endpoint", _session->endPoint())
-    //                          << LOG_KV("data size", _msg->payload()->size())
-    //                          << LOG_KV("use_count", _session.use_count());
+    WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvMessage")
+                             << LOG_DESC("receive message from server")
+                             << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
+                             << LOG_KV("endpoint", _session->endPoint())
+                             << LOG_KV("data size", _msg->payload()->size())
+                             << LOG_KV("use_count", _session.use_count());
 
     auto typeHandler = getMsgHandler(_msg->packetType());
     if (typeHandler)

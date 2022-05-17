@@ -129,7 +129,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     if (_config->asClient())
     {
-        auto connectedPeers = _config->connectedPeers();
+        auto connectedPeers = _config->connectPeers();
         WEBSOCKET_INITIALIZER(INFO)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as client")
             << LOG_KV("connected size", connectedPeers ? connectedPeers->size() : 0);
@@ -175,18 +175,14 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     _wsService->setMessageFactory(messageFactory);
     _wsService->setSessionFactory(sessionFactory);
 
-    WEBSOCKET_INITIALIZER(INFO) << LOG_BADGE("initWsService")
-                                << LOG_DESC("initializer for websocket service")
-                                << LOG_KV("listenIP", _config->listenIP())
-                                << LOG_KV("listenPort", _config->listenPort())
-                                << LOG_KV("disableSsl", _config->disableSsl())
-                                << LOG_KV("server", _config->asServer())
-                                << LOG_KV("client", _config->asClient())
-                                << LOG_KV("threadPoolSize", _config->threadPoolSize())
-                                << LOG_KV("iocThreadCount", _config->iocThreadCount())
-                                << LOG_KV("maxMsgSize", _config->maxMsgSize())
-                                << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
-                                << LOG_KV("connected peers", _config->connectedPeers() ?
-                                                                 _config->connectedPeers()->size() :
-                                                                 0);
+    WEBSOCKET_INITIALIZER(INFO)
+        << LOG_BADGE("initWsService") << LOG_DESC("initializer for websocket service")
+        << LOG_KV("listenIP", _config->listenIP()) << LOG_KV("listenPort", _config->listenPort())
+        << LOG_KV("disableSsl", _config->disableSsl()) << LOG_KV("server", _config->asServer())
+        << LOG_KV("client", _config->asClient())
+        << LOG_KV("threadPoolSize", _config->threadPoolSize())
+        << LOG_KV("iocThreadCount", _config->iocThreadCount())
+        << LOG_KV("maxMsgSize", _config->maxMsgSize())
+        << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
+        << LOG_KV("connected peers", _config->connectPeers() ? _config->connectPeers()->size() : 0);
 }

@@ -94,22 +94,27 @@ int main(int argc, char** argv)
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
-    wsService->registerMsgHandler(
-        999, [](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
-            auto seq = _msg->seq();
-            auto data = std::string(_msg->payload()->begin(), _msg->payload()->end());
-            // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
-            // requst seq ")
-            //                << LOG_KV("seq", seq);
-            // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
-            // requst message ")
-            //                << LOG_KV("data", data);
-            BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst msg")
-                           << LOG_KV("version", _msg->version()) << LOG_KV("seq", _msg->seq())
-                           << LOG_KV("packetType", _msg->packetType()) << LOG_KV("ext", _msg->ext())
-                           << LOG_KV("data", data);
-            _session->asyncSendMessage(_msg);
-        });
+    if (!wsService->registerMsgHandler(999,
+            [](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
+                _msg->setRespPacket();
+                auto seq = _msg->seq();
+                auto data = std::string(_msg->payload()->begin(), _msg->payload()->end());
+                // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
+                // requst seq ")
+                //                << LOG_KV("seq", seq);
+                // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
+                // requst message ")
+                //                << LOG_KV("data", data);
+                BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst msg")
+                               << LOG_KV("version", _msg->version()) << LOG_KV("seq", _msg->seq())
+                               << LOG_KV("packetType", _msg->packetType())
+                               << LOG_KV("ext", _msg->ext()) << LOG_KV("data", data);
+                _session->asyncSendMessage(_msg);
+            }))
+    {
+        BCOS_LOG(WARNING) << "registerMsgHandler failed";
+        return EXIT_SUCCESS;
+    }
 
     auto handler = wsService->getMsgHandler(999);
     if (!handler)

@@ -60,7 +60,7 @@ class WsService : public std::enable_shared_from_this<WsService>
 {
 public:
     using Ptr = std::shared_ptr<WsService>;
-    WsService(std::string _moduleName);
+    WsService(std::string _moduleName = "DEFAULT");
     virtual ~WsService();
 
 public:
