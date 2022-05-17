@@ -198,8 +198,7 @@ void WsService::stopIocThread()
 void WsService::reportConnectedNodes()
 {
     auto ss = sessions();
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("reportConnectedNodes") << LOG_DESC("connected nodes")
-                            << LOG_KV("count", ss.size());
+    WEBSOCKET_SERVICE(INFO) << LOG_DESC("connected nodes") << LOG_KV("count", ss.size());
 
     m_heartbeat = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
         boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
