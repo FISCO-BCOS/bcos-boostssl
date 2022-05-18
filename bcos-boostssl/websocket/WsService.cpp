@@ -355,6 +355,12 @@ void WsService::reconnect()
 
         if (!connectedPeers->empty())
         {
+            for (auto reconnectPeer : *connectedPeers)
+            {
+                WEBSOCKET_SERVICE(INFO) << ("reconnect")
+                                        << LOG_KV("peer", reconnectPeer.address() + ":" +
+                                                              std::to_string(reconnectPeer.port()));
+            }
             asyncConnectToEndpoints(connectedPeers);
         }
 
