@@ -31,22 +31,22 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 using namespace bcos::boostssl::context;
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
+
+
+#define TEST_LOG(LEVEL, module_name) BCOS_LOG(LEVEL) << LOG_BADGE(module_name) << "[WS][SERVICE]"
 
 void usage()
 {
-    std::cerr << "Usage: echo-client-sample <peerIp> <peerPort> <ssl>\n"
+    std::cerr << "Usage: echo-client-sample <peerIp> <peerPort> <ssl> <dataSize>\n"
               << "Example:\n"
-              << "    ./echo-client-sample 127.0.0.1 20200 true\n"
-              << "    ./echo-client-sample 127.0.0.1 20200 false\n";
+              << "    ./echo-client-sample 127.0.0.1 20200 true 2\n"
+              << "    ./echo-client-sample 127.0.0.1 20200 false 2\n";
     std::exit(0);
 }
 
-
 int main(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 5)
     {
         usage();
     }
@@ -55,28 +55,39 @@ int main(int argc, char** argv)
     uint16_t port = atoi(argv[2]);
 
     std::string disableSsl = "true";
+    uint16_t sizeNum = 1;
+    // uint16_t interval = 10;
 
     if (argc > 3)
     {
         disableSsl = argv[3];
     }
 
-    BCOS_LOG(INFO) << LOG_DESC("echo-client-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
-                   << LOG_KV("disableSsl", disableSsl);
+    if (argc > 4)
+    {
+        sizeNum = atoi(argv[4]);
+    }
+
+    // if (argc > 5)
+    // {
+    //     interval = atoi(argv[5]);
+    // }
+
+    std::string test_module_name = "testClient";
+    TEST_LOG(INFO, test_module_name)
+        << LOG_DESC("echo-client-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
+        << LOG_KV("disableSsl", disableSsl) << LOG_KV("datasize", sizeNum);
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Client);
 
-
-    EndPoint endpoint;
-    endpoint.host = host;
-    endpoint.port = port;
+    NodeIPEndpoint endpoint = NodeIPEndpoint(host, port);
 
     auto peers = std::make_shared<EndPoints>();
-    peers->push_back(endpoint);
-    config->setConnectedPeers(peers);
+    peers->insert(endpoint);
+    config->setConnectPeers(peers);
 
-    config->setThreadPoolSize(4);
+    config->setThreadPoolSize(1);
     config->setDisableSsl(0 == disableSsl.compare("true"));
     if (!config->disableSsl())
     {
@@ -84,42 +95,70 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
+    config->setModuleName("TEST_CLIENT");
 
-    auto wsService = std::make_shared<ws::WsService>();
+    auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
+
+    auto sessionFactory = std::make_shared<WsSessionFactory>();
+    wsInitializer->setSessionFactory(sessionFactory);
 
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
     wsService->start();
 
+    // construct message
+    auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
+    msg->setPacketType(999);
+
+    std::string randStr(sizeNum, 'a');
+
+    msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
+
+    TEST_LOG(INFO, test_module_name) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
+                                     << LOG_KV("request size", randStr.size());
+
     int i = 0;
     while (true)
     {
-        auto msg = wsService->messageFactory()->buildMessage();
-        msg->setType(999);
-        auto randStr = wsService->messageFactory()->newSeq();
-        msg->setData(std::make_shared<bytes>(randStr.begin(), randStr.end()));
-        BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("send request")
-                       << LOG_KV("req", randStr);
+        auto seq = wsService->messageFactory()->newSeq();
+        msg->setSeq(seq);
+        TEST_LOG(INFO, "TEST_CLIENT_MODULE") << LOG_BADGE(" [msg] ===>>>> ") << LOG_KV("seq", seq)
+                                             << LOG_KV("msg_seq()", msg->seq());
         wsService->asyncSendMessage(msg, Options(-1),
-            [](Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
+            [msg](Error ::Ptr _error, std::shared_ptr<boostssl::MessageFace>,
                 std::shared_ptr<WsSession> _session) {
                 (void)_session;
+                BCOS_LOG(INFO) << LOG_BADGE(" [send message] ===>>>> ")
+                               << LOG_DESC(" send requst msg") << LOG_KV("version", msg->version())
+                               << LOG_KV("seq", msg->seq())
+                               << LOG_KV("packetType", msg->packetType())
+                               << LOG_KV("ext", msg->ext())
+                               << LOG_KV("data",
+                                      std::string(msg->payload()->begin(), msg->payload()->end()));
                 if (_error && _error->errorCode() != 0)
                 {
-                    BCOS_LOG(ERROR)
+                    TEST_LOG(WARNING, "TEST_CLIENT_MODULE")
                         << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("callback response error")
                         << LOG_KV("errorCode", _error->errorCode())
                         << LOG_KV("errorMessage", _error->errorMessage());
                     return;
                 }
 
-                auto resp = std::string(_msg->data()->begin(), _msg->data()->end());
-                BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("receive response")
-                               << LOG_KV("resp", resp);
+                // auto resp = std::string(_msg->payload()->begin(),
+                // _msg->payload()->end()); BCOS_LOG(INFO) << LOG_BADGE(" [Main]
+                // ===>>>> ") << LOG_DESC("receive response")
+                //               << LOG_KV("resp", resp);
             });
-        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
+        // if (i % interval == 0)
+        // {
+        //     std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
         i++;
     }
 

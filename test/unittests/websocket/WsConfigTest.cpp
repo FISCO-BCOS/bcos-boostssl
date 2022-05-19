@@ -45,8 +45,8 @@ BOOST_AUTO_TEST_CASE(test_WsConfigTest)
         BOOST_CHECK_EQUAL(config->asClient(), true);
         BOOST_CHECK_EQUAL(config->asServer(), true);
 
-        auto peers = std::make_shared<const std::vector<EndPoint>>();
-        config->setConnectedPeers(peers);
+        auto peers = std::make_shared<const std::vector<NodeIPEndpoint>>();
+        config->setConnectPeers(peers);
         BOOST_CHECK_EQUAL(config->connectedPeers()->size(), 0);
     }
 
@@ -68,8 +68,8 @@ BOOST_AUTO_TEST_CASE(test_WsConfigTest)
         BOOST_CHECK_EQUAL(config->asClient(), false);
         BOOST_CHECK_EQUAL(config->asServer(), true);
 
-        auto peers = std::make_shared<const std::vector<EndPoint>>();
-        config->setConnectedPeers(peers);
+        auto peers = std::make_shared<const std::vector<NodeIPEndpoint>>();
+        config->setConnectPeers(peers);
         BOOST_CHECK_EQUAL(config->connectedPeers()->size(), 0);
     }
 }

@@ -35,8 +35,8 @@ public:
     using Ptr = std::shared_ptr<HttpServer>;
 
 public:
-    HttpServer(const std::string& _listenIP, uint16_t _listenPort)
-      : m_listenIP(_listenIP), m_listenPort(_listenPort)
+    HttpServer(const std::string& _listenIP, uint16_t _listenPort, std::string _moduleName)
+      : m_listenIP(_listenIP), m_listenPort(_listenPort), m_moduleName(_moduleName)
     {}
 
     ~HttpServer() { stop(); }
@@ -52,7 +52,8 @@ public:
     void onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);
 
 public:
-    HttpSession::Ptr buildHttpSession(HttpStream::Ptr _stream);
+    HttpSession::Ptr buildHttpSession(
+        HttpStream::Ptr _stream, std::shared_ptr<std::string> _nodeId);
 
 public:
     HttpReqHandler httpReqHandler() const { return m_httpReqHandler; }
@@ -70,6 +71,12 @@ public:
     std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
     void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
 
+    std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
+    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
+    {
+        m_threadPool = _threadPool;
+    }
+
     WsUpgradeHandler wsUpgradeHandler() const { return m_wsUpgradeHandler; }
     void setWsUpgradeHandler(WsUpgradeHandler _wsUpgradeHandler)
     {
@@ -85,10 +92,13 @@ public:
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 
+    std::string moduleName() { return m_moduleName; }
+
 private:
     std::string m_listenIP;
     uint16_t m_listenPort;
     bool m_disableSsl;
+    std::string m_moduleName;
 
     HttpReqHandler m_httpReqHandler;
     WsUpgradeHandler m_wsUpgradeHandler;
@@ -97,6 +107,7 @@ private:
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ssl::context> m_ctx;
 
+    std::shared_ptr<bcos::ThreadPool> m_threadPool;
     std::shared_ptr<HttpStreamFactory> m_httpStreamFactory;
 };
 
@@ -117,7 +128,7 @@ public:
      */
     HttpServer::Ptr buildHttpServer(const std::string& _listenIP, uint16_t _listenPort,
         std::shared_ptr<boost::asio::io_context> _ioc,
-        std::shared_ptr<boost::asio::ssl::context> _ctx);
+        std::shared_ptr<boost::asio::ssl::context> _ctx, std::string _moduleName);
 };
 
 }  // namespace http

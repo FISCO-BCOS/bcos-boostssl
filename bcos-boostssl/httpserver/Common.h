@@ -23,10 +23,12 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
-#define HTTP_LISTEN(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][LISTEN]"
-#define HTTP_SESSION(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][SESSION]"
-#define HTTP_SERVER(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][SERVER]"
-#define HTTP_STREAM(LEVEL) BCOS_LOG(LEVEL) << "[HTTP][STREAM]"
+
+#define HTTP_LISTEN(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][LISTEN]"
+#define HTTP_SESSION(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][SESSION]"
+#define HTTP_SERVER(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][SERVER]"
+#define HTTP_STREAM(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[HTTP][STREAM]"
+
 
 namespace bcos
 {
@@ -41,7 +43,10 @@ using HttpRequestPtr = std::shared_ptr<HttpRequest>;
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;
 using HttpReqHandler =
     std::function<void(const std::string& req, std::function<void(const std::string& resp)>)>;
-using WsUpgradeHandler = std::function<void(std::shared_ptr<HttpStream>, HttpRequest&&)>;
+using WsUpgradeHandler =
+    std::function<void(std::shared_ptr<HttpStream>, HttpRequest&&, std::shared_ptr<std::string>)>;
+
+static const int PARSER_BODY_LIMITATION = 100 * 1024 * 1024;
 }  // namespace http
 }  // namespace boostssl
 }  // namespace bcos

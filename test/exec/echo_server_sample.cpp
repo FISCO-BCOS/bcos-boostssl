@@ -34,6 +34,11 @@ using namespace bcos::boostssl::context;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
+std::string MODULE_NAME = "DEFAULT";
+
+#define TEST_SERVER_LOG(LEVEL, MODULE_NAME) \
+    BCOS_LOG(LEVEL) << LOG_BADGE(MODULE_NAME) << "[WS][SERVICE]"
+
 void usage()
 {
     std::cerr << "Usage: echo-server-sample <listenIP> <listenPort> <ssl>\n"
@@ -61,15 +66,16 @@ int main(int argc, char** argv)
         disableSsl = argv[3];
     }
 
-    BCOS_LOG(INFO) << LOG_DESC("echo-server-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
-                   << LOG_KV("disableSsl", disableSsl);
+    MODULE_NAME = "TEST_SERVER_MODULE";
+    TEST_SERVER_LOG(INFO, MODULE_NAME) << LOG_DESC("echo-server-sample") << LOG_KV("ip", host)
+                                       << LOG_KV("port", port) << LOG_KV("disableSsl", disableSsl);
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Server);
 
     config->setListenIP(host);
     config->setListenPort(port);
-    config->setThreadPoolSize(4);
+    config->setThreadPoolSize(1);
     config->setDisableSsl(0 == disableSsl.compare("true"));
     if (!config->disableSsl())
     {
@@ -77,30 +83,52 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
+    config->setModuleName("TEST_SERVER");
 
-    auto wsService = std::make_shared<ws::WsService>();
+    auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
+
+    auto sessionFactory = std::make_shared<WsSessionFactory>();
+    wsInitializer->setSessionFactory(sessionFactory);
 
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
-    wsService->registerMsgHandler(
-        999, [](std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session) {
-            auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
-            auto data = std::string(_msg->data()->begin(), _msg->data()->end());
-            BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst seq ")
-                           << LOG_KV("seq", seq);
-            BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst message ")
-                           << LOG_KV("data", data);
-            _session->asyncSendMessage(_msg);
-        });
+    if (!wsService->registerMsgHandler(999,
+            [](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
+                _msg->setRespPacket();
+                auto seq = _msg->seq();
+                auto data = std::string(_msg->payload()->begin(), _msg->payload()->end());
+                // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
+                // requst seq ")
+                //                << LOG_KV("seq", seq);
+                // BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive
+                // requst message ")
+                //                << LOG_KV("data", data);
+                BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC(" receive requst msg")
+                               << LOG_KV("version", _msg->version()) << LOG_KV("seq", _msg->seq())
+                               << LOG_KV("packetType", _msg->packetType())
+                               << LOG_KV("ext", _msg->ext()) << LOG_KV("data", data);
+                _session->asyncSendMessage(_msg);
+            }))
+    {
+        BCOS_LOG(WARNING) << "registerMsgHandler failed";
+        return EXIT_SUCCESS;
+    }
+
+    auto handler = wsService->getMsgHandler(999);
+    if (!handler)
+    {
+        BCOS_LOG(WARNING) << "msg handler not found";
+        return EXIT_SUCCESS;
+    }
 
     wsService->start();
 
     int i = 0;
     while (true)
     {
-        BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ");
+        TEST_SERVER_LOG(INFO, MODULE_NAME) << LOG_BADGE(" [Main] ===>>>> ");
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         i++;
     }

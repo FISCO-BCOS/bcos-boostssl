@@ -40,6 +40,11 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 
+WsSession::WsSession(std::string _moduleName) : m_moduleName(_moduleName)
+{
+    WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
+}
+
 void WsSession::drop(uint32_t _reason)
 {
     if (m_isDrop)
@@ -61,7 +66,12 @@ void WsSession::drop(uint32_t _reason)
         auto error = std::make_shared<Error>(
             WsError::SessionDisconnect, "the session has been disconnected");
 
-        boost::shared_lock<boost::shared_mutex> lock(x_callback);
+        std::shared_lock<std::shared_mutex> lock(x_callback);
+
+        WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
+                                << LOG_KV("endpoint", m_endPoint)
+                                << LOG_KV("cb size", m_callbacks.size()) << LOG_KV("session", this);
+
         for (auto& cbEntry : m_callbacks)
         {
             auto callback = cbEntry.second;
@@ -80,7 +90,7 @@ void WsSession::drop(uint32_t _reason)
 
     // clear callbacks
     {
-        boost::unique_lock<boost::shared_mutex> lock(x_callback);
+        std::unique_lock<std::shared_mutex> lock(x_callback);
         m_callbacks.clear();
     }
 
@@ -152,7 +162,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     auto size = boost::asio::buffer_size(m_buffer.data());
 
     auto message = m_messageFactory->buildMessage();
-    if (message->decode(data, size) < 0)
+    if (message->decode(bytesConstRef(data, size)) < 0)
     {  // invalid packet, stop this session ?
         WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
                                    << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
@@ -162,9 +172,9 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     _buffer.consume(_buffer.size());
 
     auto session = shared_from_this();
-    auto seq = std::string(message->seq()->begin(), message->seq()->end());
+    auto seq = message->seq();
     auto self = std::weak_ptr<WsSession>(session);
-    auto callback = getAndRemoveRespCallback(seq);
+    auto callback = getAndRemoveRespCallback(seq, true, message);
 
     // task enqueue
     m_threadPool->enqueue([message, self, callback]() {
@@ -173,6 +183,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
         {
             return;
         }
+
         if (callback)
         {
             if (callback->timer)
@@ -231,16 +242,26 @@ void WsSession::onWritePacket()
     std::shared_ptr<Message> msg = nullptr;
     std::size_t nMsgQueueSize = 0;
     {
-        boost::unique_lock<boost::shared_mutex> lock(x_queue);
-        msg = m_queue.front();
-        // remove the front ele from the queue, it has been sent
-        m_queue.erase(m_queue.begin());
-        nMsgQueueSize = m_queue.size();
+        bool isEmpty = false;
+        std::shared_ptr<bcos::bytes> buffer = nullptr;
+        {
+            boost::unique_lock<boost::shared_mutex> lock(x_msgQueue);
+            msg = m_msgQueue.front();
+            // remove the front ele from the queue, it has been sent
+            // m_msgQueue.erase(m_msgQueue.begin());
+            m_msgQueue.pop_front();
+            nMsgQueueSize = m_msgQueue.size();
+            isEmpty = m_msgQueue.empty();
+            if (!isEmpty)
+            {
+                buffer = m_msgQueue.front()->buffer;
+            }
+        }
 
         // send the next message if any
-        if (!m_queue.empty())
+        if (!isEmpty)
         {
-            asyncWrite();
+            asyncWrite(buffer);
         }
     }
 
@@ -273,7 +294,7 @@ void WsSession::onWritePacket()
 #endif
 }
 
-void WsSession::asyncWrite()
+void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
 {
     if (!isConnected())
     {
@@ -288,7 +309,7 @@ void WsSession::asyncWrite()
         auto session = shared_from_this();
         // Note: add one simple way to monitor message sending latency
         m_wsStreamDelegate->asyncWrite(
-            *(m_queue.front()->buffer), [session](boost::beast::error_code _ec, std::size_t) {
+            *_buffer, [this, session, _buffer](boost::beast::error_code _ec, std::size_t) {
                 if (_ec)
                 {
                     WEBSOCKET_SESSION(WARNING)
@@ -316,16 +337,21 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
     msg->buffer = _buffer;
     msg->incomeTimePoint = std::chrono::high_resolution_clock::now();
 
-    std::unique_lock<boost::shared_mutex> lock(x_queue);
-    auto isEmpty = m_queue.empty();
-    // data to be sent is always enqueue first
-    m_queue.push_back(msg);
+    bool isEmpty = false;
+    std::shared_ptr<bcos::bytes> buffer = nullptr;
+    {
+        std::unique_lock<boost::shared_mutex> lock(x_msgQueue);
+        isEmpty = m_msgQueue.empty();
+        // data to be sent is always enqueue first
+        m_msgQueue.push_back(msg);
+        buffer = m_msgQueue.front()->buffer;
+    }
 
     // no writing, send it
     if (isEmpty)
     {
         // we are not currently writing, so send this immediately
-        asyncWrite();
+        asyncWrite(buffer);
     }
 }
 
@@ -337,9 +363,9 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
  * @return void:
  */
 void WsSession::asyncSendMessage(
-    std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
+    std::shared_ptr<MessageFace> _msg, Options _options, RespCallBack _respFunc)
 {
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto seq = _msg->seq();
 
     if (!isConnected())
     {
@@ -358,7 +384,7 @@ void WsSession::asyncSendMessage(
     }
 
     // check if message size overflow
-    if ((int64_t)_msg->data()->size() > (int64_t)maxWriteMsgSize())
+    if ((int64_t)_msg->payload()->size() > (int64_t)maxWriteMsgSize())
     {
         if (_respFunc)
         {
@@ -369,13 +395,29 @@ void WsSession::asyncSendMessage(
         WEBSOCKET_SESSION(WARNING)
             << LOG_BADGE("asyncSendMessage") << LOG_DESC("send message size overflow")
             << LOG_KV("endpoint", endPoint()) << LOG_KV("seq", seq)
-            << LOG_KV("msgSize", _msg->data()->size())
+            << LOG_KV("msgSize", _msg->payload()->size())
             << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
         return;
     }
 
     auto buffer = std::make_shared<bytes>();
-    _msg->encode(*buffer);
+    auto r = _msg->encode(*buffer);
+    if (!r)
+    {
+        if (_respFunc)
+        {
+            auto error =
+                std::make_shared<Error>(WsError::MessageEncodeError, "Message encode failed");
+            _respFunc(error, nullptr, nullptr);
+        }
+
+        WEBSOCKET_SESSION(WARNING)
+            << LOG_BADGE("asyncSendMessage") << LOG_DESC("message encode failed")
+            << LOG_KV("endpoint", endPoint()) << LOG_KV("seq", seq)
+            << LOG_KV("msgSize", _msg->payload()->size())
+            << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
+        return;
+    }
 
     if (_respFunc)
     {  // callback
@@ -410,15 +452,24 @@ void WsSession::asyncSendMessage(
 
 void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback)
 {
-    std::unique_lock<boost::shared_mutex> lock(x_callback);
+    std::unique_lock<std::shared_mutex> lock(x_callback);
     m_callbacks[_seq] = _callback;
 }
 
-WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(const std::string& _seq, bool _remove)
+WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(
+    const std::string& _seq, bool _remove, std::shared_ptr<MessageFace> _message)
 {
+    auto session = shared_from_this();
+    // Sesseion need check response packet and message isn't a respond packet, so message don't have
+    // a callback. Otherwise message has a callback.
+    if (session->needCheckRspPacket() && _message && !_message->isRespPacket())
+    {
+        return nullptr;
+    }
+
     CallBack::Ptr callback = nullptr;
     {
-        boost::unique_lock<boost::shared_mutex> lock(x_callback);
+        std::unique_lock<std::shared_mutex> lock(x_callback);
         auto it = m_callbacks.find(_seq);
         if (it != m_callbacks.end())
         {
