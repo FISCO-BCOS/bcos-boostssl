@@ -39,15 +39,13 @@ namespace ws
 class WsMessage : public boostssl::MessageFace
 {
 public:
-    using Ptr = std::shared_ptr<WsMessage>;
     // version(2) + type(2) + status(2) + seqLength(2) + ext(2) + payload(N)
     const static size_t MESSAGE_MIN_LENGTH = 10;
 
-public:
+    using Ptr = std::shared_ptr<WsMessage>;
     WsMessage() { m_payload = std::make_shared<bcos::bytes>(); }
     virtual ~WsMessage() {}
 
-public:
     virtual uint16_t version() const override { return m_version; }
     virtual void setVersion(uint16_t) override {}
     virtual uint16_t packetType() const override { return m_packetType; }
@@ -64,12 +62,23 @@ public:
     virtual uint16_t ext() const override { return m_ext; }
     virtual void setExt(uint16_t _ext) override { m_ext = _ext; }
 
-public:
     virtual bool encode(bcos::bytes& _buffer) override;
     virtual int64_t decode(bytesConstRef _buffer) override;
 
+    bool isRespPacket() const override { return (m_ext & MessageExtFieldFlag::Response) != 0; }
+    void setRespPacket() override { m_ext |= MessageExtFieldFlag::Response; }
+
+    virtual uint32_t length() override { return m_length; }
+
 private:
+    uint16_t m_version = 0;
+    uint16_t m_packetType = 0;
+    std::string m_seq;
+    uint16_t m_ext = 0;
+    std::shared_ptr<bcos::bytes> m_payload;
+
     int16_t m_status{0};
+    uint32_t m_length;
 };
 
 class WsMessageFactory : public boostssl::MessageFaceFactory

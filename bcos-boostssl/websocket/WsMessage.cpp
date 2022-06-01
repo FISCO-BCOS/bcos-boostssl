@@ -47,12 +47,13 @@ bool WsMessage::encode(bytes& _buffer)
     _buffer.insert(_buffer.end(), (byte*)&ext, (byte*)&ext + 2);
     _buffer.insert(_buffer.end(), m_payload->begin(), m_payload->end());
 
+    m_length = _buffer.size();
     return true;
 }
 
 int64_t WsMessage::decode(bytesConstRef _buffer)
 {
-    std::size_t size = _buffer.size();
+    auto size = _buffer.size();
     if (size < MESSAGE_MIN_LENGTH)
     {
         return -1;
@@ -90,6 +91,6 @@ int64_t WsMessage::decode(bytesConstRef _buffer)
 
     // data field
     m_payload->insert(m_payload->begin(), p, dataBuffer + size);
-
+    m_length = size;
     return size;
 }

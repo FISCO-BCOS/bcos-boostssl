@@ -170,14 +170,18 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
     }
 
     _buffer.consume(_buffer.size());
+    onMessage(message);
+}
 
+void WsSession::onMessage(bcos::boostssl::MessageFace::Ptr _message)
+{
     auto session = shared_from_this();
-    auto seq = message->seq();
+    auto seq = _message->seq();
     auto self = std::weak_ptr<WsSession>(session);
-    auto callback = getAndRemoveRespCallback(seq, true, message);
+    auto callback = getAndRemoveRespCallback(seq, true, _message);
 
     // task enqueue
-    m_threadPool->enqueue([message, self, callback]() {
+    m_threadPool->enqueue([_message, self, callback]() {
         auto session = self.lock();
         if (!session)
         {
@@ -191,11 +195,11 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
                 callback->timer->cancel();
             }
 
-            callback->respCallBack(nullptr, message, session);
+            callback->respCallBack(nullptr, _message, session);
         }
         else
         {
-            session->recvMessageHandler()(message, session);
+            session->recvMessageHandler()(_message, session);
         }
     });
 }
