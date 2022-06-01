@@ -39,7 +39,6 @@ namespace boostssl
 {
 namespace ws
 {
-
 using EndPoints = std::set<NodeIPEndpoint>;
 using EndPointsPtr = std::shared_ptr<std::set<NodeIPEndpoint>>;
 using EndPointsConstPtr = std::shared_ptr<const std::set<NodeIPEndpoint>>;
@@ -144,7 +143,7 @@ public:
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
     EndPointsPtr connectPeers() const { return m_connectPeers; }
-    void setConnectPeers(EndPointsPtr _connectedPeers) { m_connectPeers = _connectedPeers; }
+    void setConnectPeers(EndPointsPtr _connectPeers) { m_connectPeers = _connectPeers; }
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 
