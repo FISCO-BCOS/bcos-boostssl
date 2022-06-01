@@ -338,7 +338,7 @@ void WsService::reconnect()
             return;
         }
 
-        auto connectedPeers = std::make_shared<std::set<NodeIPEndpoint>>();
+        auto connectPeers = std::make_shared<std::set<NodeIPEndpoint>>();
 
         // select all disconnected nodes
         ReadGuard l(x_peers);
@@ -350,18 +350,18 @@ void WsService::reconnect()
             {
                 continue;
             }
-            connectedPeers->insert(peer);
+            connectPeers->insert(peer);
         }
 
-        if (!connectedPeers->empty())
+        if (!connectPeers->empty())
         {
-            for (auto reconnectPeer : *connectedPeers)
+            for (auto reconnectPeer : *connectPeers)
             {
                 WEBSOCKET_SERVICE(INFO) << ("reconnect")
                                         << LOG_KV("peer", reconnectPeer.address() + ":" +
                                                               std::to_string(reconnectPeer.port()));
             }
-            asyncConnectToEndpoints(connectedPeers);
+            asyncConnectToEndpoints(connectPeers);
         }
 
         service->reconnect();

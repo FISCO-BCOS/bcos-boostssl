@@ -29,6 +29,17 @@
 #include <string>
 #include <utility>
 
+
+#define CHECK_OFFSET(offset, length)                                                         \
+    do                                                                                       \
+    {                                                                                        \
+        if ((offset) > (length))                                                             \
+        {                                                                                    \
+            throw std::out_of_range("Out of range error, offset:" + std::to_string(offset) + \
+                                    " ,length: " + std::to_string(length));                  \
+        }                                                                                    \
+    } while (0);
+
 namespace bcos
 {
 namespace boostssl
@@ -40,7 +51,7 @@ class WsMessage : public boostssl::MessageFace
 {
 public:
     // version(2) + type(2) + status(2) + seqLength(2) + ext(2) + payload(N)
-    const static size_t MESSAGE_MIN_LENGTH = 10;
+    const static size_t MESSAGE_MIN_LENGTH;
 
     using Ptr = std::shared_ptr<WsMessage>;
     WsMessage() { m_payload = std::make_shared<bcos::bytes>(); }
@@ -52,7 +63,7 @@ public:
     virtual void setPacketType(uint16_t _packetType) override { m_packetType = _packetType; }
     virtual int16_t status() { return m_status; }
     virtual void setStatus(int16_t _status) { m_status = _status; }
-    virtual std::string seq() const override { return m_seq; }
+    virtual std::string const& seq() const override { return m_seq; }
     virtual void setSeq(std::string _seq) override { m_seq = _seq; }
     virtual std::shared_ptr<bcos::bytes> payload() const override { return m_payload; }
     virtual void setPayload(std::shared_ptr<bcos::bytes> _payload) override
@@ -68,7 +79,7 @@ public:
     bool isRespPacket() const override { return (m_ext & MessageExtFieldFlag::Response) != 0; }
     void setRespPacket() override { m_ext |= MessageExtFieldFlag::Response; }
 
-    virtual uint32_t length() override { return m_length; }
+    virtual uint32_t length() const override { return m_length; }
 
 private:
     uint16_t m_version = 0;
@@ -106,10 +117,8 @@ public:
         uint16_t _type, std::shared_ptr<bcos::bytes> _data)
     {
         auto msg = std::make_shared<WsMessage>();
-        auto seq = newSeq();
         msg->setPacketType(_type);
         msg->setPayload(_data);
-        msg->setSeq(seq);
         return msg;
     }
 };

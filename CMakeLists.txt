@@ -87,11 +87,11 @@ install(
 
 # TODO: remove ut temp for remove bcos-framework deps
 # ut
-# if (TESTS)
-#    enable_testing()
-#    set(CTEST_OUTPUT_ON_FAILURE TRUE)
-#    add_subdirectory(test)
-# endif()
+if (TESTS)
+    enable_testing()
+    set(CTEST_OUTPUT_ON_FAILURE TRUE)
+    add_subdirectory(test)
+endif()
 
 if (BUILD_EXEC_TEST)
     add_subdirectory(test/exec)

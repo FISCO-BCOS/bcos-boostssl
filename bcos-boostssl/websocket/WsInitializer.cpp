@@ -129,14 +129,14 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     if (_config->asClient())
     {
-        auto connectedPeers = _config->connectPeers();
+        auto connectPeers = _config->connectPeers();
         WEBSOCKET_INITIALIZER(INFO)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as client")
-            << LOG_KV("connected size", connectedPeers ? connectedPeers->size() : 0);
+            << LOG_KV("connected size", connectPeers ? connectPeers->size() : 0);
 
-        if (connectedPeers)
+        if (connectPeers)
         {
-            for (auto& peer : *connectedPeers)
+            for (auto& peer : *connectPeers)
             {
                 if (!WsTools::validIP(peer.address()))
                 {
@@ -152,8 +152,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                 }
             }
 
-            // connectedPeers info is valid then set connectedPeers info into wsService
-            _wsService->setReconnectedPeers(connectedPeers);
+            // connectPeers info is valid then set connectPeers info into wsService
+            _wsService->setReconnectedPeers(connectPeers);
         }
         else
         {
