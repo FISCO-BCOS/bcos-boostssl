@@ -18,6 +18,7 @@
  * @date 2021-06-14
  */
 #pragma once
+#include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/context/ContextConfig.h>
 #include <boost/asio/ssl.hpp>
 #include <boost/filesystem.hpp>
@@ -40,6 +41,12 @@ public:
     std::string moduleName() { return m_moduleName; }
     void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
+    DataDecryptHandler dataDecryptHandler() { return m_dataDecryptHandler; }
+    void setDataDecryptHandler(DataDecryptHandler _dataDecryptHandler)
+    {
+        m_dataDecryptHandler = _dataDecryptHandler;
+    }
+
 public:
     std::shared_ptr<boost::asio::ssl::context> buildSslContext(const std::string& _configPath);
     std::shared_ptr<boost::asio::ssl::context> buildSslContext(const ContextConfig& _contextConfig);
@@ -47,15 +54,16 @@ public:
 private:
     std::shared_ptr<boost::asio::ssl::context> buildSslContext(
         const ContextConfig::CertConfig& _certConfig);
-    std::shared_ptr<boost::asio::ssl::context> buildSslContext(
+    std::shared_ptr<boost::asio::ssl::context> buildSmSslContext(
         const ContextConfig::SMCertConfig& _smCertConfig);
     std::shared_ptr<boost::asio::ssl::context> buildSslContextByCertContent(
         const ContextConfig::CertConfig& _certConfig);
-    std::shared_ptr<boost::asio::ssl::context> buildSslContextByCertContent(
+    std::shared_ptr<boost::asio::ssl::context> buildSmSslContextByCertContent(
         const ContextConfig::SMCertConfig& _smCertConfig);
 
 private:
     std::string m_moduleName = "DEFAULT";
+    DataDecryptHandler m_dataDecryptHandler = nullptr;
 };
 
 }  // namespace context

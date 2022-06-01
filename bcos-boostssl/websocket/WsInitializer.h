@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <bcos-boostssl/context/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-boostssl/websocket/WsSession.h>
@@ -52,7 +53,7 @@ public:
     }
 
 public:
-    void initWsService(WsService::Ptr _wsService);
+    void initWsService(WsService::Ptr _wsService, DataDecryptHandler _dataDecryptHandler = nullptr);
 
 private:
     std::shared_ptr<MessageFaceFactory> m_messageFactory;

@@ -69,7 +69,7 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
         {
             return buildSslContext(_contextConfig.certConfig());
         }
-        return buildSslContext(_contextConfig.smCertConfig());
+        return buildSmSslContext(_contextConfig.smCertConfig());
     }
     else
     {
@@ -77,7 +77,7 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
         {
             return buildSslContextByCertContent(_contextConfig.certConfig());
         }
-        return buildSslContextByCertContent(_contextConfig.smCertConfig());
+        return buildSmSslContextByCertContent(_contextConfig.smCertConfig());
     }
 }
 
@@ -87,8 +87,15 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
     std::shared_ptr<boost::asio::ssl::context> sslContext =
         std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12);
 
-    auto keyContent =
-        readFileContent(boost::filesystem::path(_certConfig.nodeKey));  // node.key content
+    auto keyContent = readFileContent(boost::filesystem::path(_certConfig.nodeKey));
+
+    // decrypt data in nodekey file
+    // if dataDecryptHandler is not nullptr that means content need to be decrypted
+    if (m_dataDecryptHandler != nullptr)
+    {
+        keyContent = m_dataDecryptHandler(_certConfig.nodeKey);
+    }
+
     boost::asio::const_buffer keyBuffer(keyContent->data(), keyContent->size());
     sslContext->use_private_key(keyBuffer, boost::asio::ssl::context::file_format::pem);
 
@@ -111,7 +118,7 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
     return sslContext;
 }
 
-std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
+std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSmSslContext(
     const ContextConfig::SMCertConfig& _smCertConfig)
 {
     std::shared_ptr<boost::asio::ssl::context> sslContext =
@@ -120,7 +127,17 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
     sslContext->set_verify_mode(boost::asio::ssl::context_base::verify_none);
 
     auto keyContent =
-        readFileContent(boost::filesystem::path(_smCertConfig.nodeKey));  // node.key content
+        readFileContent(boost::filesystem::path(_smCertConfig.nodeKey));  // sm_ssl.key content
+    auto enNodeKeyContent =
+        readFileContent(boost::filesystem::path(_smCertConfig.enNodeKey));  // sm_enssl.key content
+
+    // decrypt data in nodekey and ennodekey file
+    // if dataDecryptHandler is not nullptr that means content need to be decrypted
+    if (m_dataDecryptHandler != nullptr)
+    {
+        keyContent = m_dataDecryptHandler(_smCertConfig.nodeKey);
+        enNodeKeyContent = m_dataDecryptHandler(_smCertConfig.enNodeKey);
+    }
 
     boost::asio::const_buffer keyBuffer(keyContent->data(), keyContent->size());
     sslContext->use_private_key(keyBuffer, boost::asio::ssl::context::file_format::pem);
@@ -138,8 +155,8 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
             std::runtime_error("SSL_CTX_use_enc_certificate_file, error: " + std::to_string(ret)));
     }
 
-    ret = SSL_CTX_use_enc_PrivateKey_file(
-        sslContext->native_handle(), _smCertConfig.enNodeKey.c_str(), SSL_FILETYPE_PEM);
+    std::string enNodeKeyStr((const char*)enNodeKeyContent->data(), enNodeKeyContent->size());
+    ret = SSL_CTX_use_enc_PrivateKey(sslContext->native_handle(), toEvpPkey(enNodeKeyStr.c_str()));
     if (ret <= 0)
     {
         CONTEXT_LOG(WARNING) << LOG_BADGE("buildSslContext")
@@ -153,7 +170,6 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContext(
 
     auto caContent =
         readFileContent(boost::filesystem::path(_smCertConfig.caCert));  // node.key content
-
     sslContext->add_certificate_authority(
         boost::asio::const_buffer(caContent->data(), caContent->size()));
 
@@ -196,7 +212,7 @@ std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCert
     return sslContext;
 }
 
-std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSslContextByCertContent(
+std::shared_ptr<boost::asio::ssl::context> ContextBuilder::buildSmSslContextByCertContent(
     const ContextConfig::SMCertConfig& _smCertConfig)
 {
     std::shared_ptr<boost::asio::ssl::context> sslContext =

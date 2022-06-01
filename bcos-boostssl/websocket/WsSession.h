@@ -61,20 +61,8 @@ public:
     // start WsSession as server
     void startAsServer(bcos::boostssl::http::HttpRequest _httpRequest);
 
-public:
-    void onWsAccept(boost::beast::error_code _ec);
+    virtual void onMessage(bcos::boostssl::MessageFace::Ptr _message);
 
-    void asyncRead();
-    void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
-
-    void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
-    void onWrite(std::shared_ptr<bcos::bytes> _buffer);
-
-    // async read
-    void onReadPacket(boost::beast::flat_buffer& _buffer);
-    void onWritePacket();
-
-public:
     virtual bool isConnected()
     {
         return !m_isDrop && m_wsStreamDelegate && m_wsStreamDelegate->open();
@@ -89,7 +77,6 @@ public:
     virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg,
         Options _options = Options(), RespCallBack _respCallback = RespCallBack());
 
-public:
     std::string endPoint() const { return m_endPoint; }
     void setEndPoint(const std::string& _endPoint) { m_endPoint = _endPoint; }
 
@@ -165,7 +152,7 @@ public:
         m_needCheckRspPacket = _needCheckRespPacket;
     }
 
-public:
+protected:
     struct CallBack
     {
         using Ptr = std::shared_ptr<CallBack>;
@@ -177,6 +164,17 @@ public:
         std::shared_ptr<MessageFace> _message = nullptr);
     void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
+    void onWsAccept(boost::beast::error_code _ec);
+
+    void asyncRead();
+    void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
+
+    void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
+    void onWrite(std::shared_ptr<bcos::bytes> _buffer);
+
+    // async read
+    void onReadPacket(boost::beast::flat_buffer& _buffer);
+    void onWritePacket();
 protected:
     // flag for message that need to check respond packet like p2pmessage
     bool m_needCheckRspPacket = false;

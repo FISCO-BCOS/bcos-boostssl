@@ -31,6 +31,8 @@ namespace bcos
 {  // namespace bcos
 namespace boostssl
 {
+using DataDecryptHandler = std::function<std::shared_ptr<std::string>(const std::string&)>;
+
 inline X509* toX509(const char* _pemBuffer)
 {
     BIO* bio_mem = BIO_new(BIO_s_mem());

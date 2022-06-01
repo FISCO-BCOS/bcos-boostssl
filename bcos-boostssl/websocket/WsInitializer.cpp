@@ -39,7 +39,7 @@ using namespace bcos::boostssl::context;
 using namespace bcos::boostssl::ws;
 using namespace bcos::boostssl::http;
 
-void WsInitializer::initWsService(WsService::Ptr _wsService)
+void WsInitializer::initWsService(WsService::Ptr _wsService, DataDecryptHandler _dataDecryptHandler)
 {
     std::shared_ptr<WsConfig> _config = m_config;
     std::string m_moduleName = _config->moduleName();
@@ -85,6 +85,12 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         contextBuilder->setModuleName(m_moduleName);
         _config->contextConfig()->setModuleName(m_moduleName);
 
+        // DataDecryptHandler for decrypt data in nodekey file when building ssl context
+        if (_dataDecryptHandler != nullptr)
+        {
+            contextBuilder->setDataDecryptHandler(_dataDecryptHandler);
+        }
+
         ctx = contextBuilder->buildSslContext(*_config->contextConfig());
     }
 
@@ -129,14 +135,14 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     if (_config->asClient())
     {
-        auto connectedPeers = _config->connectPeers();
+        auto connectPeers = _config->connectPeers();
         WEBSOCKET_INITIALIZER(INFO)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as client")
-            << LOG_KV("connected size", connectedPeers ? connectedPeers->size() : 0);
+            << LOG_KV("connected size", connectPeers ? connectPeers->size() : 0);
 
-        if (connectedPeers)
+        if (connectPeers)
         {
-            for (auto& peer : *connectedPeers)
+            for (auto& peer : *connectPeers)
             {
                 if (!WsTools::validIP(peer.address()))
                 {
@@ -152,8 +158,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
                 }
             }
 
-            // connectedPeers info is valid then set connectedPeers info into wsService
-            _wsService->setReconnectedPeers(connectedPeers);
+            // connectPeers info is valid then set connectPeers info into wsService
+            _wsService->setReconnectedPeers(connectPeers);
         }
         else
         {
