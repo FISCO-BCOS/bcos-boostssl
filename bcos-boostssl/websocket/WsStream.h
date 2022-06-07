@@ -95,6 +95,8 @@ public:
             opt.keep_alive_pings = true;
 
             m_stream->set_option(opt);
+            m_stream->auto_fragment(false);
+            m_stream->secure_prng(false);
         }
     }
 
