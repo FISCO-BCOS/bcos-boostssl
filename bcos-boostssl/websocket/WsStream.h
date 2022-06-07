@@ -97,6 +97,7 @@ public:
             m_stream->set_option(opt);
             m_stream->auto_fragment(false);
             m_stream->secure_prng(false);
+            m_stream->write_buffer_bytes(2 * 1024 * 1024);
         }
     }
 

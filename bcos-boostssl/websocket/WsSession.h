@@ -159,22 +159,23 @@ protected:
         RespCallBack respCallBack;
         std::shared_ptr<boost::asio::deadline_timer> timer;
     };
-    void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
+    virtual void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
     CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true,
         std::shared_ptr<MessageFace> _message = nullptr);
-    void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
+    virtual void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
-    void onWsAccept(boost::beast::error_code _ec);
+    virtual void onWsAccept(boost::beast::error_code _ec);
 
-    void asyncRead();
-    void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
+    virtual void asyncRead();
+    virtual void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
-    void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
-    void onWrite(std::shared_ptr<bcos::bytes> _buffer);
+    virtual void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
+    virtual void onWrite(std::shared_ptr<bcos::bytes> _buffer);
 
     // async read
-    void onReadPacket(boost::beast::flat_buffer& _buffer);
+    virtual void onReadPacket(boost::beast::flat_buffer& _buffer);
     void onWritePacket();
+
 protected:
     // flag for message that need to check respond packet like p2pmessage
     bool m_needCheckRspPacket = false;
