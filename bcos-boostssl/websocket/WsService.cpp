@@ -646,8 +646,6 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
 
             auto session = *ss.begin();
             ss.erase(ss.begin());
-
-            auto self = shared_from_this();
             session->asyncSendMessage(msg, options);
         }
 
@@ -668,29 +666,32 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
             auto session = *ss.begin();
             ss.erase(ss.begin());
 
-            auto self = shared_from_this();
+            // auto self = shared_from_this();
+            std::string endPoint = session->endPoint();
+            auto moduleName = session->moduleName();
+            // Note: should not pass session to the lamda operator[], this will lead to memory leak
             session->asyncSendMessage(msg, options,
-                [self, session](Error::Ptr _error, std::shared_ptr<boostssl::MessageFace> _msg,
+                [endPoint, moduleName, callback = respFunc](Error::Ptr _error,
+                    std::shared_ptr<boostssl::MessageFace> _msg,
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != 0)
                     {
-                        std::string m_moduleName = session->moduleName();
-                        WEBSOCKET_SERVICE(WARNING)
-                            << LOG_BADGE("asyncSendMessage") << LOG_DESC("callback error")
-                            << LOG_KV("endpoint", session->endPoint())
+                        BOOST_SSL_LOG(WARNING)
+                            << LOG_BADGE(moduleName) << LOG_BADGE("asyncSendMessage")
+                            << LOG_DESC("callback error") << LOG_KV("endpoint", endPoint)
                             << LOG_KV("errorCode", _error->errorCode())
                             << LOG_KV("errorMessage", _error->errorMessage());
-
-                        if (notRetryAgain(_error->errorCode()))
+                        return;
+                        /*if (notRetryAgain(_error->errorCode()))
                         {
                             return self->respFunc(_error, _msg, _session);
                         }
 
                         // retry
-                        return self->trySendMessageWithCB();
+                        return self->trySendMessageWithCB();*/
                     }
 
-                    self->respFunc(_error, _msg, _session);
+                    callback(_error, _msg, _session);
                 });
         }
     };

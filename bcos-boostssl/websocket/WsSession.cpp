@@ -130,8 +130,6 @@ void WsSession::startAsServer(HttpRequest _httpRequest)
 {
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsServer") << LOG_DESC("start websocket handshake")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
-
-    auto session = shared_from_this();
     m_wsStreamDelegate->asyncAccept(
         _httpRequest, std::bind(&WsSession::onWsAccept, shared_from_this(), std::placeholders::_1));
 }
@@ -175,11 +173,9 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
 
 void WsSession::onMessage(bcos::boostssl::MessageFace::Ptr _message)
 {
-    auto session = shared_from_this();
     auto seq = _message->seq();
-    auto self = std::weak_ptr<WsSession>(session);
     auto callback = getAndRemoveRespCallback(seq, true, _message);
-
+    auto self = std::weak_ptr<WsSession>(shared_from_this());
     // task enqueue
     m_threadPool->enqueue([_message, self, callback]() {
         auto session = self.lock();
@@ -310,18 +306,23 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
 
     try
     {
-        auto session = shared_from_this();
+        auto self = std::weak_ptr<WsSession>(shared_from_this());
         // Note: add one simple way to monitor message sending latency
+        // Note: the lamda[] should not include session directly, this will cause memory leak
         m_wsStreamDelegate->asyncWrite(
-            *_buffer, [this, session, _buffer](boost::beast::error_code _ec, std::size_t) {
+            *_buffer, [self, _buffer](boost::beast::error_code _ec, std::size_t) {
+                auto session = self.lock();
+                if (!session)
+                {
+                    return;
+                }
                 if (_ec)
                 {
-                    WEBSOCKET_SESSION(WARNING)
-                        << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
-                        << LOG_KV("endpoint", session->endPoint());
+                    BCOS_LOG(WARNING) << LOG_BADGE(session->moduleName()) << LOG_BADGE("Session")
+                                      << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
+                                      << LOG_KV("endpoint", session->endPoint());
                     return session->drop(WsError::WriteError);
                 }
-
                 session->onWritePacket();
             });
     }
@@ -463,10 +464,9 @@ void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback
 WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(
     const std::string& _seq, bool _remove, std::shared_ptr<MessageFace> _message)
 {
-    auto session = shared_from_this();
     // Sesseion need check response packet and message isn't a respond packet, so message don't have
     // a callback. Otherwise message has a callback.
-    if (session->needCheckRspPacket() && _message && !_message->isRespPacket())
+    if (needCheckRspPacket() && _message && !_message->isRespPacket())
     {
         return nullptr;
     }
