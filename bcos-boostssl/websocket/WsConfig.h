@@ -96,6 +96,7 @@ private:
     uint32_t m_maxMsgSize{DEFAULT_MAX_MESSAGE_SIZE};
 
     std::string m_moduleName = "DEFAULT";
+    bool m_networkCompress;
 
 public:
     void setModel(WsModel _model) { m_model = _model; }
@@ -155,6 +156,9 @@ public:
 
     std::string moduleName() { return m_moduleName; }
     void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
+
+    bool networkCompress() { return m_networkCompress; }
+    void setNetworkCompress(bool _networkCompress) { m_networkCompress = _networkCompress; }
 };
 }  // namespace ws
 }  // namespace boostssl

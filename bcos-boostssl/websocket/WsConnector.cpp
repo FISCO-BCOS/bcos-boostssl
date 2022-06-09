@@ -102,7 +102,8 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                         << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect success")
                         << LOG_KV("endpoint", endpoint);
 
-                    auto wsStreamDelegate = builder->build(_disableSsl, rawStream, m_moduleName);
+                    auto wsStreamDelegate =
+                        builder->build(_disableSsl, rawStream, m_moduleName, m_networkCompress);
 
                     std::shared_ptr<std::string> nodeId = std::make_shared<std::string>();
                     wsStreamDelegate->setVerifyCallback(

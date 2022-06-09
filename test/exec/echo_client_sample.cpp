@@ -96,6 +96,7 @@ int main(int argc, char** argv)
         config->setContextConfig(contextConfig);
     }
     config->setModuleName("TEST_CLIENT");
+    config->setNetworkCompress(true);
 
     auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();

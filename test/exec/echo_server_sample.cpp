@@ -77,6 +77,7 @@ int main(int argc, char** argv)
     config->setListenPort(port);
     config->setThreadPoolSize(1);
     config->setDisableSsl(0 == disableSsl.compare("true"));
+    config->setNetworkCompress(true);
     if (!config->disableSsl())
     {
         auto contextConfig = std::make_shared<ContextConfig>();

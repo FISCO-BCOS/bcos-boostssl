@@ -94,6 +94,8 @@ public:
     std::string moduleName() { return m_moduleName; }
     void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
+    void setNetworkCompress(bool _networkCompress) { m_networkCompress = _networkCompress; }
+
 private:
     std::shared_ptr<WsStreamDelegateBuilder> m_builder;
     std::shared_ptr<boost::asio::ip::tcp::resolver> m_resolver;
@@ -104,6 +106,7 @@ private:
     std::set<std::string> m_pendingConns;
 
     std::string m_moduleName = "DEFAULT";
+    bool m_networkCompress = false;
 };
 }  // namespace ws
 }  // namespace boostssl

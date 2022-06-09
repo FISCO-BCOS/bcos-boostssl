@@ -35,8 +35,12 @@ public:
     using Ptr = std::shared_ptr<HttpServer>;
 
 public:
-    HttpServer(const std::string& _listenIP, uint16_t _listenPort, std::string _moduleName)
-      : m_listenIP(_listenIP), m_listenPort(_listenPort), m_moduleName(_moduleName)
+    HttpServer(const std::string& _listenIP, uint16_t _listenPort, std::string _moduleName,
+        bool _networkCompress)
+      : m_listenIP(_listenIP),
+        m_listenPort(_listenPort),
+        m_moduleName(_moduleName),
+        m_networkCompress(_networkCompress)
     {}
 
     ~HttpServer() { stop(); }
@@ -99,6 +103,7 @@ private:
     uint16_t m_listenPort;
     bool m_disableSsl;
     std::string m_moduleName;
+    bool m_networkCompress;
 
     HttpReqHandler m_httpReqHandler;
     WsUpgradeHandler m_wsUpgradeHandler;
@@ -128,7 +133,8 @@ public:
      */
     HttpServer::Ptr buildHttpServer(const std::string& _listenIP, uint16_t _listenPort,
         std::shared_ptr<boost::asio::io_context> _ioc,
-        std::shared_ptr<boost::asio::ssl::context> _ctx, std::string _moduleName);
+        std::shared_ptr<boost::asio::ssl::context> _ctx, std::string _moduleName,
+        bool _networkCompress);
 };
 
 }  // namespace http

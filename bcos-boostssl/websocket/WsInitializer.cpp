@@ -75,6 +75,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     WsTools::setModuleName(m_moduleName);
     NodeInfoTools::setModuleName(m_moduleName);
     connector->setModuleName(m_moduleName);
+    connector->setNetworkCompress(_config->networkCompress());
 
     std::shared_ptr<boost::asio::ssl::context> ctx = nullptr;
     if (!_config->disableSsl())
@@ -107,8 +108,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
-        auto httpServer = httpServerFactory->buildHttpServer(
-            _config->listenIP(), _config->listenPort(), ioc, ctx, m_moduleName);
+        auto httpServer = httpServerFactory->buildHttpServer(_config->listenIP(),
+            _config->listenPort(), ioc, ctx, m_moduleName, _config->networkCompress());
         httpServer->setDisableSsl(_config->disableSsl());
         httpServer->setThreadPool(threadPool);
         httpServer->setWsUpgradeHandler(
