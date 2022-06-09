@@ -306,6 +306,7 @@ public:
     WsStreamDelegate::Ptr build(
         std::shared_ptr<boost::beast::tcp_stream> _tcpStream, std::string _moduleName)
     {
+        _tcpStream->socket().set_option(boost::asio::ip::tcp::no_delay(true));
         auto wsStream = std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
             std::move(*_tcpStream));
         auto rawWsStream = std::make_shared<bcos::boostssl::ws::WsStream<boost::beast::tcp_stream>>(
@@ -317,6 +318,7 @@ public:
         std::shared_ptr<boost::beast::ssl_stream<boost::beast::tcp_stream>> _sslStream,
         std::string _moduleName)
     {
+        _sslStream->next_layer().socket().set_option(boost::asio::ip::tcp::no_delay(true));
         auto wsStream = std::make_shared<
             boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
             std::move(*_sslStream));

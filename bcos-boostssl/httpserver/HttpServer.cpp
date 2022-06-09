@@ -117,6 +117,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     }
     auto localEndpoint = socket.local_endpoint();
     auto remoteEndpoint = socket.remote_endpoint();
+    socket.set_option(boost::asio::ip::tcp::no_delay(true));
 
     HTTP_SERVER(INFO) << LOG_BADGE("accept") << LOG_KV("local_endpoint", socket.local_endpoint())
                       << LOG_KV("remote_endpoint", socket.remote_endpoint());
