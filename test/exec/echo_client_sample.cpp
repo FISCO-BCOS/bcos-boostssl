@@ -18,6 +18,7 @@
  * @date 2021-10-31
  */
 
+#include "RateLimiter.h"
 #include "bcos-boostssl/websocket/WsInitializer.h"
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsService.h>
@@ -37,18 +38,19 @@ using namespace bcos::boostssl::context;
 
 void usage()
 {
-    std::cerr << "Usage: echo-client-sample <peerIp> <peerPort> <ssl> <dataSize>\n"
+    std::cerr << "Usage: echo-client-sample <peerIp> <peerPort> qps(MBit/s) payloadSize(KBytes, "
+                 "default is 1MBytes)\n"
               << "Example:\n"
-              << "    ./echo-client-sample 127.0.0.1 20200 true 2\n"
-              << "    ./echo-client-sample 127.0.0.1 20200 false 2\n";
+              << "    ./echo-client-sample 127.0.0.1 20200 true 1024 1024\n";
     std::exit(0);
 }
 
-void sendMessage(std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsService> _wsService)
+void sendMessage(std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsService> _wsService,
+    std::shared_ptr<RateLimiter> _rateLimiter)
 {
-    int i = 0;
     while (true)
     {
+        _rateLimiter->acquire(1, true);
         auto seq = _wsService->messageFactory()->newSeq();
         _msg->setSeq(seq);
         auto startT = utcTime();
@@ -68,8 +70,6 @@ void sendMessage(std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsService> _
                 BCOS_LOG(INFO) << LOG_DESC("receiveResponse, timecost:") << (utcTime() - startT)
                                << LOG_KV("msgSize", msgSize);
             });
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        i++;
     }
 }
 
@@ -79,22 +79,27 @@ int main(int argc, char** argv)
     {
         usage();
     }
-
     std::string host = argv[1];
     uint16_t port = atoi(argv[2]);
 
-    std::string disableSsl = "true";
-    uint32_t sizeNum = 1;
-    // uint16_t interval = 10;
+    std::string disableSsl = argv[3];
 
-    if (argc > 3)
+    uint64_t qps = (atol(argv[4])) * 1024 * 1024;
+    // default payLoadSize is 1MB
+    uint64_t payLoadSize = 1024 * 1024;
+    if (argc > 5)
     {
-        disableSsl = argv[3];
+        payLoadSize = (atol(argv[5]) * 1024);
     }
+    std::cout << "### payLoad:" << payLoadSize << std::endl;
+    std::cout << "### qps: " << qps << std::endl;
+    int64_t packetQPS = (qps) / (payLoadSize * 8);
+    std::cout << "### packetQPS: " << packetQPS << std::endl;
+
+
     std::string test_module_name = "testClient";
-    TEST_LOG(INFO, test_module_name)
-        << LOG_DESC("echo-client-sample") << LOG_KV("ip", host) << LOG_KV("port", port)
-        << LOG_KV("disableSsl", disableSsl) << LOG_KV("datasize", sizeNum);
+    TEST_LOG(INFO, test_module_name) << LOG_DESC("echo-client-sample") << LOG_KV("ip", host)
+                                     << LOG_KV("port", port) << LOG_KV("disableSsl", disableSsl);
 
     auto config = std::make_shared<WsConfig>();
     config->setModel(WsModel::Client);
@@ -127,28 +132,12 @@ int main(int argc, char** argv)
 
     wsService->start();
 
-    ThreadPool::Ptr threadPool = std::make_shared<ThreadPool>("send", 16);
-    std::srand(utcTime());
-    for (int i = 0; i < 1000; i++)
-    {
-        // construct message
-        auto msg =
-            std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
-        msg->setPacketType(999);
-        int64_t payloadSize = 0;
-        uint32_t a = std::rand();
-        uint32_t b = std::rand();
-        if (i % 2)
-        {
-            payloadSize = (((uint32_t)a << 16) | b) % (1024 * 1024);
-        }
-        else
-        {
-            payloadSize = (((uint32_t)a << 16) | b) % (20 * 1024);
-        }
-        std::string randStr(payloadSize, 'a');
-        msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
-        threadPool->enqueue([msg, wsService]() { sendMessage(msg, wsService); });
-    }
+    // construct message
+    auto msg = std::dynamic_pointer_cast<WsMessage>(wsService->messageFactory()->buildMessage());
+    msg->setPacketType(999);
+    std::string randStr(payLoadSize, 'a');
+    msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
+    auto rateLimiter = std::make_shared<RateLimiter>(packetQPS);
+    sendMessage(msg, wsService, rateLimiter);
     return EXIT_SUCCESS;
 }
