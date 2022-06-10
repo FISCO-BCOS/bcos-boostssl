@@ -43,6 +43,16 @@ using namespace bcos::boostssl::http;
 WsSession::WsSession(std::string _moduleName) : m_moduleName(_moduleName)
 {
     WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
+    m_reporter = std::make_shared<bcos::Timer>(1000, "queueReporter");
+    m_reporter->registerTimeoutHandler([this]() { report(); });
+    m_reporter->start();
+}
+
+void WsSession::report()
+{
+    m_reporter->restart();
+    boost::shared_lock<boost::shared_mutex> lock(x_msgQueue);
+    WEBSOCKET_SESSION(INFO) << LOG_DESC("queueSize: ") << m_msgQueue.size();
 }
 
 void WsSession::drop(uint32_t _reason)
@@ -66,8 +76,7 @@ void WsSession::drop(uint32_t _reason)
         auto error = std::make_shared<Error>(
             WsError::SessionDisconnect, "the session has been disconnected");
 
-        std::shared_lock<std::shared_mutex> lock(x_callback);
-
+        ReadGuard l(x_callback);
         WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
                                 << LOG_KV("endpoint", m_endPoint)
                                 << LOG_KV("cb size", m_callbacks.size()) << LOG_KV("session", this);
@@ -90,7 +99,7 @@ void WsSession::drop(uint32_t _reason)
 
     // clear callbacks
     {
-        std::unique_lock<std::shared_mutex> lock(x_callback);
+        WriteGuard lock(x_callback);
         m_callbacks.clear();
     }
 
@@ -173,8 +182,7 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
 
 void WsSession::onMessage(bcos::boostssl::MessageFace::Ptr _message)
 {
-    auto seq = _message->seq();
-    auto callback = getAndRemoveRespCallback(seq, true, _message);
+    auto callback = getAndRemoveRespCallback(_message->seq(), true, _message);
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     // task enqueue
     m_threadPool->enqueue([_message, self, callback]() {
@@ -267,17 +275,14 @@ void WsSession::onWritePacket()
 
     // Note: check whether there is a large delay in sending
 #if 1
-    auto now = std::chrono::high_resolution_clock::now();
-    auto delayMS =
-        std::chrono::duration_cast<std::chrono::milliseconds>(now - msg->incomeTimePoint).count();
-
+    auto now = utcTime();
+    auto delayMS = now - msg->incomeTimePoint;
     if (delayMS >= MAX_MESSAGE_SEND_DELAY_MS)
     {
         m_msgDelayCount++;
     }
 
-    auto reportMS =
-        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_msgDelayReportMS).count();
+    auto reportMS = now - m_msgDelayReportMS;
     if (reportMS >= MESSAGE_SEND_DELAY_REPORT_MS)
     {
         if (m_msgDelayCount > 0)
@@ -340,7 +345,7 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
 {
     auto msg = std::make_shared<Message>();
     msg->buffer = _buffer;
-    msg->incomeTimePoint = std::chrono::high_resolution_clock::now();
+    msg->incomeTimePoint = utcTime();
 
     bool isEmpty = false;
     std::shared_ptr<bcos::bytes> buffer = nullptr;
@@ -348,7 +353,7 @@ void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
         std::unique_lock<boost::shared_mutex> lock(x_msgQueue);
         isEmpty = m_msgQueue.empty();
         // data to be sent is always enqueue first
-        m_msgQueue.push_back(msg);
+        m_msgQueue.emplace_back(msg);
         buffer = m_msgQueue.front()->buffer;
     }
 
@@ -457,7 +462,7 @@ void WsSession::asyncSendMessage(
 
 void WsSession::addRespCallback(const std::string& _seq, CallBack::Ptr _callback)
 {
-    std::unique_lock<std::shared_mutex> lock(x_callback);
+    WriteGuard lock(x_callback);
     m_callbacks[_seq] = _callback;
 }
 
@@ -473,10 +478,11 @@ WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(
 
     CallBack::Ptr callback = nullptr;
     {
-        std::unique_lock<std::shared_mutex> lock(x_callback);
+        UpgradableGuard l(x_callback);
         auto it = m_callbacks.find(_seq);
         if (it != m_callbacks.end())
         {
+            UpgradeGuard ul(l);
             callback = it->second;
             if (_remove)
             {
