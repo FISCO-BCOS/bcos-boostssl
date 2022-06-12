@@ -176,22 +176,21 @@ void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
         return drop(WsError::PacketError);
     }
 
-    _buffer.consume(_buffer.size());
+    m_buffer.consume(_buffer.size());
     onMessage(message);
 }
 
 void WsSession::onMessage(bcos::boostssl::MessageFace::Ptr _message)
 {
-    auto callback = getAndRemoveRespCallback(_message->seq(), true, _message);
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     // task enqueue
-    m_threadPool->enqueue([_message, self, callback]() {
+    m_threadPool->enqueue([_message, self]() {
         auto session = self.lock();
         if (!session)
         {
             return;
         }
-
+        auto callback = session->getAndRemoveRespCallback(_message->seq(), true, _message);
         if (callback)
         {
             if (callback->timer)
@@ -319,7 +318,6 @@ void WsSession::send(std::shared_ptr<bytes> _buffer)
 {
     auto msg = std::make_shared<Message>();
     msg->buffer = _buffer;
-    msg->incomeTimePoint = utcTime();
     {
         WriteGuard l(x_writeQueue);
         // data to be sent is always enqueue first
@@ -445,10 +443,10 @@ WsSession::CallBack::Ptr WsSession::getAndRemoveRespCallback(
         auto it = m_callbacks.find(_seq);
         if (it != m_callbacks.end())
         {
-            UpgradeGuard ul(l);
             callback = it->second;
             if (_remove)
             {
+                UpgradeGuard ul(l);
                 m_callbacks.erase(it);
             }
         }

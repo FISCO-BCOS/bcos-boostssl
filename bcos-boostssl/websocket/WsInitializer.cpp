@@ -61,8 +61,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     {
         threadPoolSize = 16;
     }
-
-    uint32_t iocThreadCount = threadPoolSize;
+    uint32_t iocThreadCount = _config->iocThreadCount();
     auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
     auto ioc = std::make_shared<boost::asio::io_context>(iocThreadCount);
     auto resolver =

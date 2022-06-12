@@ -76,7 +76,7 @@ private:
     uint32_t m_threadPoolSize{4};
 
     // thread count for ioc thread
-    uint32_t m_iocThreadCount{4};
+    uint32_t m_iocThreadCount{1};
 
     // time out for send message
     int32_t m_sendMsgTimeout{DEFAULT_MESSAGE_TIMEOUT_MS};

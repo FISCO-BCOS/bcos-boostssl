@@ -666,12 +666,12 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
             auto session = *ss.begin();
             ss.erase(ss.begin());
 
-            // auto self = shared_from_this();
+            auto self = shared_from_this();
             std::string endPoint = session->endPoint();
             auto moduleName = session->moduleName();
             // Note: should not pass session to the lamda operator[], this will lead to memory leak
             session->asyncSendMessage(msg, options,
-                [endPoint, moduleName, callback = respFunc](Error::Ptr _error,
+                [self, endPoint, moduleName, callback = respFunc](Error::Ptr _error,
                     std::shared_ptr<boostssl::MessageFace> _msg,
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != 0)
@@ -682,13 +682,13 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                             << LOG_KV("errorCode", _error->errorCode())
                             << LOG_KV("errorMessage", _error->errorMessage());
                         return;
-                        /*if (notRetryAgain(_error->errorCode()))
+                        if (notRetryAgain(_error->errorCode()))
                         {
                             return self->respFunc(_error, _msg, _session);
                         }
 
                         // retry
-                        return self->trySendMessageWithCB();*/
+                        return self->trySendMessageWithCB();
                     }
 
                     callback(_error, _msg, _session);

@@ -146,7 +146,7 @@ public:
 
     std::size_t msgQueueSize()
     {
-        bcos::ReadGuard lock(x_writeQueue);
+        bcos::ReadGuard l(x_writeQueue);
         return m_writeQueue.size();
     }
 
@@ -230,30 +230,12 @@ protected:
     struct Message
     {
         std::shared_ptr<bcos::bytes> buffer;
-        uint64_t incomeTimePoint;
     };
 
     // send message queue
     mutable bcos::SharedMutex x_writeQueue;
     std::priority_queue<std::shared_ptr<Message>> m_writeQueue;
     std::atomic_bool m_writing = {false};
-
-    // for send performance statistics
-    std::atomic<uint32_t> m_msgDelayCount = 0;
-    uint64_t m_msgDelayReportMS = 0;
-
-
-    uint64_t m_lastReadReportMS = 0;
-    std::atomic<int64_t> m_msgRecvSizeTotal = 0;
-    std::atomic<int64_t> m_msgRecvTimeTotal = 0;
-    std::atomic<int64_t> m_lastSecondRecvMsgSizeTotal = 0;
-    std::atomic<int64_t> m_lastSecondRecvMsgTimeTotal = 0;
-
-    uint64_t m_lastWriteReportMS = 0;
-    std::atomic<int64_t> m_msgWriteSizeTotal = 0;
-    std::atomic<int64_t> m_msgWriteTimeTotal = 0;
-    std::atomic<int64_t> m_lastSecondWriteMsgSizeTotal = 0;
-    std::atomic<int64_t> m_lastSecondWriteMsgTimeTotal = 0;
 
     std::shared_ptr<bcos::Timer> m_reporter;
 };
