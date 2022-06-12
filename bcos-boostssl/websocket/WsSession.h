@@ -32,6 +32,7 @@
 #include <boost/thread/thread.hpp>
 #include <atomic>
 #include <mutex>
+#include <queue>
 #include <shared_mutex>
 #include <unordered_map>
 
@@ -113,7 +114,11 @@ public:
     }
 
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
-    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc)
+    {
+        m_ioc = _ioc;
+        m_strand = std::make_shared<boost::asio::io_context::strand>(*m_ioc);
+    }
 
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
@@ -141,8 +146,8 @@ public:
 
     std::size_t msgQueueSize()
     {
-        boost::shared_lock<boost::shared_mutex> lock(x_msgQueue);
-        return m_msgQueue.size();
+        bcos::ReadGuard lock(x_writeQueue);
+        return m_writeQueue.size();
     }
 
     std::string nodeId() { return m_nodeId; }
@@ -175,7 +180,7 @@ protected:
     virtual void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
     virtual void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
-    virtual void onWrite(std::shared_ptr<bcos::bytes> _buffer);
+    virtual void send(std::shared_ptr<bcos::bytes> _buffer);
 
     // async read
     virtual void onReadPacket(boost::beast::flat_buffer& _buffer);
@@ -221,7 +226,7 @@ protected:
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
-
+    std::shared_ptr<boost::asio::io_context::strand> m_strand;
     struct Message
     {
         std::shared_ptr<bcos::bytes> buffer;
@@ -229,8 +234,9 @@ protected:
     };
 
     // send message queue
-    mutable boost::shared_mutex x_msgQueue;
-    std::list<std::shared_ptr<Message>> m_msgQueue;
+    mutable bcos::SharedMutex x_writeQueue;
+    std::priority_queue<std::shared_ptr<Message>> m_writeQueue;
+    std::atomic_bool m_writing = {false};
 
     // for send performance statistics
     std::atomic<uint32_t> m_msgDelayCount = 0;

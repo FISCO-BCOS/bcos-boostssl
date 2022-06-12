@@ -51,8 +51,8 @@ WsSession::WsSession(std::string _moduleName) : m_moduleName(_moduleName)
 void WsSession::report()
 {
     m_reporter->restart();
-    boost::shared_lock<boost::shared_mutex> lock(x_msgQueue);
-    WEBSOCKET_SESSION(INFO) << LOG_DESC("queueSize: ") << m_msgQueue.size();
+    boost::shared_lock<boost::shared_mutex> lock(x_writeQueue);
+    WEBSOCKET_SESSION(INFO) << LOG_DESC("queueSize: ") << m_writeQueue.size();
 }
 
 void WsSession::drop(uint32_t _reason)
@@ -247,56 +247,24 @@ void WsSession::onRead(boost::system::error_code _ec, std::size_t)
 
 void WsSession::onWritePacket()
 {
-    std::shared_ptr<Message> msg = nullptr;
-    std::size_t nMsgQueueSize = 0;
+    if (m_writing)
     {
-        bool isEmpty = false;
-        std::shared_ptr<bcos::bytes> buffer = nullptr;
-        {
-            boost::unique_lock<boost::shared_mutex> lock(x_msgQueue);
-            msg = m_msgQueue.front();
-            // remove the front ele from the queue, it has been sent
-            // m_msgQueue.erase(m_msgQueue.begin());
-            m_msgQueue.pop_front();
-            nMsgQueueSize = m_msgQueue.size();
-            isEmpty = m_msgQueue.empty();
-            if (!isEmpty)
-            {
-                buffer = m_msgQueue.front()->buffer;
-            }
-        }
-
-        // send the next message if any
-        if (!isEmpty)
-        {
-            asyncWrite(buffer);
-        }
+        return;
     }
-
-    // Note: check whether there is a large delay in sending
-#if 1
-    auto now = utcTime();
-    auto delayMS = now - msg->incomeTimePoint;
-    if (delayMS >= MAX_MESSAGE_SEND_DELAY_MS)
+    WriteGuard l(x_writeQueue);
+    if (m_writing)
     {
-        m_msgDelayCount++;
+        return;
     }
-
-    auto reportMS = now - m_msgDelayReportMS;
-    if (reportMS >= MESSAGE_SEND_DELAY_REPORT_MS)
+    if (m_writeQueue.empty())
     {
-        if (m_msgDelayCount > 0)
-        {
-            WEBSOCKET_SESSION(WARNING)
-                << LOG_BADGE("onWrite") << LOG_DESC("message sending in large delay")
-                << LOG_KV("endpoint", endPoint()) << LOG_KV("nDelayCount", m_msgDelayCount)
-                << LOG_KV("nMsgQueueSize", nMsgQueueSize) << LOG_KV("timeInterval", reportMS);
-        }
-
-        m_msgDelayCount = 0;
-        m_msgDelayReportMS = now;
+        m_writing = false;
+        return;
     }
-#endif
+    m_writing = true;
+    auto msg = m_writeQueue.top();
+    m_writeQueue.pop();
+    asyncWrite(msg->buffer);
 }
 
 void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
@@ -315,21 +283,27 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
         // Note: add one simple way to monitor message sending latency
         // Note: the lamda[] should not include session directly, this will cause memory leak
         m_wsStreamDelegate->asyncWrite(
-            *_buffer, [self, _buffer](boost::beast::error_code _ec, std::size_t) {
-                auto session = self.lock();
-                if (!session)
-                {
-                    return;
-                }
-                if (_ec)
-                {
-                    BCOS_LOG(WARNING) << LOG_BADGE(session->moduleName()) << LOG_BADGE("Session")
+            *_buffer, boost::asio::bind_executor(
+                          *m_strand, [self, _buffer](boost::beast::error_code _ec, std::size_t) {
+                              auto session = self.lock();
+                              if (!session)
+                              {
+                                  return;
+                              }
+                              if (_ec)
+                              {
+                                  BCOS_LOG(WARNING)
+                                      << LOG_BADGE(session->moduleName()) << LOG_BADGE("Session")
                                       << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
                                       << LOG_KV("endpoint", session->endPoint());
-                    return session->drop(WsError::WriteError);
-                }
-                session->onWritePacket();
-            });
+                                  return session->drop(WsError::WriteError);
+                              }
+                              if (session->m_writing)
+                              {
+                                  session->m_writing = false;
+                              }
+                              session->onWritePacket();
+                          }));
     }
     catch (const std::exception& _e)
     {
@@ -341,28 +315,17 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
     }
 }
 
-void WsSession::onWrite(std::shared_ptr<bytes> _buffer)
+void WsSession::send(std::shared_ptr<bytes> _buffer)
 {
     auto msg = std::make_shared<Message>();
     msg->buffer = _buffer;
     msg->incomeTimePoint = utcTime();
-
-    bool isEmpty = false;
-    std::shared_ptr<bcos::bytes> buffer = nullptr;
     {
-        std::unique_lock<boost::shared_mutex> lock(x_msgQueue);
-        isEmpty = m_msgQueue.empty();
+        WriteGuard l(x_writeQueue);
         // data to be sent is always enqueue first
-        m_msgQueue.emplace_back(msg);
-        buffer = m_msgQueue.front()->buffer;
+        m_writeQueue.push(msg);
     }
-
-    // no writing, send it
-    if (isEmpty)
-    {
-        // we are not currently writing, so send this immediately
-        asyncWrite(buffer);
-    }
+    onWritePacket();
 }
 
 /**
@@ -456,7 +419,7 @@ void WsSession::asyncSendMessage(
 
     {
         boost::asio::post(m_wsStreamDelegate->tcpStream().get_executor(),
-            boost::beast::bind_front_handler(&WsSession::onWrite, shared_from_this(), buffer));
+            boost::beast::bind_front_handler(&WsSession::send, shared_from_this(), buffer));
     }
 }
 
