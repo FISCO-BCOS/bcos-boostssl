@@ -41,7 +41,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
         std::shared_ptr<WsStreamDelegate>, std::shared_ptr<std::string>)>
         _callback)
 {
-    auto ioc = m_ioc;
+    auto ioc = m_ioservicePool->getIOService();
     auto ctx = m_ctx;
 
     std::string endpoint = _host + ":" + std::to_string(_port);

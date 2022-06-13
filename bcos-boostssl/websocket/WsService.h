@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include "IOServicePool.h"
 #include <bcos-boostssl/httpserver/HttpServer.h>
 #include <bcos-boostssl/interfaces/MessageFace.h>
 #include <bcos-boostssl/websocket/Common.h>
@@ -77,10 +78,6 @@ public:
     void syncConnectToEndpoints(EndPointsPtr _peers);
 
 public:
-    void startIocThread();
-    void stopIocThread();
-
-public:
     std::shared_ptr<WsSession> newSession(
         std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _nodeId);
     std::shared_ptr<WsSession> getSession(const std::string& _endPoint);
@@ -124,10 +121,6 @@ public:
     {
         m_sessionFactory = _sessionFactory;
     }
-
-    std::size_t iocThreadCount() const { return m_iocThreadCount; }
-    void setIocThreadCount(std::size_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
-
     int32_t waitConnectFinishTimeout() const { return m_waitConnectFinishTimeout; }
     void setWaitConnectFinishTimeout(int32_t _timeout) { m_waitConnectFinishTimeout = _timeout; }
 
@@ -140,8 +133,7 @@ public:
         m_threadPool = _threadPool;
     }
 
-    std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
-    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+    void setIOServicePool(IOServicePool::Ptr _ioservicePool) { m_ioservicePool = _ioservicePool; }
 
     std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
     void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
@@ -222,12 +214,8 @@ private:
 
     // ws connector
     std::shared_ptr<WsConnector> m_connector;
-    // io context
-    std::shared_ptr<boost::asio::io_context> m_ioc;
     // ssl context
     std::shared_ptr<boost::asio::ssl::context> m_ctx = nullptr;
-    // thread for ioc
-    std::shared_ptr<std::vector<std::thread>> m_iocThreads;
     // reconnect timer
     std::shared_ptr<boost::asio::deadline_timer> m_reconnect;
     // heartbeat timer
@@ -236,7 +224,6 @@ private:
     std::shared_ptr<bcos::boostssl::http::HttpServer> m_httpServer;
 
 private:
-    std::size_t m_iocThreadCount;
     // mutex for m_sessions
     mutable boost::shared_mutex x_mutex;
     // all active sessions
@@ -255,6 +242,8 @@ private:
     std::vector<HandshakeHandler> m_handshakeHandlers;
     // sessionFactory
     WsSessionFactory::Ptr m_sessionFactory;
+
+    IOServicePool::Ptr m_ioservicePool;
 };
 
 }  // namespace ws
