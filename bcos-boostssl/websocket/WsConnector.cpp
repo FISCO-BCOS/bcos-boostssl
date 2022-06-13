@@ -79,8 +79,7 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                 << LOG_KV("endPoint", endpoint);
 
             // create raw tcp stream
-            auto rawStream =
-                std::make_shared<boost::beast::tcp_stream>(boost::asio::make_strand(*ioc));
+            auto rawStream = std::make_shared<boost::beast::tcp_stream>(*ioc);
             // rawStream->expires_after(std::chrono::seconds(30));
 
             // async connect

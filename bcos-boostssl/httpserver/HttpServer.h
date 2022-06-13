@@ -19,8 +19,8 @@
  */
 #pragma once
 
-#include "bcos-boostssl/websocket/IOServicePool.h"
 #include <bcos-boostssl/httpserver/HttpSession.h>
+#include <bcos-utilities/IOServicePool.h>
 #include <exception>
 #include <thread>
 namespace bcos
@@ -92,7 +92,7 @@ public:
 
     std::string moduleName() { return m_moduleName; }
 
-    void setIOServicePool(bcos::boostssl::ws::IOServicePool::Ptr _ioservicePool)
+    void setIOServicePool(bcos::IOServicePool::Ptr _ioservicePool)
     {
         m_ioservicePool = _ioservicePool;
     }
@@ -111,7 +111,7 @@ private:
 
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     std::shared_ptr<HttpStreamFactory> m_httpStreamFactory;
-    bcos::boostssl::ws::IOServicePool::Ptr m_ioservicePool;
+    bcos::IOServicePool::Ptr m_ioservicePool;
 };
 
 // The http server factory

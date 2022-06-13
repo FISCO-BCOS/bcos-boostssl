@@ -18,12 +18,13 @@
  * @date 2021-10-31
  */
 
-#include "RateLimiter.h"
 #include "bcos-boostssl/websocket/WsInitializer.h"
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/BoostLogInitializer.h>
 #include <bcos-utilities/Common.h>
+#include <bcos-utilities/RateLimiter.h>
 #include <bcos-utilities/ThreadPool.h>
 #include <string>
 
@@ -96,6 +97,11 @@ int main(int argc, char** argv)
     int64_t packetQPS = (qps) / (payLoadSize * 8);
     std::cout << "### packetQPS: " << packetQPS << std::endl;
 
+    auto logInitializer = std::make_shared<BoostLogInitializer>();
+    std::string configFilePath = "config.ini";
+    boost::property_tree::ptree pt;
+    boost::property_tree::read_ini(configFilePath, pt);
+    logInitializer->initLog(pt);
 
     std::string test_module_name = "testClient";
     TEST_LOG(INFO, test_module_name) << LOG_DESC("echo-client-sample") << LOG_KV("ip", host)

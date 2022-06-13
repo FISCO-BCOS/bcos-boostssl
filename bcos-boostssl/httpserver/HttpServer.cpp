@@ -98,8 +98,6 @@ void HttpServer::stop()
 void HttpServer::doAccept()
 {
     // The new connection gets its own strand
-    /*m_acceptor->async_accept(boost::asio::make_strand(*(m_ioservicePool->getIOService())),
-        boost::beast::bind_front_handler(&HttpServer::onAccept, shared_from_this()));*/
     m_acceptor->async_accept(*(m_ioservicePool->getIOService()),
         boost::beast::bind_front_handler(&HttpServer::onAccept, shared_from_this()));
 }
@@ -114,7 +112,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
     }
     auto localEndpoint = socket.local_endpoint();
     auto remoteEndpoint = socket.remote_endpoint();
-    // socket.set_option(boost::asio::ip::tcp::no_delay(true));
+    socket.set_option(boost::asio::ip::tcp::no_delay(true));
 
     HTTP_SERVER(INFO) << LOG_BADGE("accept") << LOG_KV("local_endpoint", socket.local_endpoint())
                       << LOG_KV("remote_endpoint", socket.remote_endpoint());
@@ -217,8 +215,7 @@ HttpServer::Ptr HttpServerFactory::buildHttpServer(const std::string& _listenIP,
     std::string m_moduleName = _moduleName;
     // create httpserver and launch a listening port
     auto server = std::make_shared<HttpServer>(_listenIP, _listenPort, _moduleName);
-    auto acceptor =
-        std::make_shared<boost::asio::ip::tcp::acceptor>(boost::asio::make_strand(*_ioc));
+    auto acceptor = std::make_shared<boost::asio::ip::tcp::acceptor>((*_ioc));
     auto httpStreamFactory = std::make_shared<HttpStreamFactory>();
     server->setCtx(_ctx);
     server->setAcceptor(acceptor);

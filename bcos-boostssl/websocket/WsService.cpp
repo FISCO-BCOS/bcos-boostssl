@@ -267,8 +267,7 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
 void WsService::reconnect()
 {
     auto self = std::weak_ptr<WsService>(shared_from_this());
-    m_reconnect = std::make_shared<boost::asio::deadline_timer>(
-        boost::asio::make_strand(*(m_ioservicePool->getIOService())),
+    m_reconnect = std::make_shared<boost::asio::deadline_timer>(*(m_ioservicePool->getIOService()),
         boost::posix_time::milliseconds(m_config->reconnectPeriod()));
 
     m_reconnect->async_wait([self, this](const boost::system::error_code&) {
@@ -621,7 +620,6 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                             << LOG_DESC("callback error") << LOG_KV("endpoint", endPoint)
                             << LOG_KV("errorCode", _error->errorCode())
                             << LOG_KV("errorMessage", _error->errorMessage());
-                        return;
                         if (notRetryAgain(_error->errorCode()))
                         {
                             return self->respFunc(_error, _msg, _session);

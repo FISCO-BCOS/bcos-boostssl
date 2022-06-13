@@ -17,7 +17,6 @@
  * @author: octopus
  * @date 2021-09-29
  */
-#include "IOServicePool.h"
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/context/NodeInfoTools.h>
 #include <bcos-boostssl/httpserver/Common.h>
@@ -30,6 +29,7 @@
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-boostssl/websocket/WsTools.h>
 #include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/IOServicePool.h>
 #include <bcos-utilities/ThreadPool.h>
 #include <cstddef>
 #include <memory>
@@ -66,8 +66,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto ioServicePool = std::make_shared<IOServicePool>();
     _wsService->setIOServicePool(ioServicePool);
 
-    auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(
-        (boost::asio::make_strand(*(ioServicePool->getIOService()))));
+    auto resolver =
+        std::make_shared<boost::asio::ip::tcp::resolver>((*(ioServicePool->getIOService())));
     auto connector = std::make_shared<WsConnector>(resolver);
     connector->setIOServicePool(ioServicePool);
 

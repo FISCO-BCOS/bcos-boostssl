@@ -43,7 +43,8 @@ using namespace bcos::boostssl::http;
 WsSession::WsSession(std::string _moduleName) : m_moduleName(_moduleName)
 {
     WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
-    m_reporter = std::make_shared<bcos::Timer>(1000, "queueReporter");
+    // print the queueSize every 10s
+    m_reporter = std::make_shared<bcos::Timer>(10000, "queueReporter");
     m_reporter->registerTimeoutHandler([this]() { report(); });
     m_reporter->start();
 }
@@ -51,8 +52,8 @@ WsSession::WsSession(std::string _moduleName) : m_moduleName(_moduleName)
 void WsSession::report()
 {
     m_reporter->restart();
-    boost::shared_lock<boost::shared_mutex> lock(x_writeQueue);
-    WEBSOCKET_SESSION(INFO) << LOG_DESC("queueSize: ") << m_writeQueue.size();
+    ReadGuard lock(x_writeQueue);
+    WEBSOCKET_SESSION(INFO) << m_endPoint << LOG_DESC(" queueSize: ") << m_writeQueue.size();
 }
 
 void WsSession::drop(uint32_t _reason)
@@ -282,27 +283,25 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
         // Note: add one simple way to monitor message sending latency
         // Note: the lamda[] should not include session directly, this will cause memory leak
         m_wsStreamDelegate->asyncWrite(
-            *_buffer, boost::asio::bind_executor(
-                          *m_strand, [self, _buffer](boost::beast::error_code _ec, std::size_t) {
-                              auto session = self.lock();
-                              if (!session)
-                              {
-                                  return;
-                              }
-                              if (_ec)
-                              {
-                                  BCOS_LOG(WARNING)
-                                      << LOG_BADGE(session->moduleName()) << LOG_BADGE("Session")
+            *_buffer, [self, _buffer](boost::beast::error_code _ec, std::size_t) {
+                auto session = self.lock();
+                if (!session)
+                {
+                    return;
+                }
+                if (_ec)
+                {
+                    BCOS_LOG(WARNING) << LOG_BADGE(session->moduleName()) << LOG_BADGE("Session")
                                       << LOG_BADGE("asyncWrite") << LOG_KV("message", _ec.message())
                                       << LOG_KV("endpoint", session->endPoint());
-                                  return session->drop(WsError::WriteError);
-                              }
-                              if (session->m_writing)
-                              {
-                                  session->m_writing = false;
-                              }
-                              session->onWritePacket();
-                          }));
+                    return session->drop(WsError::WriteError);
+                }
+                if (session->m_writing)
+                {
+                    session->m_writing = false;
+                }
+                session->onWritePacket();
+            });
     }
     catch (const std::exception& _e)
     {
@@ -399,7 +398,7 @@ void WsSession::asyncSendMessage(
         {
             // create new timer to handle timeout
             auto timer = std::make_shared<boost::asio::deadline_timer>(
-                boost::asio::make_strand(*m_ioc), boost::posix_time::milliseconds(timeout));
+                *m_ioc, boost::posix_time::milliseconds(timeout));
 
             callback->timer = timer;
             auto self = std::weak_ptr<WsSession>(shared_from_this());

@@ -114,11 +114,7 @@ public:
     }
 
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
-    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc)
-    {
-        m_ioc = _ioc;
-        m_strand = std::make_shared<boost::asio::io_context::strand>(*m_ioc);
-    }
+    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
 
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
@@ -226,7 +222,6 @@ protected:
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
-    std::shared_ptr<boost::asio::io_context::strand> m_strand;
     struct Message
     {
         std::shared_ptr<bcos::bytes> buffer;
