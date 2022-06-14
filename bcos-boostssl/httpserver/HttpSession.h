@@ -180,18 +180,13 @@ public:
                             << LOG_KV("keep_alive", _httpRequest.keep_alive())
                             << LOG_KV("need_eof", _httpRequest.need_eof());
 
-        std::chrono::high_resolution_clock::time_point start =
-            std::chrono::high_resolution_clock::now();
-
+        auto startT = utcTime();
         unsigned version = _httpRequest.version();
         auto self = std::weak_ptr<HttpSession>(shared_from_this());
         if (m_httpReqHandler)
         {
             std::string request = _httpRequest.body();
-            m_httpReqHandler(request, [this, self, version, start](const std::string& _content) {
-                std::chrono::high_resolution_clock::time_point end =
-                    std::chrono::high_resolution_clock::now();
-
+            m_httpReqHandler(request, [this, self, version, startT](const std::string& _content) {
                 auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
                 auto session = self.lock();
                 if (!session)
@@ -200,12 +195,10 @@ public:
                 }
                 // put the response into the queue and waiting to be send
                 session->queue()->enqueue(resp);
-
-                auto ms =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("response")
-                                    << LOG_KV("body", resp->body())
-                                    << LOG_KV("keep_alive", resp->keep_alive()) << LOG_KV("ms", ms);
+                HTTP_SESSION(DEBUG)
+                    << LOG_BADGE("handleRequest") << LOG_DESC("response")
+                    << LOG_KV("body", resp->body()) << LOG_KV("keep_alive", resp->keep_alive())
+                    << LOG_KV("timeCost", (utcTime() - startT));
             });
         }
         else

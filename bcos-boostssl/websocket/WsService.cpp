@@ -64,7 +64,10 @@ void WsService::start()
     m_running = true;
 
     // start ioc thread
-    startIocThread();
+    if (m_ioservicePool)
+    {
+        m_ioservicePool->start();
+    }
 
     // start as server
     if (m_config->asServer())
@@ -104,9 +107,9 @@ void WsService::stop()
     m_running = false;
 
     // stop ioc thread
-    if (m_ioc && !m_ioc->stopped())
+    if (m_ioservicePool)
     {
-        m_ioc->stop();
+        m_ioservicePool->stop();
     }
 
     // cancel reconnect task
@@ -121,71 +124,7 @@ void WsService::stop()
         m_heartbeat->cancel();
     }
 
-    stopIocThread();
-
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
-}
-
-void WsService::startIocThread()
-{
-    std::size_t threads =
-        m_iocThreadCount > 0 ? m_iocThreadCount : std::thread::hardware_concurrency();
-    if (!threads)
-    {
-        threads = 4;
-    }
-
-    m_iocThreads = std::make_shared<std::vector<std::thread>>();
-    m_iocThreads->reserve(threads);
-
-    for (std::size_t i = 0; i < threads; i++)
-    {
-        m_iocThreads->emplace_back([&, i] {
-            bcos::pthread_setThreadName("t_ws_ioc_" + std::to_string(i));
-            while (m_running)
-            {
-                try
-                {
-                    m_ioc->run();
-                }
-                catch (const std::exception& e)
-                {
-                    WEBSOCKET_SERVICE(WARNING)
-                        << LOG_BADGE("startIocThread") << LOG_DESC("Exception in IOC Thread:")
-                        << boost::diagnostic_information(e);
-                }
-
-                if (m_running && m_ioc->stopped())
-                {
-                    m_ioc->restart();
-                }
-            }
-
-            WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread") << "IOC thread exit";
-        });
-    }
-
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("startIocThread")
-                            << LOG_KV("ioc thread count", m_iocThreads->size());
-}
-
-void WsService::stopIocThread()
-{
-    // stop io threads
-    if (m_iocThreads && !m_iocThreads->empty())
-    {
-        for (auto& t : *m_iocThreads)
-        {
-            if (t.get_id() != std::this_thread::get_id())
-            {
-                t.join();
-            }
-            else
-            {
-                t.detach();
-            }
-        }
-    }
 }
 
 void WsService::reportConnectedNodes()
@@ -193,7 +132,7 @@ void WsService::reportConnectedNodes()
     auto ss = sessions();
     WEBSOCKET_SERVICE(INFO) << LOG_DESC("connected nodes") << LOG_KV("count", ss.size());
 
-    m_heartbeat = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
+    m_heartbeat = std::make_shared<boost::asio::deadline_timer>(*(m_ioservicePool->getIOService()),
         boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
     auto self = std::weak_ptr<WsService>(shared_from_this());
     m_heartbeat->async_wait([self](const boost::system::error_code&) {
@@ -328,7 +267,7 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
 void WsService::reconnect()
 {
     auto self = std::weak_ptr<WsService>(shared_from_this());
-    m_reconnect = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
+    m_reconnect = std::make_shared<boost::asio::deadline_timer>(*(m_ioservicePool->getIOService()),
         boost::posix_time::milliseconds(m_config->reconnectPeriod()));
 
     m_reconnect->async_wait([self, this](const boost::system::error_code&) {
@@ -411,7 +350,7 @@ std::shared_ptr<WsSession> WsService::newSession(
     auto session = m_sessionFactory->createSession(m_moduleName);
 
     session->setWsStreamDelegate(_wsStreamDelegate);
-    session->setIoc(ioc());
+    session->setIoc(m_ioservicePool->getIOService());
     session->setThreadPool(threadPool());
     session->setMessageFactory(messageFactory());
     session->setEndPoint(endPoint);
@@ -646,8 +585,6 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
 
             auto session = *ss.begin();
             ss.erase(ss.begin());
-
-            auto self = shared_from_this();
             session->asyncSendMessage(msg, options);
         }
 
@@ -669,18 +606,20 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
             ss.erase(ss.begin());
 
             auto self = shared_from_this();
+            std::string endPoint = session->endPoint();
+            auto moduleName = session->moduleName();
+            // Note: should not pass session to the lamda operator[], this will lead to memory leak
             session->asyncSendMessage(msg, options,
-                [self, session](Error::Ptr _error, std::shared_ptr<boostssl::MessageFace> _msg,
+                [self, endPoint, moduleName, callback = respFunc](Error::Ptr _error,
+                    std::shared_ptr<boostssl::MessageFace> _msg,
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != 0)
                     {
-                        std::string m_moduleName = session->moduleName();
-                        WEBSOCKET_SERVICE(WARNING)
-                            << LOG_BADGE("asyncSendMessage") << LOG_DESC("callback error")
-                            << LOG_KV("endpoint", session->endPoint())
+                        BOOST_SSL_LOG(WARNING)
+                            << LOG_BADGE(moduleName) << LOG_BADGE("asyncSendMessage")
+                            << LOG_DESC("callback error") << LOG_KV("endpoint", endPoint)
                             << LOG_KV("errorCode", _error->errorCode())
                             << LOG_KV("errorMessage", _error->errorMessage());
-
                         if (notRetryAgain(_error->errorCode()))
                         {
                             return self->respFunc(_error, _msg, _session);
@@ -690,7 +629,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                         return self->trySendMessageWithCB();
                     }
 
-                    self->respFunc(_error, _msg, _session);
+                    callback(_error, _msg, _session);
                 });
         }
     };
