@@ -24,6 +24,7 @@
 #include <bcos-boostssl/websocket/WsStream.h>
 #include <bcos-utilities/Common.h>
 #include <bcos-utilities/ThreadPool.h>
+#include <bcos-utilities/Timer.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
@@ -31,6 +32,7 @@
 #include <boost/thread/thread.hpp>
 #include <atomic>
 #include <mutex>
+#include <queue>
 #include <shared_mutex>
 #include <unordered_map>
 
@@ -51,7 +53,11 @@ public:
 public:
     WsSession(std::string _moduleName = "DEFAULT");
 
-    virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
+    virtual ~WsSession()
+    {
+        WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this);
+        m_reporter->stop();
+    }
 
     void drop(uint32_t _reason);
 
@@ -136,8 +142,8 @@ public:
 
     std::size_t msgQueueSize()
     {
-        boost::shared_lock<boost::shared_mutex> lock(x_msgQueue);
-        return m_msgQueue.size();
+        bcos::ReadGuard l(x_writeQueue);
+        return m_writeQueue.size();
     }
 
     std::string nodeId() { return m_nodeId; }
@@ -159,22 +165,25 @@ protected:
         RespCallBack respCallBack;
         std::shared_ptr<boost::asio::deadline_timer> timer;
     };
-    void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
+    virtual void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
     CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true,
         std::shared_ptr<MessageFace> _message = nullptr);
-    void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
+    virtual void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
-    void onWsAccept(boost::beast::error_code _ec);
+    virtual void onWsAccept(boost::beast::error_code _ec);
 
-    void asyncRead();
-    void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
+    virtual void asyncRead();
+    virtual void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
-    void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
-    void onWrite(std::shared_ptr<bcos::bytes> _buffer);
+    virtual void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
+    virtual void send(std::shared_ptr<bcos::bytes> _buffer);
 
     // async read
-    void onReadPacket(boost::beast::flat_buffer& _buffer);
+    virtual void onReadPacket(boost::beast::flat_buffer& _buffer);
     void onWritePacket();
+
+    virtual void report();
+
 protected:
     // flag for message that need to check respond packet like p2pmessage
     bool m_needCheckRspPacket = false;
@@ -199,7 +208,7 @@ protected:
     //
     WsStreamDelegate::Ptr m_wsStreamDelegate;
     // callbacks
-    std::shared_mutex x_callback;
+    mutable bcos::SharedMutex x_callback;
     std::unordered_map<std::string, CallBack::Ptr> m_callbacks;
 
     // callback handler
@@ -213,36 +222,17 @@ protected:
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
-
     struct Message
     {
         std::shared_ptr<bcos::bytes> buffer;
-        std::chrono::time_point<std::chrono::high_resolution_clock> incomeTimePoint;
     };
 
     // send message queue
-    mutable boost::shared_mutex x_msgQueue;
-    std::list<std::shared_ptr<Message>> m_msgQueue;
+    mutable bcos::SharedMutex x_writeQueue;
+    std::priority_queue<std::shared_ptr<Message>> m_writeQueue;
+    std::atomic_bool m_writing = {false};
 
-    // for send performance statistics
-    std::atomic<uint32_t> m_msgDelayCount = 0;
-    std::chrono::time_point<std::chrono::high_resolution_clock> m_msgDelayReportMS =
-        std::chrono::high_resolution_clock::now();
-
-
-    std::chrono::time_point<std::chrono::high_resolution_clock> m_lastReadReportMS =
-        std::chrono::high_resolution_clock::now();
-    std::atomic<int64_t> m_msgRecvSizeTotal = 0;
-    std::atomic<int64_t> m_msgRecvTimeTotal = 0;
-    std::atomic<int64_t> m_lastSecondRecvMsgSizeTotal = 0;
-    std::atomic<int64_t> m_lastSecondRecvMsgTimeTotal = 0;
-
-    std::chrono::time_point<std::chrono::high_resolution_clock> m_lastWriteReportMS =
-        std::chrono::high_resolution_clock::now();
-    std::atomic<int64_t> m_msgWriteSizeTotal = 0;
-    std::atomic<int64_t> m_msgWriteTimeTotal = 0;
-    std::atomic<int64_t> m_lastSecondWriteMsgSizeTotal = 0;
-    std::atomic<int64_t> m_lastSecondWriteMsgTimeTotal = 0;
+    std::shared_ptr<bcos::Timer> m_reporter;
 };
 
 class WsSessionFactory

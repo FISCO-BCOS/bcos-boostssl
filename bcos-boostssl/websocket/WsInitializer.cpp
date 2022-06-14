@@ -29,6 +29,7 @@
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-boostssl/websocket/WsTools.h>
 #include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/IOServicePool.h>
 #include <bcos-utilities/ThreadPool.h>
 #include <cstddef>
 #include <memory>
@@ -61,13 +62,15 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     {
         threadPoolSize = 16;
     }
-
-    uint32_t iocThreadCount = threadPoolSize;
     auto wsServiceWeakPtr = std::weak_ptr<WsService>(_wsService);
-    auto ioc = std::make_shared<boost::asio::io_context>(iocThreadCount);
+    auto ioServicePool = std::make_shared<IOServicePool>();
+    _wsService->setIOServicePool(ioServicePool);
+
     auto resolver =
-        std::make_shared<boost::asio::ip::tcp::resolver>((boost::asio::make_strand(*ioc)));
-    auto connector = std::make_shared<WsConnector>(resolver, ioc);
+        std::make_shared<boost::asio::ip::tcp::resolver>((*(ioServicePool->getIOService())));
+    auto connector = std::make_shared<WsConnector>(resolver);
+    connector->setIOServicePool(ioServicePool);
+
     auto builder = std::make_shared<WsStreamDelegateBuilder>();
     auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
 
@@ -107,8 +110,9 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         }
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
-        auto httpServer = httpServerFactory->buildHttpServer(
-            _config->listenIP(), _config->listenPort(), ioc, ctx, m_moduleName);
+        auto httpServer = httpServerFactory->buildHttpServer(_config->listenIP(),
+            _config->listenPort(), ioServicePool->getIOService(), ctx, m_moduleName);
+        httpServer->setIOServicePool(ioServicePool);
         httpServer->setDisableSsl(_config->disableSsl());
         httpServer->setThreadPool(threadPool);
         httpServer->setWsUpgradeHandler(
@@ -166,9 +170,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     connector->setCtx(ctx);
     connector->setBuilder(builder);
 
-    _wsService->setIoc(ioc);
     _wsService->setCtx(ctx);
-    _wsService->setIocThreadCount(iocThreadCount);
     _wsService->setConfig(_config);
     _wsService->setConnector(connector);
     _wsService->setThreadPool(threadPool);
@@ -181,7 +183,6 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         << LOG_KV("disableSsl", _config->disableSsl()) << LOG_KV("server", _config->asServer())
         << LOG_KV("client", _config->asClient())
         << LOG_KV("threadPoolSize", _config->threadPoolSize())
-        << LOG_KV("iocThreadCount", _config->iocThreadCount())
         << LOG_KV("maxMsgSize", _config->maxMsgSize())
         << LOG_KV("msgTimeOut", _config->sendMsgTimeout())
         << LOG_KV("connected peers", _config->connectPeers() ? _config->connectPeers()->size() : 0);
