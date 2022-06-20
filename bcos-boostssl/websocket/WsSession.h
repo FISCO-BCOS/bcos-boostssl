@@ -183,6 +183,7 @@ protected:
     void onWritePacket();
 
     virtual void report();
+    virtual void startReporter();
 
 protected:
     // flag for message that need to check respond packet like p2pmessage

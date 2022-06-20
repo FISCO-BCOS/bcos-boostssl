@@ -43,9 +43,21 @@ using namespace bcos::boostssl::http;
 WsSession::WsSession(std::string _moduleName) : m_moduleName(_moduleName)
 {
     WEBSOCKET_SESSION(INFO) << LOG_KV("[NEWOBJ][WSSESSION]", this);
+}
+
+void WsSession::startReporter()
+{
     // print the queueSize every 10s
     m_reporter = std::make_shared<bcos::Timer>(10000, "queueReporter");
-    m_reporter->registerTimeoutHandler([this]() { report(); });
+    auto self = std::weak_ptr<WsSession>(shared_from_this());
+    m_reporter->registerTimeoutHandler([self]() {
+        auto session = self.lock();
+        if (!session)
+        {
+            return;
+        }
+        session->report();
+    });
     m_reporter->start();
 }
 
@@ -126,7 +138,7 @@ void WsSession::startAsClient()
         auto session = shared_from_this();
         m_connectHandler(nullptr, session);
     }
-
+    startReporter();
     // read message
     asyncRead();
 
@@ -140,6 +152,7 @@ void WsSession::startAsServer(HttpRequest _httpRequest)
 {
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("startAsServer") << LOG_DESC("start websocket handshake")
                             << LOG_KV("endPoint", m_endPoint) << LOG_KV("session", this);
+    startReporter();
     m_wsStreamDelegate->asyncAccept(
         _httpRequest, std::bind(&WsSession::onWsAccept, shared_from_this(), std::placeholders::_1));
 }
