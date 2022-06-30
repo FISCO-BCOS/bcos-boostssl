@@ -22,6 +22,7 @@
 #include <bcos-boostssl/httpserver/HttpQueue.h>
 #include <bcos-boostssl/httpserver/HttpStream.h>
 #include <bcos-utilities/BoostLog.h>
+#include <bcos-utilities/ThreadPool.h>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/strand.hpp>
@@ -44,7 +45,10 @@ public:
     using Ptr = std::shared_ptr<HttpSession>;
 
 public:
-    HttpSession() { HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this); }
+    HttpSession(std::string _moduleName) : m_moduleName(_moduleName)
+    {
+        HTTP_SESSION(DEBUG) << LOG_KV("[NEWOBJ][HTTPSESSION]", this);
+    }
 
     virtual ~HttpSession()
     {
@@ -63,7 +67,7 @@ public:
     {
         m_parser.emplace();
         // set limit to http request size, 100m
-        m_parser->body_limit(100 * 1024 * 1024);
+        m_parser->body_limit(PARSER_BODY_LIMITATION);
 
         auto session = shared_from_this();
         m_httpStream->asyncRead(m_buffer, m_parser,
@@ -92,18 +96,25 @@ public:
             return;
         }
 
+        auto self = std::weak_ptr<HttpSession>(shared_from_this());
         if (boost::beast::websocket::is_upgrade(m_parser->get()))
         {
             HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
             if (m_wsUpgradeHandler)
             {
-                m_wsUpgradeHandler(m_httpStream, m_parser->release());
+                auto httpSession = self.lock();
+                if (!httpSession)
+                {
+                    return;
+                }
+                m_wsUpgradeHandler(m_httpStream, m_parser->release(), httpSession->nodeId());
             }
             else
             {
-                HTTP_SESSION(WARNING)
-                    << LOG_BADGE("onRead")
-                    << LOG_DESC("the session will be closed for unsupported websocket upgrade");
+                HTTP_SESSION(WARNING) << LOG_BADGE("onRead")
+                                      << LOG_DESC(
+                                             "the session will be closed for "
+                                             "unsupported websocket upgrade");
                 // doClose();
                 return;
             }
@@ -112,17 +123,7 @@ public:
 
         HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("receive http request");
 
-        auto self = std::weak_ptr<HttpSession>(shared_from_this());
-        handleRequest(m_parser->release(), [self](auto&& msg) {
-            auto session = self.lock();
-            if (!session)
-            {
-                return;
-            }
-
-            // put the response into the queue and waiting to be send
-            session->queue()->enqueue(msg);
-        });
+        handleRequest(m_parser->release());
 
         if (!m_queue->isFull())
         {
@@ -168,11 +169,9 @@ public:
     /**
      * @brief: handle http request and send the response
      * @param req: http request object
-     * @param send: http response sender
      * @return void:
      */
-    template <class Send>
-    void handleRequest(HttpRequest&& _httpRequest, Send&& send)
+    void handleRequest(HttpRequest&& _httpRequest)
     {
         HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("request")
                             << LOG_KV("method", _httpRequest.method_string())
@@ -181,26 +180,25 @@ public:
                             << LOG_KV("keep_alive", _httpRequest.keep_alive())
                             << LOG_KV("need_eof", _httpRequest.need_eof());
 
-        std::chrono::high_resolution_clock::time_point start =
-            std::chrono::high_resolution_clock::now();
-
+        auto startT = utcTime();
         unsigned version = _httpRequest.version();
+        auto self = std::weak_ptr<HttpSession>(shared_from_this());
         if (m_httpReqHandler)
         {
             std::string request = _httpRequest.body();
-            m_httpReqHandler(request, [this, _httpRequest, version, send, start](
-                                          const std::string& _content) {
-                std::chrono::high_resolution_clock::time_point end =
-                    std::chrono::high_resolution_clock::now();
-
+            m_httpReqHandler(request, [this, self, version, startT](const std::string& _content) {
                 auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
-                send(resp);
-
-                auto ms =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                HTTP_SESSION(DEBUG) << LOG_BADGE("handleRequest") << LOG_DESC("response")
-                                    << LOG_KV("body", resp->body())
-                                    << LOG_KV("keep_alive", resp->keep_alive()) << LOG_KV("ms", ms);
+                auto session = self.lock();
+                if (!session)
+                {
+                    return;
+                }
+                // put the response into the queue and waiting to be send
+                session->queue()->enqueue(resp);
+                HTTP_SESSION(DEBUG)
+                    << LOG_BADGE("handleRequest") << LOG_DESC("response")
+                    << LOG_KV("body", resp->body()) << LOG_KV("keep_alive", resp->keep_alive())
+                    << LOG_KV("timeCost", (utcTime() - startT));
             });
         }
         else
@@ -208,7 +206,14 @@ public:
             // unsupported http service
             auto resp =
                 buildHttpResp(boost::beast::http::status::http_version_not_supported, version, "");
-            send(resp);
+            auto session = self.lock();
+            if (!session)
+            {
+                return;
+            }
+            // put the response into the queue and waiting to be send
+            session->queue()->enqueue(resp);
+
             HTTP_SESSION(WARNING) << LOG_BADGE("handleRequest")
                                   << LOG_DESC("unsupported http service")
                                   << LOG_KV("body", resp->body());
@@ -247,6 +252,18 @@ public:
     HttpStream::Ptr httpStream() { return m_httpStream; }
     void setHttpStream(HttpStream::Ptr _httpStream) { m_httpStream = _httpStream; }
 
+    void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
+    {
+        m_threadPool = _threadPool;
+    }
+
+    std::shared_ptr<std::string> nodeId() { return m_nodeId; }
+    void setNodeId(std::shared_ptr<std::string> _nodeId) { m_nodeId = _nodeId; }
+
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
+
+
 private:
     HttpStream::Ptr m_httpStream;
 
@@ -254,11 +271,17 @@ private:
 
     std::shared_ptr<Queue> m_queue;
 
+    std::shared_ptr<bcos::ThreadPool> m_threadPool;
+
     HttpReqHandler m_httpReqHandler;
     WsUpgradeHandler m_wsUpgradeHandler;
     // the parser is stored in an optional container so we can
     // construct it from scratch it at the beginning of each new message.
     boost::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> m_parser;
+
+    std::shared_ptr<std::string> m_nodeId;
+
+    std::string m_moduleName = "DEFAULT";
 };
 
 }  // namespace http

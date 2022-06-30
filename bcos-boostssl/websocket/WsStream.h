@@ -57,7 +57,9 @@ public:
     using Ptr = std::shared_ptr<WsStream>;
     using ConstPtr = std::shared_ptr<const WsStream>;
 
-    WsStream(std::shared_ptr<boost::beast::websocket::stream<STREAM>> _stream) : m_stream(_stream)
+    WsStream(
+        std::shared_ptr<boost::beast::websocket::stream<STREAM>> _stream, std::string _moduleName)
+      : m_stream(_stream), m_moduleName(_moduleName)
     {
         initDefaultOpt();
         WEBSOCKET_STREAM(INFO) << LOG_KV("[NEWOBJ][WsStream]", this);
@@ -93,6 +95,9 @@ public:
             opt.keep_alive_pings = true;
 
             m_stream->set_option(opt);
+            m_stream->auto_fragment(false);
+            m_stream->secure_prng(false);
+            m_stream->write_buffer_bytes(2 * 1024 * 1024);
         }
     }
 
@@ -108,6 +113,9 @@ public:
     }
     //---------------  set opt params for websocket stream  end
     //-------------------------------
+
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 
 public:
     bool open() { return !m_closed.load() && m_stream->is_open(); }
@@ -193,6 +201,7 @@ public:
 private:
     std::atomic<bool> m_closed{false};
     std::shared_ptr<boost::beast::websocket::stream<STREAM>> m_stream;
+    std::string m_moduleName = "DEFAULT";
 };
 
 using RawWsStream = WsStream<boost::beast::tcp_stream>;
@@ -269,6 +278,14 @@ public:
         return m_isSsl ? m_sslStream->tcpStream() : m_rawStream->tcpStream();
     }
 
+    void setVerifyCallback(bool _disableSsl, VerifyCallback callback, bool = true)
+    {
+        if (!_disableSsl)
+        {
+            m_sslStream->stream()->next_layer().set_verify_callback(callback);
+        }
+    }
+
 private:
     bool m_isSsl{false};
 
@@ -286,38 +303,42 @@ public:
     std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
 
 public:
-    WsStreamDelegate::Ptr build(std::shared_ptr<boost::beast::tcp_stream> _tcpStream)
+    WsStreamDelegate::Ptr build(
+        std::shared_ptr<boost::beast::tcp_stream> _tcpStream, std::string _moduleName)
     {
+        _tcpStream->socket().set_option(boost::asio::ip::tcp::no_delay(true));
         auto wsStream = std::make_shared<boost::beast::websocket::stream<boost::beast::tcp_stream>>(
             std::move(*_tcpStream));
-        auto rawWsStream =
-            std::make_shared<bcos::boostssl::ws::WsStream<boost::beast::tcp_stream>>(wsStream);
+        auto rawWsStream = std::make_shared<bcos::boostssl::ws::WsStream<boost::beast::tcp_stream>>(
+            wsStream, _moduleName);
         return std::make_shared<WsStreamDelegate>(rawWsStream);
     }
 
     WsStreamDelegate::Ptr build(
-        std::shared_ptr<boost::beast::ssl_stream<boost::beast::tcp_stream>> _sslStream)
+        std::shared_ptr<boost::beast::ssl_stream<boost::beast::tcp_stream>> _sslStream,
+        std::string _moduleName)
     {
+        _sslStream->next_layer().socket().set_option(boost::asio::ip::tcp::no_delay(true));
         auto wsStream = std::make_shared<
             boost::beast::websocket::stream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
             std::move(*_sslStream));
         auto sslWsStream = std::make_shared<
             bcos::boostssl::ws::WsStream<boost::beast::ssl_stream<boost::beast::tcp_stream>>>(
-            wsStream);
+            wsStream, _moduleName);
         return std::make_shared<WsStreamDelegate>(sslWsStream);
     }
 
-    WsStreamDelegate::Ptr build(
-        bool _disableSsl, std::shared_ptr<boost::beast::tcp_stream> _tcpStream)
+    WsStreamDelegate::Ptr build(bool _disableSsl,
+        std::shared_ptr<boost::beast::tcp_stream> _tcpStream, std::string _moduleName)
     {
         if (_disableSsl)
         {
-            return build(_tcpStream);
+            return build(_tcpStream, _moduleName);
         }
 
         auto sslStream = std::make_shared<boost::beast::ssl_stream<boost::beast::tcp_stream>>(
             std::move(*_tcpStream), *m_ctx);
-        return build(sslStream);
+        return build(sslStream, _moduleName);
     }
 
 private:

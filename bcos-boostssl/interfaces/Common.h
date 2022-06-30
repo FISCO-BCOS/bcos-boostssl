@@ -13,9 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file WsError.h
- * @author: octopus
- * @date 2021-10-02
+ * @file Common.h
+ * @author: lucasli
+ * @date 2022-04-27
  */
 #pragma once
 
@@ -23,31 +23,11 @@ namespace bcos
 {
 namespace boostssl
 {
-namespace ws
+
+enum MessageExtFieldFlag
 {
-enum WsError
-{
-    AcceptError = -4000,
-    ReadError = -4001,
-    WriteError = -4002,
-    PingError = -4003,
-    PongError = -4004,
-    PacketError = -4005,
-    SessionDisconnect = -4006,
-    UserDisconnect = -4007,
-    TimeOut = -4008,
-    NoActiveCons = -4009,
-    EndPointNotExist = -4010,
-    MessageOverflow = -4011,
-    UndefinedException = -4012,
-    MessageEncodeError = -4013
+    Response = 0x0001,
 };
 
-inline bool notRetryAgain(int _wsError)
-{
-    return (_wsError == boostssl::ws::WsError::MessageOverflow);
-}
-
-}  // namespace ws
 }  // namespace boostssl
 }  // namespace bcos
