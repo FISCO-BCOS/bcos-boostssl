@@ -135,13 +135,25 @@ void WsService::reportConnectedNodes()
     m_heartbeat = std::make_shared<boost::asio::deadline_timer>(*(m_ioservicePool->getIOService()),
         boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
     auto self = std::weak_ptr<WsService>(shared_from_this());
-    m_heartbeat->async_wait([self](const boost::system::error_code&) {
-        auto service = self.lock();
-        if (!service)
+    m_heartbeat->async_wait([self](const boost::system::error_code& _error) {
+        if (_error == boost::asio::error::operation_aborted)
         {
             return;
         }
-        service->reportConnectedNodes();
+        try
+        {
+            auto service = self.lock();
+            if (!service)
+            {
+                return;
+            }
+            service->reportConnectedNodes();
+        }
+        catch (std::exception const& e)
+        {
+            BOOST_SSL_LOG(WARNING) << LOG_DESC("reportConnectedNodes exception")
+                                   << LOG_KV("error", boost::diagnostic_information(e));
+        }
     });
 }
 
@@ -270,40 +282,53 @@ void WsService::reconnect()
     m_reconnect = std::make_shared<boost::asio::deadline_timer>(*(m_ioservicePool->getIOService()),
         boost::posix_time::milliseconds(m_config->reconnectPeriod()));
 
-    m_reconnect->async_wait([self, this](const boost::system::error_code&) {
-        auto service = self.lock();
-        if (!service)
+    m_reconnect->async_wait([self, this](const boost::system::error_code& _error) {
+        if (_error == boost::asio::error::operation_aborted)
         {
             return;
         }
-
-        auto connectPeers = std::make_shared<std::set<NodeIPEndpoint>>();
-
-        // select all disconnected nodes
-        ReadGuard l(x_peers);
-        for (auto& peer : *m_reconnectedPeers)
+        try
         {
-            std::string connectedEndPoint = peer.address() + ":" + std::to_string(peer.port());
-            auto session = getSession(connectedEndPoint);
-            if (session)
+            auto service = self.lock();
+            if (!service)
             {
-                continue;
+                return;
             }
-            connectPeers->insert(peer);
-        }
 
-        if (!connectPeers->empty())
+            auto connectPeers = std::make_shared<std::set<NodeIPEndpoint>>();
+
+            // select all disconnected nodes
+            ReadGuard l(x_peers);
+            for (auto& peer : *m_reconnectedPeers)
+            {
+                std::string connectedEndPoint = peer.address() + ":" + std::to_string(peer.port());
+                auto session = getSession(connectedEndPoint);
+                if (session)
+                {
+                    continue;
+                }
+                connectPeers->insert(peer);
+            }
+
+            if (!connectPeers->empty())
+            {
+                for (auto reconnectPeer : *connectPeers)
+                {
+                    WEBSOCKET_SERVICE(INFO)
+                        << ("reconnect")
+                        << LOG_KV("peer", reconnectPeer.address() + ":" +
+                                              std::to_string(reconnectPeer.port()));
+                }
+                asyncConnectToEndpoints(connectPeers);
+            }
+
+            service->reconnect();
+        }
+        catch (std::exception const& e)
         {
-            for (auto reconnectPeer : *connectPeers)
-            {
-                WEBSOCKET_SERVICE(INFO) << ("reconnect")
-                                        << LOG_KV("peer", reconnectPeer.address() + ":" +
-                                                              std::to_string(reconnectPeer.port()));
-            }
-            asyncConnectToEndpoints(connectPeers);
+            BOOST_SSL_LOG(WARNING) << LOG_DESC("reconnect exception")
+                                   << LOG_KV("error", boost::diagnostic_information(e));
         }
-
-        service->reconnect();
     });
 }
 
