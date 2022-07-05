@@ -56,7 +56,10 @@ public:
     virtual ~WsSession()
     {
         WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this);
-        m_reporter->stop();
+        if (m_reporter)
+        {
+            m_reporter->stop();
+        }
     }
 
     void drop(uint32_t _reason);
