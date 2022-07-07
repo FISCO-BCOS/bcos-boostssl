@@ -132,8 +132,8 @@ void WsService::reportConnectedNodes()
     auto ss = sessions();
     WEBSOCKET_SERVICE(INFO) << LOG_DESC("connected nodes") << LOG_KV("count", ss.size());
 
-    m_heartbeat = std::make_shared<boost::asio::deadline_timer>(*(m_ioservicePool->getIOService()),
-        boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
+    m_heartbeat = std::make_shared<boost::asio::deadline_timer>(
+        *(m_timerIoc), boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
     auto self = std::weak_ptr<WsService>(shared_from_this());
     m_heartbeat->async_wait([self](const boost::system::error_code& _error) {
         if (_error == boost::asio::error::operation_aborted)
@@ -279,8 +279,8 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
 void WsService::reconnect()
 {
     auto self = std::weak_ptr<WsService>(shared_from_this());
-    m_reconnect = std::make_shared<boost::asio::deadline_timer>(*(m_ioservicePool->getIOService()),
-        boost::posix_time::milliseconds(m_config->reconnectPeriod()));
+    m_reconnect = std::make_shared<boost::asio::deadline_timer>(
+        *(m_timerIoc), boost::posix_time::milliseconds(m_config->reconnectPeriod()));
 
     m_reconnect->async_wait([self, this](const boost::system::error_code& _error) {
         if (_error == boost::asio::error::operation_aborted)

@@ -133,7 +133,11 @@ public:
         m_threadPool = _threadPool;
     }
 
-    void setIOServicePool(IOServicePool::Ptr _ioservicePool) { m_ioservicePool = _ioservicePool; }
+    void setIOServicePool(IOServicePool::Ptr _ioservicePool)
+    {
+        m_ioservicePool = _ioservicePool;
+        m_timerIoc = m_ioservicePool->getIOService();
+    }
 
     std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
     void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
@@ -244,6 +248,8 @@ private:
     WsSessionFactory::Ptr m_sessionFactory;
 
     IOServicePool::Ptr m_ioservicePool;
+
+    std::shared_ptr<boost::asio::io_context> m_timerIoc;
 };
 
 }  // namespace ws
