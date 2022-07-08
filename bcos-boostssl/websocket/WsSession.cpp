@@ -179,19 +179,28 @@ void WsSession::onWsAccept(boost::beast::error_code _ec)
 
 void WsSession::onReadPacket(boost::beast::flat_buffer& _buffer)
 {
-    auto data = boost::asio::buffer_cast<byte*>(boost::beast::buffers_front(_buffer.data()));
-    auto size = boost::asio::buffer_size(m_buffer.data());
+    try
+    {
+        auto data = boost::asio::buffer_cast<byte*>(boost::beast::buffers_front(_buffer.data()));
+        auto size = boost::asio::buffer_size(m_buffer.data());
 
-    auto message = m_messageFactory->buildMessage();
-    if (message->decode(bytesConstRef(data, size)) < 0)
-    {  // invalid packet, stop this session ?
-        WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
-                                   << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
-        return drop(WsError::PacketError);
+        auto message = m_messageFactory->buildMessage();
+        if (message->decode(bytesConstRef(data, size)) < 0)
+        {  // invalid packet, stop this session ?
+            WEBSOCKET_SESSION(WARNING)
+                << LOG_BADGE("onReadPacket") << LOG_DESC("decode packet error")
+                << LOG_KV("endpoint", endPoint()) << LOG_KV("session", this);
+            return drop(WsError::PacketError);
+        }
+
+        m_buffer.consume(_buffer.size());
+        onMessage(message);
     }
-
-    m_buffer.consume(_buffer.size());
-    onMessage(message);
+    catch (std::exception const& e)
+    {
+        WEBSOCKET_SESSION(WARNING) << LOG_DESC("onReadPacket: decode message exception")
+                                   << LOG_KV("error", boost::diagnostic_information(e));
+    }
 }
 
 void WsSession::onMessage(bcos::boostssl::MessageFace::Ptr _message)
