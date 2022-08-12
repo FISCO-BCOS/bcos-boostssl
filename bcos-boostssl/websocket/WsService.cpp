@@ -645,13 +645,11 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                             << LOG_DESC("callback error") << LOG_KV("endpoint", endPoint)
                             << LOG_KV("errorCode", _error->errorCode())
                             << LOG_KV("errorMessage", _error->errorMessage());
-                        if (notRetryAgain(_error->errorCode()))
+
+                        if (self->respFunc)
                         {
                             return self->respFunc(_error, _msg, _session);
                         }
-
-                        // retry
-                        return self->trySendMessageWithCB();
                     }
 
                     callback(_error, _msg, _session);
