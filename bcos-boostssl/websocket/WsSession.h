@@ -53,14 +53,7 @@ public:
 public:
     WsSession(std::string _moduleName = "DEFAULT");
 
-    virtual ~WsSession()
-    {
-        WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this);
-        if (m_reporter)
-        {
-            m_reporter->stop();
-        }
-    }
+    virtual ~WsSession() { WEBSOCKET_SESSION(INFO) << LOG_KV("[DELOBJ][WSSESSION]", this); }
 
     void drop(uint32_t _reason);
 
@@ -71,6 +64,7 @@ public:
     void startAsServer(bcos::boostssl::http::HttpRequest _httpRequest);
 
     virtual void onMessage(bcos::boostssl::MessageFace::Ptr _message);
+
 
     virtual bool isConnected()
     {
@@ -85,6 +79,7 @@ public:
      */
     virtual void asyncSendMessage(std::shared_ptr<boostssl::MessageFace> _msg,
         Options _options = Options(), RespCallBack _respCallback = RespCallBack());
+
 
     std::string endPoint() const { return m_endPoint; }
     void setEndPoint(const std::string& _endPoint) { m_endPoint = _endPoint; }
@@ -185,9 +180,6 @@ protected:
     virtual void onReadPacket(boost::beast::flat_buffer& _buffer);
     void onWritePacket();
 
-    virtual void report();
-    virtual void startReporter();
-
 protected:
     // flag for message that need to check respond packet like p2pmessage
     bool m_needCheckRspPacket = false;
@@ -226,6 +218,7 @@ protected:
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
+
     struct Message
     {
         std::shared_ptr<bcos::bytes> buffer;
@@ -235,8 +228,6 @@ protected:
     mutable bcos::SharedMutex x_writeQueue;
     std::priority_queue<std::shared_ptr<Message>> m_writeQueue;
     std::atomic_bool m_writing = {false};
-
-    std::shared_ptr<bcos::Timer> m_reporter;
 };
 
 class WsSessionFactory

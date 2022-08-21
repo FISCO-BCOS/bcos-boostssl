@@ -78,52 +78,59 @@ public:
 
     void onRead(boost::beast::error_code ec, std::size_t bytes_transferred)
     {
-        boost::ignore_unused(bytes_transferred);
-
-        // the peer client closed the connection
-        if (ec == boost::beast::http::error::end_of_stream)
+        try
         {
-            HTTP_SESSION(TRACE) << LOG_BADGE("onRead") << LOG_DESC("end of stream");
-            // return doClose();
-            return;
-        }
-
-        if (ec)
-        {
-            HTTP_SESSION(WARNING) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
-                                  << LOG_KV("error", ec);
-            // return doClose();
-            return;
-        }
-
-        auto self = std::weak_ptr<HttpSession>(shared_from_this());
-        if (boost::beast::websocket::is_upgrade(m_parser->get()))
-        {
-            HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
-            if (m_wsUpgradeHandler)
+            // the peer client closed the connection
+            if (ec == boost::beast::http::error::end_of_stream)
             {
-                auto httpSession = self.lock();
-                if (!httpSession)
-                {
-                    return;
-                }
-                m_wsUpgradeHandler(m_httpStream, m_parser->release(), httpSession->nodeId());
-            }
-            else
-            {
-                HTTP_SESSION(WARNING) << LOG_BADGE("onRead")
-                                      << LOG_DESC(
-                                             "the session will be closed for "
-                                             "unsupported websocket upgrade");
-                // doClose();
+                HTTP_SESSION(TRACE) << LOG_BADGE("onRead") << LOG_DESC("end of stream");
+                // return doClose();
                 return;
             }
-            return;
+
+            if (ec)
+            {
+                HTTP_SESSION(WARNING) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
+                                      << LOG_KV("error", ec);
+                // return doClose();
+                return;
+            }
+
+            auto self = std::weak_ptr<HttpSession>(shared_from_this());
+            if (boost::beast::websocket::is_upgrade(m_parser->get()))
+            {
+                HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
+                if (m_wsUpgradeHandler)
+                {
+                    auto httpSession = self.lock();
+                    if (!httpSession)
+                    {
+                        return;
+                    }
+                    m_wsUpgradeHandler(m_httpStream, m_parser->release(), httpSession->nodeId());
+                }
+                else
+                {
+                    HTTP_SESSION(WARNING) << LOG_BADGE("onRead")
+                                          << LOG_DESC(
+                                                 "the session will be closed for "
+                                                 "unsupported websocket upgrade");
+                    // doClose();
+                    return;
+                }
+                return;
+            }
+
+            HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("receive http request");
+
+            handleRequest(m_parser->release());
         }
-
-        HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("receive http request");
-
-        handleRequest(m_parser->release());
+        catch (std::exception const& e)
+        {
+            HTTP_SESSION(WARNING) << LOG_DESC("onRead exception")
+                                  << LOG_KV("bytesSize", bytes_transferred)
+                                  << LOG_KV("error", boost::diagnostic_information(e));
+        }
 
         if (!m_queue->isFull())
         {
@@ -186,26 +193,29 @@ public:
         if (m_httpReqHandler)
         {
             std::string request = _httpRequest.body();
-            m_httpReqHandler(request, [this, self, version, startT](const std::string& _content) {
-                auto resp = buildHttpResp(boost::beast::http::status::ok, version, _content);
+            m_httpReqHandler(request, [self, version, startT](bcos::bytes _content) {
                 auto session = self.lock();
                 if (!session)
                 {
                     return;
                 }
+                auto resp = session->buildHttpResp(
+                    boost::beast::http::status::ok, version, std::move(_content));
                 // put the response into the queue and waiting to be send
                 session->queue()->enqueue(resp);
-                HTTP_SESSION(DEBUG)
-                    << LOG_BADGE("handleRequest") << LOG_DESC("response")
-                    << LOG_KV("body", resp->body()) << LOG_KV("keep_alive", resp->keep_alive())
-                    << LOG_KV("timeCost", (utcTime() - startT));
+                BCOS_LOG(TRACE) << LOG_BADGE(session->m_moduleName) << LOG_BADGE("handleRequest")
+                                << LOG_DESC("response")
+                                << LOG_KV("body", std::string_view((const char*)resp->body().data(),
+                                                      resp->body().size()))
+                                << LOG_KV("keep_alive", resp->keep_alive())
+                                << LOG_KV("timecost", (utcTime() - startT));
             });
         }
         else
         {
             // unsupported http service
             auto resp =
-                buildHttpResp(boost::beast::http::status::http_version_not_supported, version, "");
+                buildHttpResp(boost::beast::http::status::http_version_not_supported, version, {});
             auto session = self.lock();
             if (!session)
             {
@@ -216,7 +226,9 @@ public:
 
             HTTP_SESSION(WARNING) << LOG_BADGE("handleRequest")
                                   << LOG_DESC("unsupported http service")
-                                  << LOG_KV("body", resp->body());
+                                  << LOG_KV(
+                                         "body", std::string_view((const char*)resp->body().data(),
+                                                     resp->body().size()));
         }
     }
 
@@ -227,13 +239,13 @@ public:
      * @return HttpResponsePtr:
      */
     HttpResponsePtr buildHttpResp(
-        boost::beast::http::status status, unsigned version, boost::beast::string_view content)
+        boost::beast::http::status status, unsigned version, bcos::bytes content)
     {
         auto msg = std::make_shared<HttpResponse>(status, version);
         msg->set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
         msg->set(boost::beast::http::field::content_type, "application/json");
         msg->keep_alive(true);  // default , keep alive
-        msg->body() = std::string(content);
+        msg->body() = std::move(content);
         msg->prepare_payload();
         return msg;
     }

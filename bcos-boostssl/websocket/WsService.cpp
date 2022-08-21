@@ -124,8 +124,10 @@ void WsService::stop()
         m_heartbeat->cancel();
     }
 
+
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
 }
+
 
 void WsService::reportConnectedNodes()
 {
@@ -310,6 +312,7 @@ void WsService::reconnect()
                 connectPeers->insert(peer);
             }
 
+
             if (!connectPeers->empty())
             {
                 for (auto reconnectPeer : *connectPeers)
@@ -321,6 +324,7 @@ void WsService::reconnect()
                 }
                 asyncConnectToEndpoints(connectPeers);
             }
+
 
             service->reconnect();
         }
@@ -610,6 +614,8 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
 
             auto session = *ss.begin();
             ss.erase(ss.begin());
+
+
             session->asyncSendMessage(msg, options);
         }
 

@@ -92,6 +92,7 @@ void HttpServer::stop()
         m_acceptor->close();
     }
 
+
     HTTP_SERVER(INFO) << LOG_BADGE("stop") << LOG_DESC("http server");
 }
 
@@ -110,6 +111,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
                              << LOG_KV("message", ec.message());
         return doAccept();
     }
+
     auto localEndpoint = socket.local_endpoint();
     auto remoteEndpoint = socket.remote_endpoint();
     socket.set_option(boost::asio::ip::tcp::no_delay(true));

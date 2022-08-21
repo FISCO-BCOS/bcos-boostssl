@@ -27,7 +27,7 @@ using namespace bcos::boostssl;
 using namespace bcos::boostssl::ws;
 
 // version(2) + type(2) + status(2) + seqLength(2) + ext(2) + payload(N)
-const size_t WsMessage::MESSAGE_MIN_LENGTH = 10;
+constexpr size_t WsMessage::MESSAGE_MIN_LENGTH = 10;
 
 bool WsMessage::encode(bytes& _buffer)
 {

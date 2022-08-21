@@ -50,12 +50,14 @@ namespace ws
 class WsMessage : public boostssl::MessageFace
 {
 public:
+
     // version(2) + type(2) + status(2) + seqLength(2) + ext(2) + payload(N)
     const static size_t MESSAGE_MIN_LENGTH;
 
     using Ptr = std::shared_ptr<WsMessage>;
     WsMessage() { m_payload = std::make_shared<bcos::bytes>(); }
     virtual ~WsMessage() {}
+
 
     virtual uint16_t version() const override { return m_version; }
     virtual void setVersion(uint16_t) override {}
@@ -72,6 +74,7 @@ public:
     }
     virtual uint16_t ext() const override { return m_ext; }
     virtual void setExt(uint16_t _ext) override { m_ext = _ext; }
+
 
     virtual bool encode(bcos::bytes& _buffer) override;
     virtual int64_t decode(bytesConstRef _buffer) override;
@@ -117,8 +120,10 @@ public:
         uint16_t _type, std::shared_ptr<bcos::bytes> _data)
     {
         auto msg = std::make_shared<WsMessage>();
+
         msg->setPacketType(_type);
         msg->setPayload(_data);
+
         return msg;
     }
 };

@@ -23,6 +23,8 @@
 #include <bcos-boostssl/context/ContextConfig.h>
 #include <bcos-utilities/BoostLog.h>
 #include <boost/exception/diagnostic_information.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <exception>
 #include <iostream>
 
