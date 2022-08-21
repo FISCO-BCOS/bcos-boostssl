@@ -139,9 +139,6 @@ public:
         m_timerIoc = m_ioservicePool->getIOService();
     }
 
-    std::shared_ptr<boost::asio::ssl::context> ctx() const { return m_ctx; }
-    void setCtx(std::shared_ptr<boost::asio::ssl::context> _ctx) { m_ctx = _ctx; }
-
     std::shared_ptr<WsConnector> connector() const { return m_connector; }
     void setConnector(std::shared_ptr<WsConnector> _connector) { m_connector = _connector; }
 
@@ -218,8 +215,6 @@ private:
 
     // ws connector
     std::shared_ptr<WsConnector> m_connector;
-    // ssl context
-    std::shared_ptr<boost::asio::ssl::context> m_ctx = nullptr;
     // reconnect timer
     std::shared_ptr<boost::asio::deadline_timer> m_reconnect;
     // heartbeat timer
