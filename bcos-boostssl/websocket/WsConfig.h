@@ -20,6 +20,7 @@
 #pragma once
 
 #include <bcos-boostssl/context/ContextConfig.h>
+#include <bcos-boostssl/interfaces/NodeInfoDef.h>
 #include <bcos-utilities/BoostLog.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <cstdint>
@@ -38,15 +39,9 @@ namespace boostssl
 {
 namespace ws
 {
-struct EndPoint
-{
-    std::string host;
-    uint16_t port;
-};
-
-using EndPoints = std::vector<EndPoint>;
-using EndPointsPtr = std::shared_ptr<std::vector<EndPoint>>;
-using EndPointsConstPtr = std::shared_ptr<const std::vector<EndPoint>>;
+using EndPoints = std::set<NodeIPEndpoint>;
+using EndPointsPtr = std::shared_ptr<std::set<NodeIPEndpoint>>;
+using EndPointsConstPtr = std::shared_ptr<const std::set<NodeIPEndpoint>>;
 
 enum WsModel : uint16_t
 {
@@ -71,14 +66,14 @@ private:
     // the listen port when ws work as server
     uint16_t m_listenPort;
 
+    // whether smSSL or not, default not
+    bool m_smSSL = false;
+
     // list of connected server nodes when ws work as client
-    EndPointsConstPtr m_connectedPeers;
+    EndPointsPtr m_connectPeers;
 
     // thread pool size
     uint32_t m_threadPoolSize{4};
-
-    // thread count for ioc thread
-    uint32_t m_iocThreadCount{4};
 
     // time out for send message
     int32_t m_sendMsgTimeout{DEFAULT_MESSAGE_TIMEOUT_MS};
@@ -97,6 +92,8 @@ private:
     // the max message to be send or read
     uint32_t m_maxMsgSize{DEFAULT_MAX_MESSAGE_SIZE};
 
+    std::string m_moduleName = "DEFAULT";
+
 public:
     void setModel(WsModel _model) { m_model = _model; }
     WsModel model() const { return m_model; }
@@ -109,6 +106,9 @@ public:
 
     void setListenPort(uint16_t _listenPort) { m_listenPort = _listenPort; }
     uint16_t listenPort() const { return m_listenPort; }
+
+    void setSmSSL(bool _isSmSSL) { m_smSSL = _isSmSSL; }
+    bool smSSL() { return m_smSSL; }
 
     void setMaxMsgSize(uint32_t _maxMsgSize) { m_maxMsgSize = _maxMsgSize; }
     uint32_t maxMsgSize() const { return m_maxMsgSize; }
@@ -130,21 +130,14 @@ public:
     int32_t sendMsgTimeout() const { return m_sendMsgTimeout; }
     void setSendMsgTimeout(int32_t _sendMsgTimeout) { m_sendMsgTimeout = _sendMsgTimeout; }
 
-    uint32_t iocThreadCount() const { return m_iocThreadCount; }
-    void setIocThreadCount(uint32_t _iocThreadCount) { m_iocThreadCount = _iocThreadCount; }
-
     uint32_t threadPoolSize() const
     {
         return m_threadPoolSize ? m_threadPoolSize : MIN_THREAD_POOL_SIZE;
     }
     void setThreadPoolSize(uint32_t _threadPoolSize) { m_threadPoolSize = _threadPoolSize; }
 
-    EndPointsConstPtr connectedPeers() const { return m_connectedPeers; }
-    void setConnectedPeers(EndPointsConstPtr _connectedPeers)
-    {
-        m_connectedPeers = _connectedPeers;
-    }
-
+    EndPointsPtr connectPeers() const { return m_connectPeers; }
+    void setConnectPeers(EndPointsPtr _connectPeers) { m_connectPeers = _connectPeers; }
     bool disableSsl() const { return m_disableSsl; }
     void setDisableSsl(bool _disableSsl) { m_disableSsl = _disableSsl; }
 
@@ -153,6 +146,9 @@ public:
     {
         m_contextConfig = _contextConfig;
     }
+
+    std::string moduleName() { return m_moduleName; }
+    void setModuleName(std::string _moduleName) { m_moduleName = _moduleName; }
 };
 }  // namespace ws
 }  // namespace boostssl
