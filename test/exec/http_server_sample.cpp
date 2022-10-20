@@ -88,9 +88,9 @@ int main(int argc, char** argv)
 
     auto server = wsService->httpServer();
     server->setHttpReqHandler(
-        [](const std::string& _req, std::function<void(const std::string& resp)> _callback) {
+        [](const std::string_view _req, std::function<void(bcos::bytes)> _callback) {
             BCOS_LOG(INFO) << LOG_BADGE(" [Main] ===>>>> ") << LOG_KV("request", _req);
-            _callback(_req);
+            _callback(bcos::bytes(_req.begin(), _req.end()));
         });
     wsService->start();
 
