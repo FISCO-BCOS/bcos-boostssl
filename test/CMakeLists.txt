@@ -1,4 +1,4 @@
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Top-level CMake file for ut of bcos-rpc
 # ------------------------------------------------------------------------------
 # Copyright (C) 2021 FISCO BCOS.
@@ -25,4 +25,4 @@ config_test_cases("" "${SOURCES}" bin/${TEST_BINARY_NAME} "")
 add_executable(${TEST_BINARY_NAME} ${SOURCES})
 target_include_directories(${TEST_BINARY_NAME} PRIVATE .)
 find_package(Boost CONFIG REQUIRED unit_test_framework)
-target_link_libraries(${TEST_BINARY_NAME} bcos-boostssl Boost::unit_test_framework)
+target_link_libraries(${TEST_BINARY_NAME} ${BOOSTSSL_TARGET} bcos-utilities::bcos-utilities OpenSSL::SSL OpenSSL::Crypto Boost::unit_test_framework)
