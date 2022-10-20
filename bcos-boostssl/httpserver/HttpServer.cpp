@@ -112,12 +112,19 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
         return doAccept();
     }
 
-    auto localEndpoint = socket.local_endpoint();
     boost::system::error_code sec;
+    auto localEndpoint = socket.local_endpoint(sec);
+    if(sec) {
+        HTTP_SERVER(WARNING) << LOG_BADGE("accept") << LOG_KV("local_endpoint error", sec)
+                             << LOG_KV("message", sec.message());
+        ws::WsTools::close(socket);
+        return doAccept();
+    }
     auto remoteEndpoint = socket.remote_endpoint(sec);
     if(sec) {
         HTTP_SERVER(WARNING) << LOG_BADGE("accept") << LOG_KV("remote_endpoint error", sec)
                              << LOG_KV("message", sec.message());
+        ws::WsTools::close(socket);
         return doAccept();
     }
     socket.set_option(boost::asio::ip::tcp::no_delay(true));
