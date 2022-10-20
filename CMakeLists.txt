@@ -31,13 +31,12 @@ list(APPEND CMAKE_MODULE_PATH ${BCOS_BOOSTSSL_CMAKE_DIR})
 #init hunter
 include(HunterGate)
 HunterGate(
-    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/514cacbc13c813690c78528c6092bb7915241f16.tar.gz"
-    SHA1 "0170c8daef905b461c22633121a452cc4fbcb232"
+    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/162ff7cde3d843e43afdab8fe3214275c35ef168.tar.gz"
+    SHA1 "0ba8099fe89beb0d44986c750fe0d44040725d99"
     FILEPATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.cmake"
 )
 
 project(bcos-boostssl VERSION "1.0.0")
-set(VERSION_SUFFIX "-rc3")
 
 # basic settings
 include(Options)
@@ -87,11 +86,11 @@ install(
 
 # TODO: remove ut temp for remove bcos-framework deps
 # ut
-# if (TESTS)
-#    enable_testing()
-#    set(CTEST_OUTPUT_ON_FAILURE TRUE)
-#    add_subdirectory(test)
-# endif()
+if (TESTS)
+    enable_testing()
+    set(CTEST_OUTPUT_ON_FAILURE TRUE)
+    add_subdirectory(test)
+endif()
 
 if (BUILD_EXEC_TEST)
     add_subdirectory(test/exec)
