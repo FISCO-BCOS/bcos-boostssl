@@ -270,7 +270,7 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
                 }
 
                 auto session = service->newSession(_wsStreamDelegate, *_nodeId.get());
-                session->setConnectedEndPoint(connectedEndPoint);
+                session->setEndPoint(connectedEndPoint);
                 session->startAsClient();
             });
     }
@@ -383,7 +383,6 @@ std::shared_ptr<WsSession> WsService::newSession(
     session->setThreadPool(threadPool());
     session->setMessageFactory(messageFactory());
     session->setEndPoint(endPoint);
-    session->setConnectedEndPoint(endPoint);
     session->setMaxWriteMsgSize(m_config->maxMsgSize());
     session->setSendMsgTimeout(m_config->sendMsgTimeout());
     session->setNodeId(_nodeId);
@@ -420,15 +419,14 @@ std::shared_ptr<WsSession> WsService::newSession(
 
 void WsService::addSession(std::shared_ptr<WsSession> _session)
 {
-    auto connectedEndPoint = _session->connectedEndPoint();
     auto endpoint = _session->endPoint();
     bool ok = false;
     {
         boost::unique_lock<boost::shared_mutex> lock(x_mutex);
-        auto it = m_sessions.find(connectedEndPoint);
+        auto it = m_sessions.find(endpoint);
         if (it == m_sessions.end())
         {
-            m_sessions[connectedEndPoint] = _session;
+            m_sessions[endpoint] = _session;
             ok = true;
         }
     }
@@ -439,8 +437,7 @@ void WsService::addSession(std::shared_ptr<WsSession> _session)
         conHandler(_session);
     }
 
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("addSession") << LOG_DESC("add session to mapping")
-                            << LOG_KV("connectedEndPoint", connectedEndPoint)
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("addSession") << LOG_DESC("map the session")
                             << LOG_KV("endPoint", endpoint) << LOG_KV("result", ok);
 }
 
@@ -492,17 +489,14 @@ void WsService::onConnect(Error::Ptr _error, std::shared_ptr<WsSession> _session
 {
     std::ignore = _error;
     std::string endpoint = "";
-    std::string connectedEndPoint = "";
     if (_session)
     {
         endpoint = _session->endPoint();
-        connectedEndPoint = _session->connectedEndPoint();
     }
 
     addSession(_session);
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onConnect") << LOG_KV("endpoint", endpoint)
-                            << LOG_KV("connectedEndPoint", connectedEndPoint)
                             << LOG_KV("refCount", _session.use_count());
 }
 
@@ -516,15 +510,13 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
 {
     std::ignore = _error;
     std::string endpoint = "";
-    std::string connectedEndPoint = "";
     if (_session)
     {
         endpoint = _session->endPoint();
-        connectedEndPoint = _session->connectedEndPoint();
     }
 
     // clear the session
-    removeSession(connectedEndPoint);
+    removeSession(endpoint);
 
     for (auto& disHandler : m_disconnectHandlers)
     {
@@ -532,7 +524,6 @@ void WsService::onDisconnect(Error::Ptr _error, std::shared_ptr<WsSession> _sess
     }
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onDisconnect") << LOG_KV("endpoint", endpoint)
-                            << LOG_KV("connectedEndPoint", connectedEndPoint)
                             << LOG_KV("refCount", _session ? _session.use_count() : -1);
 }
 
@@ -571,8 +562,8 @@ void WsService::asyncSendMessageByEndPoint(const std::string& _endPoint,
     {
         if (_respFunc)
         {
-            auto error = std::make_shared<Error>(
-                WsError::EndPointNotExist, "there has no connection of the endpoint exist");
+            auto error = std::make_shared<Error>(WsError::EndPointNotExist,
+                "there has no connection of the endpoint exist, endpoint: " + _endPoint);
             _respFunc(error, nullptr, nullptr);
         }
 
