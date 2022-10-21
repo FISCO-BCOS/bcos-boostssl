@@ -84,11 +84,11 @@ public:
     std::string endPoint() const { return m_endPoint; }
     void setEndPoint(const std::string& _endPoint) { m_endPoint = _endPoint; }
 
-    std::string connectedEndPoint() const { return m_connectedEndPoint; }
-    void setConnectedEndPoint(const std::string& _connectedEndPoint)
-    {
-        m_connectedEndPoint = _connectedEndPoint;
-    }
+    // std::string connectedEndPoint() const { return m_connectedEndPoint; }
+    // void setConnectedEndPoint(const std::string& _connectedEndPoint)
+    // {
+    //     m_connectedEndPoint = _connectedEndPoint;
+    // }
 
     void setConnectHandler(WsConnectHandler _connectHandler) { m_connectHandler = _connectHandler; }
     WsConnectHandler connectHandler() { return m_connectHandler; }
