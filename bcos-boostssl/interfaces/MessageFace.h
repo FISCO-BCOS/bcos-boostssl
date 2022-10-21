@@ -49,6 +49,9 @@ public:
     virtual std::shared_ptr<bytes> payload() const = 0;
     virtual void setPayload(std::shared_ptr<bcos::bytes>) = 0;
 
+    virtual bool encodeHeader(bcos::bytes& _buffer) = 0;
+    virtual int64_t decodeHeader(bytesConstRef _buffer) = 0;
+
     virtual bool encode(bcos::bytes& _buffer) = 0;
     virtual int64_t decode(bytesConstRef _buffer) = 0;
 

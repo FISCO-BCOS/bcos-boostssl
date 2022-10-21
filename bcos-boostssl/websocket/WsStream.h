@@ -21,6 +21,8 @@
 
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
+#include <bcos-boostssl/websocket/CompositeBuffer.h>
+#include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsTools.h>
 #include <bcos-utilities/BoostLog.h>
 #include <bcos-utilities/Common.h>
@@ -145,6 +147,19 @@ public:
         m_stream->async_write(boost::asio::buffer(_buffer), _handler);
     }
 
+    void asyncWrite(const CompositeBuffer& _compositeBuffer, WsStreamRWHandler _handler)
+    {
+        m_stream->binary(true);
+
+        std::vector<boost::asio::const_buffer> constBuffers(4);
+        for (const auto& buffer : _compositeBuffer.buffers())
+        {
+            constBuffers.push_back(boost::asio::buffer(*buffer));
+        }
+
+        m_stream->async_write(constBuffers, _handler);
+    }
+
     void asyncRead(boost::beast::flat_buffer& _buffer, WsStreamRWHandler _handler)
     {
         m_stream->async_read(_buffer, _handler);
@@ -238,6 +253,12 @@ public:
     {
         return m_isSsl ? m_sslStream->asyncWrite(_buffer, _handler) :
                          m_rawStream->asyncWrite(_buffer, _handler);
+    }
+
+    void asyncWrite(const CompositeBuffer& _compositeBuffer, WsStreamRWHandler _handler)
+    {
+        return m_isSsl ? m_sslStream->asyncWrite(_compositeBuffer, _handler) :
+                         m_rawStream->asyncWrite(_compositeBuffer, _handler);
     }
 
     void asyncRead(boost::beast::flat_buffer& _buffer, WsStreamRWHandler _handler)

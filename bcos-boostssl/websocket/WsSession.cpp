@@ -18,6 +18,7 @@
  * @date 2021-07-08
  */
 
+#include <bcos-boostssl/websocket/CompositeBuffer.h>
 #include <bcos-boostssl/websocket/WsError.h>
 #include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-utilities/BoostLog.h>
@@ -252,18 +253,21 @@ void WsSession::onWritePacket()
     {
         return;
     }
+
+    // nothing to be send
     if (m_writeQueue.empty())
     {
         m_writing = false;
         return;
     }
+
     m_writing = true;
-    auto msg = m_writeQueue.top();
+    auto compositeBuffer = m_writeQueue.top();
     m_writeQueue.pop();
-    asyncWrite(msg->buffer);
+    asyncWrite(compositeBuffer);
 }
 
-void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
+void WsSession::asyncWrite(std::shared_ptr<CompositeBuffer> _buffer)
 {
     if (!isConnected())
     {
@@ -277,7 +281,7 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
     {
         auto self = std::weak_ptr<WsSession>(shared_from_this());
         // Note: add one simple way to monitor message sending latency
-        // Note: the lamda[] should not include session directly, this will cause memory leak
+        // Note: the lambda[] should not include session directly, this will cause memory leak
         m_wsStreamDelegate->asyncWrite(
             *_buffer, [self, _buffer](boost::beast::error_code _ec, std::size_t) {
                 auto session = self.lock();
@@ -309,14 +313,12 @@ void WsSession::asyncWrite(std::shared_ptr<bcos::bytes> _buffer)
     }
 }
 
-void WsSession::send(std::shared_ptr<bytes> _buffer)
+void WsSession::send(std::shared_ptr<CompositeBuffer> _compositeBuffer)
 {
-    auto msg = std::make_shared<Message>();
-    msg->buffer = _buffer;
     {
         WriteGuard l(x_writeQueue);
         // data to be sent is always enqueue first
-        m_writeQueue.push(msg);
+        m_writeQueue.push(std::move(_compositeBuffer));
     }
     onWritePacket();
 }
@@ -366,8 +368,11 @@ void WsSession::asyncSendMessage(
         return;
     }
 
-    auto buffer = std::make_shared<bytes>();
-    auto r = _msg->encode(*buffer);
+    // encode header only for improve perf
+    // TODO: Whether a policy should be added and, if the payload size is small, encode the entire
+    // message instead, to be test.
+    auto headerBuffer = std::make_shared<bytes>();
+    auto r = _msg->encodeHeader(*headerBuffer);
     if (!r)
     {
         if (_respFunc)
@@ -384,6 +389,10 @@ void WsSession::asyncSendMessage(
             << LOG_KV("maxWriteMsgSize", maxWriteMsgSize());
         return;
     }
+
+    auto compositeBuffer = std::make_shared<CompositeBuffer>();
+    compositeBuffer->appendBuffer(headerBuffer);
+    compositeBuffer->appendBuffer(_msg->payload());
 
     if (_respFunc)
     {  // callback
@@ -412,7 +421,8 @@ void WsSession::asyncSendMessage(
 
     {
         boost::asio::post(m_wsStreamDelegate->tcpStream().get_executor(),
-            boost::beast::bind_front_handler(&WsSession::send, shared_from_this(), buffer));
+            boost::beast::bind_front_handler(
+                &WsSession::send, shared_from_this(), compositeBuffer));
     }
 }
 

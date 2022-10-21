@@ -18,8 +18,10 @@
  * @date 2021-07-28
  */
 #pragma once
+#include "bcos-boostssl/websocket/CompositeBuffer.h"
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
+#include <bcos-boostssl/websocket/CompositeBuffer.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsStream.h>
 #include <bcos-utilities/Common.h>
@@ -173,8 +175,9 @@ protected:
     virtual void asyncRead();
     virtual void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
 
-    virtual void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
-    virtual void send(std::shared_ptr<bcos::bytes> _buffer);
+    virtual void asyncWrite(std::shared_ptr<CompositeBuffer> _buffer);
+
+    virtual void send(std::shared_ptr<CompositeBuffer> _compositeBuffer);
 
     // async read
     virtual void onReadPacket(boost::beast::flat_buffer& _buffer);
@@ -219,14 +222,9 @@ protected:
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
 
-    struct Message
-    {
-        std::shared_ptr<bcos::bytes> buffer;
-    };
-
     // send message queue
     mutable bcos::SharedMutex x_writeQueue;
-    std::priority_queue<std::shared_ptr<Message>> m_writeQueue;
+    std::priority_queue<std::shared_ptr<CompositeBuffer>> m_writeQueue;
     std::atomic_bool m_writing = {false};
 };
 
