@@ -49,7 +49,7 @@ public:
         return true;
     }
 
-    static bool validPort(uint16_t _port) { return _port > 1024; }
+    static bool validPort(uint16_t _port) { return _port > 0; }
 
     static bool stringToEndPoint(const std::string& peer, NodeIPEndpoint& _endpoint);
 
