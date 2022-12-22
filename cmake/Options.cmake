@@ -30,7 +30,7 @@ macro(default_option O DEF)
 endmacro()
 
 # common settings
-set(MARCH_TYPE "-march=x86-64 -mtune=generic -fvisibility=hidden -fvisibility-inlines-hidden")
+set(MARCH_TYPE "-mtune=generic -fvisibility=hidden -fvisibility-inlines-hidden")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
     message(FATAL "The ${PROJECT_NAME} does not support compiling on 32-bit systems")
