@@ -18,6 +18,8 @@
  * @date 2021-10-31
  */
 
+#include "bcos-boostssl/utility/NewTimer.h"
+#include "bcos-boostssl/utility/RateReporter.h"
 #include "bcos-boostssl/websocket/WsInitializer.h"
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsService.h>
@@ -25,6 +27,7 @@
 #include <bcos-utilities/BoostLogInitializer.h>
 #include <bcos-utilities/Common.h>
 #include <bcos-utilities/ThreadPool.h>
+#include <memory>
 #include <string>
 
 using namespace bcos;
@@ -91,8 +94,13 @@ int main(int argc, char** argv)
     }
     config->setModuleName("TEST_SERVER");
 
+    auto timerFactory = std::make_shared<timer::TimerFactory>();
     auto wsService = std::make_shared<ws::WsService>(config->moduleName());
+    wsService->setTimerFactory(timerFactory);
     auto wsInitializer = std::make_shared<WsInitializer>();
+
+    auto rateReport = RateReporterFactory::build("server", 5000);
+    rateReport->start();
 
     auto sessionFactory = std::make_shared<WsSessionFactory>();
     wsInitializer->setSessionFactory(sessionFactory);
@@ -100,9 +108,11 @@ int main(int argc, char** argv)
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
-    if (!wsService->registerMsgHandler(999,
-            [](std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
+    if (!wsService->registerMsgHandler(
+            999, [&rateReport](std::shared_ptr<boostssl::MessageFace> _msg,
+                     std::shared_ptr<WsSession> _session) {
                 _msg->setRespPacket();
+                rateReport->update(_msg->length(), true);
                 _session->asyncSendMessage(_msg);
             }))
     {

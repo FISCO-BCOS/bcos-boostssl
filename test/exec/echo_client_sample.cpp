@@ -18,6 +18,7 @@
  * @date 2021-10-31
  */
 
+#include "bcos-boostssl/utility/RateReporter.h"
 #include "bcos-boostssl/websocket/WsInitializer.h"
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsService.h>
@@ -49,16 +50,23 @@ void usage()
 void sendMessage(std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsService> _wsService,
     std::shared_ptr<RateLimiter> _rateLimiter)
 {
+    auto sendRateReport = RateReporterFactory::build("clientSend", 5000);
+    sendRateReport->start();
+
+    auto recvRateReport = RateReporterFactory::build("clientRecv", 5000);
+    recvRateReport->start();
+
     while (true)
     {
         _rateLimiter->acquire(1, true);
         auto seq = _wsService->messageFactory()->newSeq();
         _msg->setSeq(seq);
-        auto startT = utcTime();
-        auto msgSize = _msg->payload()->size();
+        sendRateReport->update(_msg->length(), true);
+        // auto startT = utcTime();
+        // auto msgSize = _msg->payload()->size();
         _wsService->asyncSendMessage(_msg, Options(-1),
-            [msgSize, startT](Error ::Ptr _error, std::shared_ptr<boostssl::MessageFace>,
-                std::shared_ptr<WsSession> _session) {
+            [/*msgSize, startT*/ &recvRateReport](Error ::Ptr _error,
+                std::shared_ptr<boostssl::MessageFace> _msg, std::shared_ptr<WsSession> _session) {
                 (void)_session;
                 if (_error && _error->errorCode() != 0)
                 {
@@ -66,10 +74,15 @@ void sendMessage(std::shared_ptr<MessageFace> _msg, std::shared_ptr<WsService> _
                         << LOG_BADGE(" [Main] ===>>>> ") << LOG_DESC("callback response error")
                         << LOG_KV("errorCode", _error->errorCode())
                         << LOG_KV("errorMessage", _error->errorMessage());
+                    recvRateReport->update(1, false);
                     return;
                 }
-                BCOS_LOG(INFO) << LOG_DESC("receiveResponse, timecost:") << (utcTime() - startT)
-                               << LOG_KV("msgSize", msgSize);
+
+                recvRateReport->update(_msg->length(), true);
+
+                // BCOS_LOG(INFO) << LOG_DESC("receiveResponse, timecost:") << (utcTime() -
+                // startT)
+                //                << LOG_KV("msgSize", msgSize);
             });
     }
 }
@@ -85,17 +98,15 @@ int main(int argc, char** argv)
 
     std::string disableSsl = argv[3];
 
-    uint64_t qps = (atol(argv[4])) * 1024 * 1024;
-    // default payLoadSize is 1MB
-    uint64_t payLoadSize = 1024 * 1024;
+    uint64_t qps = (atol(argv[4]));
+    // default payLoadSize is 1K
+    uint64_t payLoadSize = 1024;
     if (argc > 5)
     {
         payLoadSize = (atol(argv[5]) * 1024);
     }
     std::cout << "### payLoad:" << payLoadSize << std::endl;
     std::cout << "### qps: " << qps << std::endl;
-    int64_t packetQPS = (qps) / (payLoadSize * 8);
-    std::cout << "### packetQPS: " << packetQPS << std::endl;
 
     auto logInitializer = std::make_shared<BoostLogInitializer>();
     std::string configFilePath = "config.ini";
@@ -127,6 +138,7 @@ int main(int argc, char** argv)
     }
     config->setModuleName("TEST_CLIENT");
 
+    auto timerFactory = std::make_shared<timer::TimerFactory>();
     auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
 
@@ -136,6 +148,7 @@ int main(int argc, char** argv)
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
+    wsService->setTimerFactory(timerFactory);
     wsService->start();
 
     // construct message
@@ -143,7 +156,7 @@ int main(int argc, char** argv)
     msg->setPacketType(999);
     std::string randStr(payLoadSize, 'a');
     msg->setPayload(std::make_shared<bytes>(randStr.begin(), randStr.end()));
-    auto rateLimiter = std::make_shared<RateLimiter>(packetQPS);
+    auto rateLimiter = std::make_shared<RateLimiter>(qps);
     sendMessage(msg, wsService, rateLimiter);
     return EXIT_SUCCESS;
 }
