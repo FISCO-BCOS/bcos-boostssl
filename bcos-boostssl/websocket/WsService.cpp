@@ -75,6 +75,7 @@ void WsService::start()
         m_httpServer->start();
     }
 
+    auto self = weak_from_this();
     // start as client
     if (m_config->asClient())
     {
@@ -85,10 +86,30 @@ void WsService::start()
             syncConnectToEndpoints(m_config->connectPeers());
         }
 
-        reconnect();
+
+        m_reconnectTimer = m_timerFactory->createTimer(
+            [self] {
+                auto service = self.lock();
+                if (service)
+                {
+                    service->reconnect();
+                }
+            },
+            m_config->reconnectPeriod(), m_config->reconnectPeriod());
+        m_reconnectTimer->start();
     }
 
-    reportConnectedNodes();
+    // report session status
+    m_reporterTimer = m_timerFactory->createTimer(
+        [self]() {
+            auto service = self.lock();
+            if (service)
+            {
+                service->report();
+            }
+        },
+        m_config->heartbeatPeriod(), m_config->heartbeatPeriod());
+    m_reporterTimer->start();
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("start")
                             << LOG_DESC("start websocket service successfully")
@@ -112,68 +133,43 @@ void WsService::stop()
         m_ioservicePool->stop();
     }
 
-    // cancel reconnect task
-    if (m_reconnect)
+    if (m_reporterTimer)
     {
-        m_reconnect->cancel();
+        m_reporterTimer->stop();
     }
 
-    // cancel heartbeat task
-    if (m_heartbeat)
+    if (m_reconnectTimer)
     {
-        m_heartbeat->cancel();
+        m_reconnectTimer->stop();
     }
-
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
 }
 
-
-void WsService::reportConnectedNodes()
+void WsService::report()
 {
     auto ss = sessions();
-    WEBSOCKET_SERVICE(INFO) << LOG_DESC("connected nodes") << LOG_KV("count", ss.size());
-
-    for (auto const& session : ss)
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("report") << LOG_DESC("connected nodes")
+                            << LOG_KV("count", ss.size());
+    for (const auto& session : ss)
     {
-        auto queueSize = session->writeQueueSize();
-        if (queueSize > 0)
+        auto writeQueueSize = session->writeQueueSize();
+        auto callbackQueueSize = session->callbackQueueSize();
+        if (writeQueueSize > 0 || callbackQueueSize >0)
         {
             WEBSOCKET_SERVICE(INFO)
-                << LOG_DESC("report session write queue status")
-                << LOG_KV("endpoint", session->endPoint()) << LOG_KV("writeQueueSize", queueSize);
+                << LOG_BADGE("report") << LOG_KV("endpoint", session->endPoint())
+                << LOG_KV("writeQueueSize", writeQueueSize)
+                << LOG_KV("callbackQueueSize", callbackQueueSize);
         }
         else
         {
             WEBSOCKET_SERVICE(DEBUG)
-                << LOG_DESC("report session write queue status")
-                << LOG_KV("endpoint", session->endPoint()) << LOG_KV("writeQueueSize", queueSize);
+                << LOG_BADGE("report") << LOG_KV("endpoint", session->endPoint())
+                << LOG_KV("writeQueueSize", writeQueueSize) 
+                << LOG_KV("callbackQueueSize", callbackQueueSize);
         }
     }
-
-    m_heartbeat = std::make_shared<boost::asio::deadline_timer>(
-        *(m_timerIoc), boost::posix_time::milliseconds(m_config->heartbeatPeriod()));
-    auto self = std::weak_ptr<WsService>(shared_from_this());
-    m_heartbeat->async_wait([self](const boost::system::error_code& _error) {
-        if (_error == boost::asio::error::operation_aborted)
-        {
-            return;
-        }
-        try
-        {
-            auto service = self.lock();
-            if (!service)
-            {
-                return;
-            }
-            service->reportConnectedNodes();
-        }
-        catch (std::exception const& e)
-        {
-            BOOST_SSL_LOG(WARNING) << LOG_DESC("reportConnectedNodes exception")
-                                   << LOG_KV("error", boost::diagnostic_information(e));
-        }
-    });
 }
 
 std::string WsService::genConnectError(
@@ -297,60 +293,33 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
 
 void WsService::reconnect()
 {
-    auto self = std::weak_ptr<WsService>(shared_from_this());
-    m_reconnect = std::make_shared<boost::asio::deadline_timer>(
-        *(m_timerIoc), boost::posix_time::milliseconds(m_config->reconnectPeriod()));
+    auto connectPeers = std::make_shared<std::set<NodeIPEndpoint>>();
 
-    m_reconnect->async_wait([self, this](const boost::system::error_code& _error) {
-        if (_error == boost::asio::error::operation_aborted)
+    // select all disconnected nodes
+    ReadGuard l(x_peers);
+    {
+        for (auto& peer : *m_reconnectedPeers)
         {
-            return;
+            std::string connectedEndPoint = peer.address() + ":" + std::to_string(peer.port());
+            auto session = getSession(connectedEndPoint);
+            if (session)
+            {
+                continue;
+            }
+            connectPeers->insert(peer);
         }
-        try
+    }
+
+    if (!connectPeers->empty())
+    {
+        for (auto reconnectPeer : *connectPeers)
         {
-            auto service = self.lock();
-            if (!service)
-            {
-                return;
-            }
-
-            auto connectPeers = std::make_shared<std::set<NodeIPEndpoint>>();
-
-            // select all disconnected nodes
-            ReadGuard l(x_peers);
-            for (auto& peer : *m_reconnectedPeers)
-            {
-                std::string connectedEndPoint = peer.address() + ":" + std::to_string(peer.port());
-                auto session = getSession(connectedEndPoint);
-                if (session)
-                {
-                    continue;
-                }
-                connectPeers->insert(peer);
-            }
-
-
-            if (!connectPeers->empty())
-            {
-                for (auto reconnectPeer : *connectPeers)
-                {
-                    WEBSOCKET_SERVICE(INFO)
-                        << ("reconnect")
-                        << LOG_KV("peer", reconnectPeer.address() + ":" +
-                                              std::to_string(reconnectPeer.port()));
-                }
-                asyncConnectToEndpoints(connectPeers);
-            }
-
-
-            service->reconnect();
+            WEBSOCKET_SERVICE(INFO) << ("reconnect")
+                                    << LOG_KV("peer", reconnectPeer.address() + ":" +
+                                                          std::to_string(reconnectPeer.port()));
         }
-        catch (std::exception const& e)
-        {
-            BOOST_SSL_LOG(WARNING) << LOG_DESC("reconnect exception")
-                                   << LOG_KV("error", boost::diagnostic_information(e));
-        }
-    });
+        asyncConnectToEndpoints(connectPeers);
+    }
 }
 
 bool WsService::registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler)
@@ -609,6 +578,7 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
         RespCallBack respFunc;
 
     public:
+        // TODO: opt this
         void trySendMessageWithOutCB()
         {
             if (ss.empty())
