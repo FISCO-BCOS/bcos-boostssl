@@ -144,7 +144,7 @@ void workAsClient(std::string serverIp, uint16_t serverPort, bool disableSsl, ui
                 auto ss = wsService->sessions();
                 if (!ss.empty())
                 {
-                    nQueueSize = ss[0]->msgQueueSize();
+                    nQueueSize = ss[0]->writeQueueSize();
                 }
 
                 std::cerr << " boostssl throughput perf working as client: " << std::endl;
