@@ -97,10 +97,14 @@ int main(int argc, char** argv)
     int64_t packetQPS = (qps) / (payLoadSize * 8);
     std::cout << "### packetQPS: " << packetQPS << std::endl;
 
-    auto logInitializer = std::make_shared<BoostLogInitializer>();
     std::string configFilePath = "config.ini";
+    auto logInitializer = std::make_shared<BoostLogInitializer>();
     boost::property_tree::ptree pt;
-    boost::property_tree::read_ini(configFilePath, pt);
+
+    if(boost::filesystem::exists(configFilePath)) 
+    {
+        boost::property_tree::read_ini(configFilePath, pt);
+    }
     logInitializer->initLog(pt);
 
     std::string test_module_name = "testClient";

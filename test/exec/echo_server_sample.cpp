@@ -66,11 +66,16 @@ int main(int argc, char** argv)
     {
         disableSsl = argv[3];
     }
-    auto logInitializer = std::make_shared<BoostLogInitializer>();
+
     std::string configFilePath = "config.ini";
+    auto logInitializer = std::make_shared<BoostLogInitializer>();
     boost::property_tree::ptree pt;
-    boost::property_tree::read_ini(configFilePath, pt);
+    if(boost::filesystem::exists(configFilePath)) 
+    {
+        boost::property_tree::read_ini(configFilePath, pt);
+    }
     logInitializer->initLog(pt);
+    
     MODULE_NAME = "TEST_SERVER_MODULE";
     TEST_SERVER_LOG(INFO, MODULE_NAME) << LOG_DESC("echo-server-sample") << LOG_KV("ip", host)
                                        << LOG_KV("port", port) << LOG_KV("disableSsl", disableSsl);
