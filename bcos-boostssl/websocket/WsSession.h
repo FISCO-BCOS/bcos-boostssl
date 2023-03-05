@@ -18,6 +18,7 @@
  * @date 2021-07-28
  */
 #pragma once
+#include "bcos-boostssl/interfaces/MessageFace.h"
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
@@ -84,14 +85,6 @@ public:
     std::string endPoint() const { return m_endPoint; }
     void setEndPoint(const std::string& _endPoint) { m_endPoint = _endPoint; }
 
-    std::string connectedEndPoint() const { return m_endPoint; }
-
-    // std::string connectedEndPoint() const { return m_connectedEndPoint; }
-    // void setConnectedEndPoint(const std::string& _connectedEndPoint)
-    // {
-    //     m_connectedEndPoint = _connectedEndPoint;
-    // }
-
     void setConnectHandler(WsConnectHandler _connectHandler) { m_connectHandler = _connectHandler; }
     WsConnectHandler connectHandler() { return m_connectHandler; }
 
@@ -140,12 +133,6 @@ public:
     int32_t maxWriteMsgSize() const { return m_maxWriteMsgSize; }
     void setMaxWriteMsgSize(int32_t _maxWriteMsgSize) { m_maxWriteMsgSize = _maxWriteMsgSize; }
 
-    std::size_t writeQueueSize()
-    {
-        bcos::ReadGuard lockGuard(x_writeQueue);
-        return m_writeQueue.size();
-    }
-
     std::string nodeId() { return m_nodeId; }
     void setNodeId(std::string _nodeId) { m_nodeId = _nodeId; }
 
@@ -158,6 +145,18 @@ public:
         m_needCheckRspPacket = _needCheckRespPacket;
     }
 
+    std::size_t writeQueueSize()
+    {
+        bcos::Guard lockGuard(x_writeQueue);
+        return m_writeQueue.size();
+    }
+
+    std::size_t callbackQueueSize()
+    {
+        bcos::Guard lockGuard(x_callback);
+        return m_callbacks.size();
+    }
+
 protected:
     struct CallBack
     {
@@ -166,24 +165,23 @@ protected:
         std::shared_ptr<boost::asio::deadline_timer> timer;
     };
     virtual void addRespCallback(const std::string& _seq, CallBack::Ptr _callback);
-    CallBack::Ptr getAndRemoveRespCallback(const std::string& _seq, bool _remove = true,
-        std::shared_ptr<MessageFace> _message = nullptr);
+    CallBack::Ptr getAndRemoveRespCallback(
+        const std::string& _seq, std::shared_ptr<MessageFace> _message = nullptr);
     virtual void onRespTimeout(const boost::system::error_code& _error, const std::string& _seq);
 
     virtual void onWsAccept(boost::beast::error_code _ec);
 
     virtual void asyncRead();
     virtual void onRead(boost::system::error_code ec, std::size_t bytes_transferred);
-
-    virtual void asyncWrite(std::shared_ptr<bcos::bytes> _buffer);
-    virtual void send(std::shared_ptr<bcos::bytes> _buffer);
-
-    // async read
     virtual void onReadPacket(boost::beast::flat_buffer& _buffer);
-    void onWritePacket();
+
+    virtual void asyncWrite(std::shared_ptr<EncodedMsg> _encodeMsg);
+    virtual void send(const std::shared_ptr<EncodedMsg>& _encodedMsg);
+    void write();
+    void onWrite(boost::beast::error_code _ec, std::size_t _size);
 
 protected:
-    // flag for message that need to check respond packet like p2pmessage
+    // flag for message that need to check respond packet like p2p message
     bool m_needCheckRspPacket = false;
     //
     std::atomic_bool m_isDrop = false;
@@ -206,7 +204,7 @@ protected:
     //
     WsStreamDelegate::Ptr m_wsStreamDelegate;
     // callbacks
-    mutable bcos::SharedMutex x_callback;
+    mutable bcos::Mutex x_callback;
     std::unordered_map<std::string, CallBack::Ptr> m_callbacks;
 
     // callback handler
@@ -221,14 +219,9 @@ protected:
     // ioc
     std::shared_ptr<boost::asio::io_context> m_ioc;
 
-    struct Message
-    {
-        std::shared_ptr<bcos::bytes> buffer;
-    };
-
     // send message queue
-    mutable bcos::SharedMutex x_writeQueue;
-    std::priority_queue<std::shared_ptr<Message>> m_writeQueue;
+    mutable bcos::Mutex x_writeQueue;
+    std::list<std::shared_ptr<EncodedMsg>> m_writeQueue;
     std::atomic_bool m_writing = {false};
 };
 

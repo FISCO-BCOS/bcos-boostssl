@@ -46,11 +46,12 @@ namespace boostssl
 {
 namespace ws
 {
+
+
 // the message format for ws protocol
 class WsMessage : public boostssl::MessageFace
 {
 public:
-
     // version(2) + type(2) + status(2) + seqLength(2) + ext(2) + payload(N)
     const static size_t MESSAGE_MIN_LENGTH;
 
@@ -70,13 +71,14 @@ public:
     virtual std::shared_ptr<bcos::bytes> payload() const override { return m_payload; }
     virtual void setPayload(std::shared_ptr<bcos::bytes> _payload) override
     {
-        m_payload = _payload;
+        m_payload = std::move(_payload);
     }
     virtual uint16_t ext() const override { return m_ext; }
     virtual void setExt(uint16_t _ext) override { m_ext = _ext; }
 
-
     virtual bool encode(bcos::bytes& _buffer) override;
+
+    virtual bool encode(EncodedMsg& _encodedMsg) override;
     virtual int64_t decode(bytesConstRef _buffer) override;
 
     bool isRespPacket() const override { return (m_ext & MessageExtFieldFlag::Response) != 0; }

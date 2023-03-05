@@ -21,6 +21,7 @@
 
 #include <bcos-boostssl/httpserver/HttpServer.h>
 #include <bcos-boostssl/interfaces/MessageFace.h>
+#include <bcos-boostssl/utility/NewTimer.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-boostssl/websocket/WsConnector.h>
@@ -68,7 +69,7 @@ public:
     virtual void start();
     virtual void stop();
     virtual void reconnect();
-    virtual void reportConnectedNodes();
+    virtual void status();
 
     std::shared_ptr<std::vector<std::shared_ptr<
         std::promise<std::tuple<boost::beast::error_code, std::string, std::string>>>>>
@@ -159,6 +160,9 @@ public:
         m_httpServer = _httpServer;
     }
 
+    void setTimerFactory(timer::TimerFactory::Ptr _timerFactory) { m_timerFactory = _timerFactory; }
+    timer::TimerFactory::Ptr timerFactory() { return m_timerFactory; }
+
     bool registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler);
 
     MsgHandler getMsgHandler(uint16_t _type);
@@ -209,18 +213,20 @@ private:
     // Config
     std::shared_ptr<WsConfig> m_config;
 
-    // list of reconnected server nodes updated by upper module, such as p2pservice
+    // list of reconnected server nodes updated by upper module, such as p2p service
     EndPointsPtr m_reconnectedPeers;
     mutable bcos::SharedMutex x_peers;
 
     // ws connector
     std::shared_ptr<WsConnector> m_connector;
-    // reconnect timer
-    std::shared_ptr<boost::asio::deadline_timer> m_reconnect;
-    // heartbeat timer
-    std::shared_ptr<boost::asio::deadline_timer> m_heartbeat;
+
+    std::shared_ptr<timer::Timer> m_statTimer;
+    //
+    std::shared_ptr<timer::Timer> m_reconnectTimer;
     // http server
     std::shared_ptr<bcos::boostssl::http::HttpServer> m_httpServer;
+
+    timer::TimerFactory::Ptr m_timerFactory;
 
 private:
     // mutex for m_sessions
@@ -228,6 +234,7 @@ private:
     // all active sessions
     std::unordered_map<std::string, std::shared_ptr<WsSession>> m_sessions;
     // type => handler
+    // TODO: opt the lock
     std::unordered_map<uint16_t, MsgHandler> m_msgType2Method;
     mutable SharedMutex x_msgTypeHandlers;
     // connected handlers, the handers will be called after ws protocol handshake
