@@ -112,7 +112,7 @@ int main(int argc, char** argv)
     auto logInitializer = std::make_shared<BoostLogInitializer>();
     boost::property_tree::ptree pt;
 
-    if(boost::filesystem::exists(configFilePath)) 
+    if (boost::filesystem::exists(configFilePath))
     {
         boost::property_tree::read_ini(configFilePath, pt);
     }
@@ -140,9 +140,8 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
-    config->setModuleName("TEST_CLIENT");
+    config->setModuleName("SAMPLE_CLIENT");
 
-    auto timerFactory = std::make_shared<timer::TimerFactory>();
     auto wsService = std::make_shared<ws::WsService>(config->moduleName());
     auto wsInitializer = std::make_shared<WsInitializer>();
 
@@ -152,7 +151,6 @@ int main(int argc, char** argv)
     wsInitializer->setConfig(config);
     wsInitializer->initWsService(wsService);
 
-    wsService->setTimerFactory(timerFactory);
     wsService->start();
 
     // construct message

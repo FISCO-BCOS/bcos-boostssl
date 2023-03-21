@@ -63,6 +63,12 @@ void WsService::start()
     }
     m_running = true;
 
+    // init m_timerFactory if it is not not initialized
+    if (!m_timerFactory)
+    {
+        m_timerFactory = std::make_shared<timer::TimerFactory>();
+    }
+
     // start ioc thread
     if (m_ioservicePool)
     {
