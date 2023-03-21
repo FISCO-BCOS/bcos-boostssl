@@ -225,8 +225,8 @@ private:
     std::shared_ptr<timer::Timer> m_reconnectTimer;
     // http server
     std::shared_ptr<bcos::boostssl::http::HttpServer> m_httpServer;
-
-    timer::TimerFactory::Ptr m_timerFactory;
+    // timer
+    timer::TimerFactory::Ptr m_timerFactory = nullptr;
 
 private:
     // mutex for m_sessions

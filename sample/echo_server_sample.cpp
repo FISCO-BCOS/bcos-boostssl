@@ -73,12 +73,12 @@ int main(int argc, char** argv)
     std::string configFilePath = "config.ini";
     auto logInitializer = std::make_shared<BoostLogInitializer>();
     boost::property_tree::ptree pt;
-    if(boost::filesystem::exists(configFilePath)) 
+    if (boost::filesystem::exists(configFilePath))
     {
         boost::property_tree::read_ini(configFilePath, pt);
     }
     logInitializer->initLog(pt);
-    
+
     MODULE_NAME = "TEST_SERVER_MODULE";
     TEST_SERVER_LOG(INFO, MODULE_NAME) << LOG_DESC("echo-server-sample") << LOG_KV("ip", host)
                                        << LOG_KV("port", port) << LOG_KV("disableSsl", disableSsl);
@@ -97,11 +97,9 @@ int main(int argc, char** argv)
         contextConfig->initConfig("./boostssl.ini");
         config->setContextConfig(contextConfig);
     }
-    config->setModuleName("TEST_SERVER");
+    config->setModuleName("SAMPLE_SERVER");
 
-    auto timerFactory = std::make_shared<timer::TimerFactory>();
     auto wsService = std::make_shared<ws::WsService>(config->moduleName());
-    wsService->setTimerFactory(timerFactory);
     auto wsInitializer = std::make_shared<WsInitializer>();
 
     auto rateReport = RateReporterFactory::build("server", 5000);
