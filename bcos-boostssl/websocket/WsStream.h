@@ -90,7 +90,7 @@ public:
             // Note: make it config
             opt.handshake_timeout = std::chrono::milliseconds(30000);
             // idle time
-            opt.idle_timeout = std::chrono::milliseconds(10000);
+            opt.idle_timeout = boost::beast::websocket::stream_base::none();
             // open ping/pong option
             opt.keep_alive_pings = true;
 
