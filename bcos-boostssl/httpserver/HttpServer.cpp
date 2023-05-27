@@ -21,7 +21,6 @@
 #include <bcos-boostssl/context/NodeInfoTools.h>
 #include <bcos-boostssl/httpserver/HttpServer.h>
 #include <bcos-utilities/ThreadPool.h>
-#include <memory>
 
 using namespace bcos;
 using namespace bcos::boostssl;
@@ -114,16 +113,18 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
 
     boost::system::error_code sec;
     auto localEndpoint = socket.local_endpoint(sec);
-    if(sec) {
-        HTTP_SERVER(WARNING) << LOG_BADGE("accept") << LOG_KV("local_endpoint error", sec)
-                             << LOG_KV("message", sec.message());
+    if (sec)
+    {
+        HTTP_SERVER(DEBUG) << LOG_BADGE("accept") << LOG_KV("local_endpoint error", sec)
+                           << LOG_KV("message", sec.message());
         ws::WsTools::close(socket);
         return doAccept();
     }
     auto remoteEndpoint = socket.remote_endpoint(sec);
-    if(sec) {
-        HTTP_SERVER(WARNING) << LOG_BADGE("accept") << LOG_KV("remote_endpoint error", sec)
-                             << LOG_KV("message", sec.message());
+    if (sec)
+    {
+        HTTP_SERVER(DEBUG) << LOG_BADGE("accept") << LOG_KV("remote_endpoint error", sec)
+                           << LOG_KV("message", sec.message());
         ws::WsTools::close(socket);
         return doAccept();
     }
