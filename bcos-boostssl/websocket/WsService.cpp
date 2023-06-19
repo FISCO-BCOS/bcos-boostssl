@@ -535,11 +535,12 @@ void WsService::onRecvMessage(
     }
     else
     {
-        WEBSOCKET_SERVICE(WARNING)
-            << LOG_BADGE("onRecvMessage") << LOG_DESC("unrecognized message type")
-            << LOG_KV("type", _msg->packetType()) << LOG_KV("endpoint", _session->endPoint())
-            << LOG_KV("seq", seq) << LOG_KV("data size", _msg->payload()->size())
-            << LOG_KV("use_count", _session.use_count());
+        WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onRecvMessage")
+                                << LOG_DESC("unrecognized message type")
+                                << LOG_KV("type", _msg->packetType())
+                                << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq)
+                                << LOG_KV("data size", _msg->payload()->size())
+                                << LOG_KV("use_count", _session.use_count());
     }
 }
 
