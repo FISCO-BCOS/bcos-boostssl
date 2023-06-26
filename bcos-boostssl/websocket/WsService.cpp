@@ -628,11 +628,11 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != 0)
                     {
-                        BOOST_SSL_LOG(WARNING)
+                        BOOST_SSL_LOG(INFO)
                             << LOG_BADGE(moduleName) << LOG_BADGE("asyncSendMessage")
-                            << LOG_DESC("callback error") << LOG_KV("endpoint", endPoint)
-                            << LOG_KV("errorCode", _error->errorCode())
-                            << LOG_KV("errorMessage", _error->errorMessage());
+                            << LOG_DESC("asyncSendMessage failed") << LOG_KV("endpoint", endPoint)
+                            << LOG_KV("code", _error->errorCode())
+                            << LOG_KV("message", _error->errorMessage());
 
                         if (self->respFunc)
                         {
