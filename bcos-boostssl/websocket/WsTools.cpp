@@ -47,8 +47,26 @@ bool WsTools::stringToEndPoint(const std::string& _peer, NodeIPEndpoint& _endpoi
     {  // ipv4
         std::vector<std::string> v;
         boost::split(v, _peer, boost::is_any_of(":"), boost::token_compress_on);
+        if (v.size() != 2)
+        {
+            // number of ip and port aren't equal to 2
+            WEBSOCKET_TOOL(WARNING)
+                << LOG_DESC("peer is not valid ip:port format") << LOG_KV("peer", _peer);
+            return false;
+        }
+
         ip = v[0];
-        port = boost::lexical_cast<uint16_t>(v[1]);
+        try
+        {
+            port = boost::lexical_cast<uint16_t>(v[1]);
+        }
+        catch (const std::exception& e)
+        {
+            WEBSOCKET_TOOL(WARNING) << LOG_DESC("cast port fail, peer is not valid ip:port format")
+                                    << LOG_KV("peer", _peer);
+            return false;
+        }
+
         valid = true;
     }
 
