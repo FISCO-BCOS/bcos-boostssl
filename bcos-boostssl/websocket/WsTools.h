@@ -38,18 +38,6 @@ static std::string m_moduleName = "DEFAULT";
 class WsTools
 {
 public:
-    static bool isNumeric(const std::string& str)
-    {
-        if (str.empty())
-        {
-            return false;
-        }
-
-        char* end = nullptr;
-        std::strtod(str.c_str(), &end);
-        return end == str.c_str() + str.length();
-    }
-
     static bool validIP(const std::string& _ip)
     {
         boost::system::error_code ec;
