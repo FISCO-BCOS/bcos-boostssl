@@ -49,7 +49,6 @@ bool WsTools::stringToEndPoint(const std::string& _peer, NodeIPEndpoint& _endpoi
         boost::split(v, _peer, boost::is_any_of(":"), boost::token_compress_on);
         if (v.size() != 2)
         {
-            // number of ip and port aren't equal to 2
             WEBSOCKET_TOOL(WARNING)
                 << LOG_DESC("peer is not valid ip:port format") << LOG_KV("peer", _peer);
             return false;
