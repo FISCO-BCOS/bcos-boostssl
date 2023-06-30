@@ -50,23 +50,23 @@ bool WsTools::stringToEndPoint(const std::string& _peer, NodeIPEndpoint& _endpoi
         if (v.size() != 2)
         {
             // number of ip and port aren't equal to 2
-            WEBSOCKET_TOOL(WARNING) << LOG_DESC(
-                                           "peer is not valid ip:port format, "
-                                           "number of ip and port must equal to 2")
-                                    << LOG_KV("peer", _peer);
+            WEBSOCKET_TOOL(WARNING)
+                << LOG_DESC("peer is not valid ip:port format") << LOG_KV("peer", _peer);
             return false;
         }
 
         ip = v[0];
-        std::string strPort = v[1];
-        if (!isNumeric(strPort))
+        try
         {
-            WEBSOCKET_TOOL(WARNING) << LOG_DESC("port is not valid, port should be int type")
-                                    << LOG_KV("port", strPort);
+            port = boost::lexical_cast<uint16_t>(v[1]);
+        }
+        catch (const std::exception& e)
+        {
+            WEBSOCKET_TOOL(WARNING)
+                << LOG_DESC("cast port failed, port is not valid") << LOG_KV("peer", _peer);
             return false;
         }
 
-        port = boost::lexical_cast<uint16_t>(strPort);
         valid = true;
     }
 
