@@ -27,6 +27,7 @@
 #include <memory>
 #include <vector>
 
+#define HEART_BEAT_MSG_TYPE (0xFFFF)
 #define MIN_HEART_BEAT_PERIOD_MS (10000)
 #define MIN_RECONNECT_PERIOD_MS (10000)
 #define DEFAULT_MESSAGE_TIMEOUT_MS (-1)
