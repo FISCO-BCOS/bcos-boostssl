@@ -100,6 +100,10 @@ void WsService::start()
                 if (service)
                 {
                     service->reconnect();
+                    // send heartbeat message
+                    auto msg = service->messageFactory()->buildMessage();
+                    msg->setPacketType(HEART_BEAT_MSG_TYPE);
+                    service->broadcastMessage(std::move(msg));
                 }
             },
             m_config->reconnectPeriod(), m_config->reconnectPeriod());
@@ -333,6 +337,10 @@ void WsService::reconnect()
 
 bool WsService::registerMsgHandler(uint16_t _msgType, MsgHandler _msgHandler)
 {
+    if (_msgType == HEART_BEAT_MSG_TYPE)
+    {
+        BOOST_THROW_EXCEPTION(std::runtime_error("65535 is occupied by heartbeat message"));
+    }
     UpgradableGuard l(x_msgTypeHandlers);
     if (m_msgType2Method.count(_msgType) || !_msgHandler)
     {
@@ -541,11 +549,19 @@ void WsService::onRecvMessage(
     }
     else
     {
-        WEBSOCKET_SERVICE(WARNING)
-            << LOG_BADGE("onRecvMessage") << LOG_DESC("unrecognized message type")
-            << LOG_KV("type", _msg->packetType()) << LOG_KV("endpoint", _session->endPoint())
-            << LOG_KV("seq", seq) << LOG_KV("data size", _msg->payload()->size())
-            << LOG_KV("use_count", _session.use_count());
+        if (_msg->packetType() == HEART_BEAT_MSG_TYPE)
+        {
+            WEBSOCKET_SERVICE(INFO)
+                << LOG_BADGE("onRecvMessage") << LOG_DESC("heartbeat message received");
+        }
+        else
+        {
+            WEBSOCKET_SERVICE(INFO)
+                << LOG_BADGE("onRecvMessage") << LOG_DESC("unrecognized message type")
+                << LOG_KV("type", _msg->packetType()) << LOG_KV("endpoint", _session->endPoint())
+                << LOG_KV("seq", seq) << LOG_KV("data size", _msg->payload()->size())
+                << LOG_KV("use_count", _session.use_count());
+        }
     }
 }
 
@@ -633,11 +649,11 @@ void WsService::asyncSendMessage(const WsSessions& _ss, std::shared_ptr<boostssl
                     std::shared_ptr<WsSession> _session) {
                     if (_error && _error->errorCode() != 0)
                     {
-                        BOOST_SSL_LOG(WARNING)
+                        BOOST_SSL_LOG(INFO)
                             << LOG_BADGE(moduleName) << LOG_BADGE("asyncSendMessage")
-                            << LOG_DESC("callback error") << LOG_KV("endpoint", endPoint)
-                            << LOG_KV("errorCode", _error->errorCode())
-                            << LOG_KV("errorMessage", _error->errorMessage());
+                            << LOG_DESC("asyncSendMessage failed") << LOG_KV("endpoint", endPoint)
+                            << LOG_KV("code", _error->errorCode())
+                            << LOG_KV("message", _error->errorMessage());
 
                         if (self->respFunc)
                         {

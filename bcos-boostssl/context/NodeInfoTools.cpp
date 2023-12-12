@@ -70,7 +70,7 @@ std::function<bool(bool, boost::asio::ssl::verify_context&)> NodeInfoTools::newV
                 (BASIC_CONSTRAINTS*)X509_get_ext_d2i(cert, NID_basic_constraints, &crit, NULL);
             if (!basic)
             {
-                NODEINFO_LOG(WARNING) << LOG_DESC("Get ca basic failed");
+                NODEINFO_LOG(INFO) << LOG_DESC("Get ca basic failed");
                 return preverified;
             }
 

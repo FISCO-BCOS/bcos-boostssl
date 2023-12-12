@@ -90,8 +90,8 @@ public:
 
             if (ec)
             {
-                HTTP_SESSION(WARNING) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
-                                      << LOG_KV("error", ec);
+                HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("close the connection")
+                                   << LOG_KV("error", ec);
                 // return doClose();
                 return;
             }
@@ -144,8 +144,8 @@ public:
 
         if (ec)
         {
-            HTTP_SESSION(WARNING) << LOG_BADGE("onWrite") << LOG_DESC("close the connection")
-                                  << LOG_KV("error", ec);
+            HTTP_SESSION(INFO) << LOG_BADGE("onWrite") << LOG_DESC("close the connection")
+                               << LOG_KV("error", ec);
             // return doClose();
             return;
         }

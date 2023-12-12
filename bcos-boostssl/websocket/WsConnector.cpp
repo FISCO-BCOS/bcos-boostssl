@@ -89,9 +89,9 @@ void WsConnector::connectToWsServer(const std::string& _host, uint16_t _port, bo
                     boost::asio::ip::tcp::resolver::results_type::endpoint_type _ep) mutable {
                     if (_ec)
                     {
-                        WEBSOCKET_CONNECTOR(WARNING)
-                            << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect failed")
-                            << LOG_KV("error", _ec.message()) << LOG_KV("endpoint", endpoint);
+                        // WEBSOCKET_CONNECTOR(WARNING)
+                        //     << LOG_BADGE("connectToWsServer") << LOG_DESC("async_connect failed")
+                        //     << LOG_KV("error", _ec.message()) << LOG_KV("endpoint", endpoint);
                         _callback(_ec, "", nullptr, nullptr);
                         connector->erasePendingConns(endpoint);
                         return;
