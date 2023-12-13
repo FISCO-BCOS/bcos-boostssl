@@ -22,9 +22,9 @@
  */
 #pragma once
 #include "bcos-utilities/BoostLog.h"
-#include "bcos-utilities/Common.h"
 #include <boost/asio.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include "bcos-utilities/Common.h"
 #include <exception>
 
 namespace bcos
@@ -90,11 +90,6 @@ public:
             return;
         }
 
-        if (m_ioService)
-        {
-            m_ioService->stop();
-        }
-
         if (m_delayHandler)
         {
             m_delayHandler->cancel();
@@ -104,8 +99,6 @@ public:
         {
             m_timerHandler->cancel();
         }
-
-        m_running = false;
     }
 
 private:
@@ -208,9 +201,10 @@ public:
         return timer;
     }
 
+private:
     void startThread()
     {
-        if (m_worker || !m_running)
+        if (m_worker)
         {
             return;
         }
@@ -254,9 +248,7 @@ public:
         m_running = false;
         BCOS_LOG(INFO) << LOG_BADGE("stopThread") << LOG_DESC("stop the timer thread");
 
-        // must stop ioService, otherwise thread won't stop
         m_ioService->stop();
-
         if (m_worker->get_id() != std::this_thread::get_id())
         {
             m_worker->join();
@@ -268,7 +260,6 @@ public:
         }
     }
 
-private:
     std::atomic_bool m_running = {false};
     std::string m_threadName = "timerFactory";
     std::unique_ptr<std::thread> m_worker = nullptr;
