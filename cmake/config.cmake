@@ -1,20 +1,14 @@
 hunter_config(
-    Boost VERSION "1.76.0-local"
-    URL
-    "https://osp-1257653870.cos.ap-guangzhou.myqcloud.com/FISCO-BCOS/FISCO-BCOS/deps/boost_1_76_0.tar.bz2
-    https://downloads.sourceforge.net/project/boost/boost/1.76.0/source/boost_1_76_0.tar.bz2
-    https://nchc.dl.sourceforge.net/project/boost/boost/1.76.0/boost_1_76_0.tar.bz2"
-    SHA1
-    8064156508312dde1d834fec3dca9b11006555b6
-    CMAKE_ARGS
-    CONFIG_MACRO=BOOST_UUID_RANDOM_PROVIDER_FORCE_POSIX
+    Boost VERSION "1.83"
+    URL "https://psychz.dl.sourceforge.net/project/boost/boost/1.83.0/boost_1_83_0.tar.bz2"
+    SHA1 75b1f569134401d178ad2aaf97a2993898dd7ee3
+    CMAKE_ARGS CONFIG_MACRO=BOOST_UUID_RANDOM_PROVIDER_FORCE_POSIX 
 )
 
-hunter_config(bcos-utilities VERSION 1.0.0-rc3-local
-    URL https://${URL_BASE}/FISCO-BCOS/bcos-utilities/archive/632cbeb0412d6ffa3c5217630fe6039f4092f3a4.tar.gz
-	SHA1 37b46cd3174ec1b66e28f19e6e8f31f209b61e4b
-    CMAKE_ARGS HUNTER_PACKAGE_LOG_BUILD=ON HUNTER_PACKAGE_LOG_INSTALL=ON
-)
+# hunter_config(bcos-utilities VERSION 1.0.0
+#     URL https://github.com/Shareong//bcos-utilities/archive/a59f0673386a82c8ed89d88690264e1b02bc7347.tar.gz
+# 	SHA1 7b0ef2ea5c05b7c71b39875cd0df94a5670b0e57
+# )
 
 hunter_config(OpenSSL VERSION tassl_1.1.1b_v1.4-local
     URL https://${URL_BASE}/FISCO-BCOS/TASSL-1.1.1b/archive/f9d60fa510e5fbe24413b4abdf1ea3a48f9ee6aa.tar.gz

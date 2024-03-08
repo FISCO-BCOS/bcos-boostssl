@@ -58,8 +58,7 @@ hunter_add_package(jsoncpp)
 find_package(jsoncpp CONFIG REQUIRED)
 
 # bcos-utilities
-hunter_add_package(bcos-utilities)
-find_package(bcos-utilities CONFIG REQUIRED)
+include(ProjectBcosUtilities)
 
 include_directories(${CMAKE_INSTALL_INCLUDEDIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
