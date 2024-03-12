@@ -22,9 +22,9 @@
  */
 #pragma once
 #include "bcos-utilities/BoostLog.h"
+#include "bcos-utilities/Common.h"
 #include <boost/asio.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include "bcos-utilities/Common.h"
 #include <exception>
 
 namespace bcos
@@ -249,7 +249,7 @@ private:
         BCOS_LOG(INFO) << LOG_BADGE("stopThread") << LOG_DESC("stop the timer thread");
 
         m_ioService->stop();
-        if (m_worker->get_id() != std::this_thread::get_id())
+        if (!(m_worker->get_id() == std::this_thread::get_id()))
         {
             m_worker->join();
             m_worker.reset();

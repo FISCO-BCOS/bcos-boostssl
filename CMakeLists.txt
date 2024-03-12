@@ -17,7 +17,6 @@
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required(VERSION 3.10)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum OS X deployment version")
 
 include(FetchContent)
 
@@ -45,9 +44,8 @@ include(Options)
 configure_project()
 include(CompilerSettings)
 
-# Boost
-hunter_add_package(Boost COMPONENTS all)
-find_package(Boost CONFIG REQUIRED log chrono system filesystem thread iostreams)
+# dependencies environment
+include(DepsEnv)
 
 # OpenSSL
 hunter_add_package(OpenSSL)
