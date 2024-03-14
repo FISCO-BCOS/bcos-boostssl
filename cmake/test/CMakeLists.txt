@@ -30,7 +30,6 @@ project(bcos-cmake-scripts-test VERSION "3.0")
 include(Options)
 configure_project()
 include(CompilerSettings)
-include(BuildDocs)
 
 include(Coverage)
 config_coverage("test_cov" "")
