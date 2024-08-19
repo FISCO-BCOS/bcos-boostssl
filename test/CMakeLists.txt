@@ -24,4 +24,7 @@ config_test_cases("" "${SOURCES}" bin/${TEST_BINARY_NAME} "")
 
 add_executable(${TEST_BINARY_NAME} ${SOURCES})
 target_include_directories(${TEST_BINARY_NAME} PRIVATE .)
-target_link_libraries(${TEST_BINARY_NAME} ${BOOSTSSL_TARGET} bcos-utilities OpenSSL::SSL OpenSSL::Crypto ${BOOST_UNIT_TEST})
+
+find_package(Boost REQUIRED unit_test_framework)
+
+target_link_libraries(${TEST_BINARY_NAME} ${BOOSTSSL_TARGET} OpenSSL::SSL OpenSSL::Crypto Boost::unit_test_framework)

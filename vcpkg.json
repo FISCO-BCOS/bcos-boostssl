@@ -1,0 +1,31 @@
+{
+  "name": "bcos-boostssl",
+  "version-string": "1.0.0",
+  "homepage": "https://github.com/FISCO-BCOS/bcos-boostssl",
+  "description": "bcos-boostssl",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    },
+    {
+        "name": "jsoncpp",
+        "version>=": "1.9.5"
+    },
+    {
+        "name": "openssl",
+        "version>=": "1.1.1-tassl"
+    },
+    {
+        "name": "bcos-utilities",
+        "version>=": "1.0.0"
+    }
+  ],
+  "builtin-baseline": "51b14cd4e1230dd51c11ffeff6f7d53c61cc5297",
+  "overrides": [
+  ]
+}

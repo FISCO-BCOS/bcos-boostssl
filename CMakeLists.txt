@@ -22,20 +22,16 @@ include(FetchContent)
 
 if(NOT DEFINED URL_BASE)
     set(URL_BASE "github.com")
-
     # set(URL_BASE "github.com.cnpmjs.org")
 endif()
 
 set(BCOS_BOOSTSSL_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake" CACHE PATH "The cmake path for the library")
 list(APPEND CMAKE_MODULE_PATH ${BCOS_BOOSTSSL_CMAKE_DIR})
 
-# init hunter
-include(HunterGate)
-HunterGate(
-    URL "https://${URL_BASE}/FISCO-BCOS/hunter/archive/162ff7cde3d843e43afdab8fe3214275c35ef168.tar.gz"
-    SHA1 "0ba8099fe89beb0d44986c750fe0d44040725d99"
-    FILEPATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.cmake"
-)
+# vcpkg init
+find_package(Git REQUIRED)
+execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
 
 project(bcos-boostssl VERSION "1.0.0")
 
@@ -43,20 +39,12 @@ project(bcos-boostssl VERSION "1.0.0")
 include(Options)
 configure_project()
 include(CompilerSettings)
-
-# dependencies environment
-include(DepsEnv)
-
+include(BcosUtilitiesDependencies)
 # OpenSSL
-hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 
 # JsonCpp
-hunter_add_package(jsoncpp)
-find_package(jsoncpp CONFIG REQUIRED)
-
-# bcos-utilities
-include(ProjectBcosUtilities)
+find_package(jsoncpp REQUIRED)
 
 include_directories(${CMAKE_INSTALL_INCLUDEDIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
