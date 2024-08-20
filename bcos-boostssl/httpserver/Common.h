@@ -43,8 +43,7 @@ using HttpRequest = boost::beast::http::request<boost::beast::http::string_body>
 using HttpResponse = boost::beast::http::response<boost::beast::http::vector_body<bcos::byte>>;
 using HttpRequestPtr = std::shared_ptr<HttpRequest>;
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;
-using HttpReqHandler =
-    std::function<void(const std::string_view req, std::function<void(bcos::bytes)>)>;
+using HttpReqHandler = std::function<void(HttpRequest&& req, std::function<void(bcos::bytes)>)>;
 using WsUpgradeHandler =
     std::function<void(std::shared_ptr<HttpStream>, HttpRequest&&, std::shared_ptr<std::string>)>;
 

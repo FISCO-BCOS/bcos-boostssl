@@ -192,8 +192,8 @@ public:
         auto self = std::weak_ptr<HttpSession>(shared_from_this());
         if (m_httpReqHandler)
         {
-            std::string request = _httpRequest.body();
-            m_httpReqHandler(request, [self, version, startT](bcos::bytes _content) {
+            m_httpReqHandler(std::move(_httpRequest), [self, version, startT](
+                                                          bcos::bytes _content) {
                 auto session = self.lock();
                 if (!session)
                 {
