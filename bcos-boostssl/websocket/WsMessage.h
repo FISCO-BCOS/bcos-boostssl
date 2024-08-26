@@ -46,8 +46,6 @@ namespace boostssl
 {
 namespace ws
 {
-
-
 // the message format for ws protocol
 class WsMessage : public boostssl::MessageFace
 {

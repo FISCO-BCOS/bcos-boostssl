@@ -64,7 +64,7 @@ struct NodeIPEndpoint
     {
         return boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(m_host), m_port);
     }
-    std::string getDesc() const
+    std::string detail() const
     {
         if (m_host.empty())
         {

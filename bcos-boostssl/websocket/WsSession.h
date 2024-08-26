@@ -83,7 +83,7 @@ public:
         Options _options = Options(), RespCallBack _respCallback = RespCallBack());
 
 
-    std::string endPoint() const { return m_endPoint.getDesc(); }
+    std::string endPoint() const { return m_endPoint.detail(); }
     NodeIPEndpoint const& endPointInfo() const { return m_endPoint; }
     void setEndPoint(const NodeIPEndpoint& _endPoint) { m_endPoint = _endPoint; }
 

@@ -51,7 +51,7 @@ void WsSession::drop(uint32_t _reason)
     {
         WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop")
                                 << LOG_DESC("the session has already been dropped")
-                                << LOG_KV("endpoint", m_endPoint.getDesc())
+                                << LOG_KV("endpoint", m_endPoint.detail())
                                 << LOG_KV("session", this);
         return;
     }
@@ -59,7 +59,7 @@ void WsSession::drop(uint32_t _reason)
     m_isDrop = true;
 
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("reason", _reason)
-                            << LOG_KV("endpoint", m_endPoint.getDesc()) << LOG_KV("session", this);
+                            << LOG_KV("endpoint", m_endPoint.detail()) << LOG_KV("session", this);
 
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     // call callbacks

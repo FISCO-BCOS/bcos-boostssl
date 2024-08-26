@@ -254,7 +254,7 @@ WsService::asyncConnectToEndpoints(EndPointsPtr _peers)
 
     for (auto& peer : *_peers)
     {
-        std::string connectedEndPoint = peer.getDesc();
+        std::string connectedEndPoint = peer.detail();
 
         /*
         WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("asyncConnect")
@@ -307,7 +307,7 @@ void WsService::reconnect()
     {
         for (auto& peer : *m_reconnectedPeers)
         {
-            std::string connectedEndPoint = peer.getDesc();
+            std::string connectedEndPoint = peer.detail();
             auto session = getSession(connectedEndPoint);
             if (session)
             {
@@ -321,7 +321,7 @@ void WsService::reconnect()
     {
         for (auto reconnectPeer : *connectPeers)
         {
-            WEBSOCKET_SERVICE(INFO) << ("reconnect") << LOG_KV("peer", reconnectPeer.getDesc());
+            WEBSOCKET_SERVICE(INFO) << ("reconnect") << LOG_KV("peer", reconnectPeer.detail());
         }
         asyncConnectToEndpoints(connectPeers);
     }
@@ -458,7 +458,7 @@ std::shared_ptr<WsSession> WsService::getSession(const std::string& _endPoint)
 
 bool WsService::isConnected(NodeIPEndpoint const& _nodeIPEndpoint)
 {
-    auto session = getSession(_nodeIPEndpoint.getDesc());
+    auto session = getSession(_nodeIPEndpoint.detail());
     if (session == nullptr || !session->isConnected())
     {
         return false;

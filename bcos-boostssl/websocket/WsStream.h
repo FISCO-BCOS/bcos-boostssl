@@ -181,7 +181,7 @@ public:
         return std::string("");
     }
 
-    virtual std::string remoteEndpoint() { return remoteEndpointInfo().getDesc(); }
+    virtual std::string remoteEndpoint() { return remoteEndpointInfo().detail(); }
 
     virtual NodeIPEndpoint remoteEndpointInfo()
     {
