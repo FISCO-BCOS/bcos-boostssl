@@ -78,6 +78,8 @@ public:
     std::string genConnectError(const std::string& _error, const std::string& endpoint, bool end);
     void syncConnectToEndpoints(EndPointsPtr _peers);
 
+    virtual bool isConnected(NodeIPEndpoint const& _nodeIPEndpoint);
+
 public:
     std::shared_ptr<WsSession> newSession(
         std::shared_ptr<WsStreamDelegate> _wsStreamDelegate, std::string const& _nodeId);
@@ -195,7 +197,7 @@ public:
         return m_reconnectedPeers;
     }
 
-private:
+protected:
     bool m_running{false};
 
     int32_t m_waitConnectFinishTimeout = 30000;
@@ -208,8 +210,6 @@ private:
     // listen host port
     std::string m_listenHost = "";
     uint16_t m_listenPort = 0;
-    // nodeID
-    std::string m_nodeID;
     // Config
     std::shared_ptr<WsConfig> m_config;
 
@@ -228,7 +228,7 @@ private:
     // timer
     timer::TimerFactory::Ptr m_timerFactory = nullptr;
 
-private:
+protected:
     // mutex for m_sessions
     mutable boost::shared_mutex x_mutex;
     // all active sessions

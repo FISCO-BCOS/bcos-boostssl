@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include "../interfaces/NodeInfoDef.h"
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
 #include <bcos-boostssl/websocket/WsTools.h>
@@ -180,22 +181,21 @@ public:
         return std::string("");
     }
 
-    virtual std::string remoteEndpoint()
+    virtual std::string remoteEndpoint() { return remoteEndpointInfo().getDesc(); }
+
+    virtual NodeIPEndpoint remoteEndpointInfo()
     {
         try
         {
             auto& s = tcpStream();
             auto remoteEndpoint = s.socket().remote_endpoint();
-            auto endPoint =
-                remoteEndpoint.address().to_string() + ":" + std::to_string(remoteEndpoint.port());
-            return endPoint;
+            return NodeIPEndpoint(remoteEndpoint.address(), remoteEndpoint.port());
         }
         catch (const std::exception& e)
         {
             WEBSOCKET_STREAM(WARNING) << LOG_BADGE("remoteEndpoint") << LOG_KV("e", e.what());
         }
-
-        return std::string("");
+        return NodeIPEndpoint();
     }
 
 private:
@@ -232,6 +232,11 @@ public:
     std::string remoteEndpoint()
     {
         return m_isSsl ? m_sslStream->remoteEndpoint() : m_rawStream->remoteEndpoint();
+    }
+
+    NodeIPEndpoint remoteEndpointInfo()
+    {
+        return m_isSsl ? m_sslStream->remoteEndpointInfo() : m_rawStream->remoteEndpointInfo();
     }
 
     void asyncWrite(const bcos::bytes& _buffer, bool _fin, WsStreamRWHandler _handler)

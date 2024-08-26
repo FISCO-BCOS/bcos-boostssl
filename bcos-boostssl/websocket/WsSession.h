@@ -18,6 +18,7 @@
  * @date 2021-07-28
  */
 #pragma once
+#include "../interfaces/NodeInfoDef.h"
 #include "bcos-boostssl/interfaces/MessageFace.h"
 #include <bcos-boostssl/httpserver/Common.h>
 #include <bcos-boostssl/websocket/Common.h>
@@ -82,8 +83,10 @@ public:
         Options _options = Options(), RespCallBack _respCallback = RespCallBack());
 
 
-    std::string endPoint() const { return m_endPoint; }
-    void setEndPoint(const std::string& _endPoint) { m_endPoint = _endPoint; }
+    std::string endPoint() const { return m_endPoint.getDesc(); }
+    NodeIPEndpoint const& endPointInfo() const { return m_endPoint; }
+    void setEndPoint(const NodeIPEndpoint& _endPoint) { m_endPoint = _endPoint; }
+
 
     void setConnectHandler(WsConnectHandler _connectHandler) { m_connectHandler = _connectHandler; }
     WsConnectHandler connectHandler() { return m_connectHandler; }
@@ -192,7 +195,7 @@ protected:
     // buffer used to read message
     boost::beast::flat_buffer m_buffer;
 
-    std::string m_endPoint;
+    NodeIPEndpoint m_endPoint;
     std::string m_connectedEndPoint;
     std::string m_nodeId;
 

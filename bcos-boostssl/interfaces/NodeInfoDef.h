@@ -28,7 +28,6 @@ namespace bcos
 {
 namespace boostssl
 {
-
 /**
  * @brief client end endpoint. Node will connect to NodeIPEndpoint.
  */
@@ -64,6 +63,14 @@ struct NodeIPEndpoint
     operator boost::asio::ip::tcp::endpoint() const
     {
         return boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(m_host), m_port);
+    }
+    std::string getDesc() const
+    {
+        if (m_host.empty())
+        {
+            return "";
+        }
+        return m_host + ":" + std::to_string(m_port);
     }
 
     // Get the port associated with the endpoint.
