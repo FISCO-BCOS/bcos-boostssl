@@ -18,6 +18,9 @@
  * @date 2021-10-02
  */
 #pragma once
+#include <memory>
+#include <sstream>
+#include <string>
 
 namespace bcos
 {
@@ -42,6 +45,60 @@ enum WsError
     UndefinedException = -4012,
     MessageEncodeError = -4013
 };
+
+inline std::ostream& operator<<(std::ostream& _out, WsError const& error)
+{
+    switch (error)
+    {
+    case WsError::AcceptError:
+        _out << "AcceptError";
+        break;
+    case WsError::ReadError:
+        _out << "ReadError";
+        break;
+    case WsError::WriteError:
+        _out << "WriteError";
+        break;
+    case WsError::PingError:
+        _out << "PingError";
+        break;
+    case WsError::PongError:
+        _out << "PongError";
+        break;
+    case WsError::PacketError:
+        _out << "PacketError";
+        break;
+    case WsError::SessionDisconnect:
+        _out << "SessionDisconnect";
+        break;
+    case WsError::UserDisconnect:
+        _out << "UserDisconnect";
+        break;
+    case WsError::TimeOut:
+        _out << "TimeOut";
+        break;
+    case WsError::NoActiveCons:
+        _out << "NoActiveCons";
+        break;
+    case WsError::EndPointNotExist:
+        _out << "EndPointNotExist";
+        break;
+    case WsError::MessageOverflow:
+        _out << "MessageOverflow";
+        break;
+    case WsError::UndefinedException:
+        _out << "UndefinedException";
+        break;
+    case WsError::MessageEncodeError:
+        _out << "MessageEncodeError";
+        break;
+    default:
+        _out << "Unkown";
+        break;
+    }
+    return _out;
+}
+
 
 inline bool notRetryAgain(int _wsError)
 {

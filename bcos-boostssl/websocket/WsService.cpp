@@ -540,7 +540,7 @@ void WsService::onRecvMessage(
                              << LOG_DESC("receive message from server")
                              << LOG_KV("type", _msg->packetType()) << LOG_KV("seq", seq)
                              << LOG_KV("endpoint", _session->endPoint())
-                             << LOG_KV("data size", _msg->payload()->size())
+                             << LOG_KV("dataSize", _msg->payload() ? _msg->payload()->size() : 0)
                              << LOG_KV("use_count", _session.use_count());
 
     auto typeHandler = getMsgHandler(_msg->packetType());
