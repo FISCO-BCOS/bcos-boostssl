@@ -44,7 +44,6 @@ using namespace bcos::boostssl::http;
 void WsInitializer::initWsService(WsService::Ptr _wsService)
 {
     std::shared_ptr<WsConfig> _config = m_config;
-    std::string m_moduleName = _config->moduleName();
     auto messageFactory = m_messageFactory;
     if (!messageFactory)
     {
@@ -76,9 +75,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     auto threadPool = std::make_shared<ThreadPool>("t_ws_pool", threadPoolSize);
 
     // init module_name for log
-    WsTools::setModuleName(m_moduleName);
-    NodeInfoTools::setModuleName(m_moduleName);
-    connector->setModuleName(m_moduleName);
+    connector->setModuleName(_config->moduleName());
 
     std::shared_ptr<boost::asio::ssl::context> srvCtx = nullptr;
     std::shared_ptr<boost::asio::ssl::context> clientCtx = nullptr;
@@ -87,8 +84,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         auto contextBuilder = std::make_shared<ContextBuilder>();
 
         // init module_name for log
-        contextBuilder->setModuleName(m_moduleName);
-        _config->contextConfig()->setModuleName(m_moduleName);
+        contextBuilder->setModuleName(_config->moduleName());
+        _config->contextConfig()->setModuleName(_config->moduleName());
 
         srvCtx = contextBuilder->buildSslContext(true, *_config->contextConfig());
         clientCtx = contextBuilder->buildSslContext(false, *_config->contextConfig());
@@ -97,7 +94,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
     if (_config->asServer())
     {
         WEBSOCKET_INITIALIZER(INFO)
-            << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as server");
+            << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as server")
+            << LOG_KV("module", _config->moduleName());
 
         if (!WsTools::validIP(_config->listenIP()))
         {
@@ -114,7 +112,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
         auto httpServerFactory = std::make_shared<HttpServerFactory>();
         auto httpServer = httpServerFactory->buildHttpServer(_config->listenIP(),
-            _config->listenPort(), ioServicePool->getIOService(), srvCtx, m_moduleName);
+            _config->listenPort(), ioServicePool->getIOService(), srvCtx, _config->moduleName());
         httpServer->setIOServicePool(ioServicePool);
         httpServer->setDisableSsl(_config->disableSsl());
         httpServer->setThreadPool(threadPool);
@@ -139,6 +137,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         auto connectPeers = _config->connectPeers();
         WEBSOCKET_INITIALIZER(INFO)
             << LOG_BADGE("initWsService") << LOG_DESC("start websocket service as client")
+            << LOG_KV("module", _config->moduleName())
             << LOG_KV("connected endpoints size", connectPeers ? connectPeers->size() : 0);
 
         if (connectPeers)
@@ -164,6 +163,7 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
                     WEBSOCKET_INITIALIZER(INFO)
                         << LOG_BADGE("initWsService") << LOG_DESC("domain name has been set")
+                        << LOG_KV("module", _config->moduleName())
                         << LOG_KV("host", peer.address());
                 }
 
@@ -181,7 +181,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
         else
         {
             WEBSOCKET_INITIALIZER(WARNING)
-                << LOG_BADGE("initWsService") << LOG_DESC("there has no connected server config");
+                << LOG_BADGE("initWsService") << LOG_DESC("there has no connected server config")
+                << LOG_KV("module", _config->moduleName());
         }
     }
 
@@ -196,7 +197,8 @@ void WsInitializer::initWsService(WsService::Ptr _wsService)
 
     WEBSOCKET_INITIALIZER(INFO)
         << LOG_BADGE("initWsService") << LOG_DESC("initializer for websocket service")
-        << LOG_KV("listenIP", _config->listenIP()) << LOG_KV("listenPort", _config->listenPort())
+        << LOG_KV("module", _config->moduleName()) << LOG_KV("listenIP", _config->listenIP())
+        << LOG_KV("listenPort", _config->listenPort())
         << LOG_KV("disableSsl", _config->disableSsl()) << LOG_KV("server", _config->asServer())
         << LOG_KV("client", _config->asClient())
         << LOG_KV("threadPoolSize", _config->threadPoolSize())

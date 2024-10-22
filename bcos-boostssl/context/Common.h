@@ -25,7 +25,7 @@
 
 
 #define CONTEXT_LOG(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[BOOSTSSL][CTX]"
-#define NODEINFO_LOG(LEVEL) BCOS_LOG(LEVEL) << LOG_BADGE(m_moduleName) << "[BOOSTSSL][NODEINFO]"
+#define NODEINFO_LOG(LEVEL) BCOS_LOG(LEVEL) << "[BOOSTSSL][NODEINFO]"
 
 namespace bcos
 {  // namespace bcos
