@@ -14,6 +14,7 @@ on:
     types: [published, created, edited]
 env:
   CCACHE_DIR: ${{ github.workspace }}/ccache
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   build_with_clang:
@@ -121,31 +122,49 @@ jobs:
     container:
       image: docker.io/centos:7
       volumes:
-        - /github/home/vcpkg:/github/home/vcpkg
+        - /usr/local/share/vcpkg:/usr/local/share/vcpkg
     steps:
-      - name: pre-push
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+      - uses: actions/cache@v3
+        id: deps_cache
+        with:
+          path: |
+            deps/
+            /usr/local/share/vcpkg/buildtrees
+            /usr/local/share/vcpkg/packages
+            /home/runner/.ccache
+            /Users/runner/.ccache/
+          key: centos-notest-${{ matrix.os }}-${{ github.base_ref }}-${{ hashFiles('.github/workflows/workflow.yml') }}
+          restore-keys: |
+            centos-notest-${{ matrix.os }}-${{ github.base_ref }}-${{ hashFiles('.github/workflows/workflow.yml') }}
+            centos-notest-${{ matrix.os }}-${{ github.base_ref }}-
+            centos-notest-${{ matrix.os }}-
+      - name: Prepare centos tools
         run: |
-          # Sigh.
-          sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
-          sed -i s/mirrorlist.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo
+          rpm -ivh https://cbs.centos.org/kojifiles/packages/centos-release-scl-rh/2/3.el7.centos/noarch/centos-release-scl-rh-2-3.el7.centos.noarch.rpm
+          rpm -ivh https://cbs.centos.org/kojifiles/packages/centos-release-scl/2/3.el7.centos/noarch/centos-release-scl-2-3.el7.centos.noarch.rpm
+          sed -i s/mirror.centos.org/mirrors.aliyun.com/g /etc/yum.repos.d/*.repo
           sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo
           sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
-          # Avoid https://github.com/actions/checkout/issues/1590
-          curl -L -o bcos-boostssl.tar.gz https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz
-          tar xvf bcos-boostssl.tar.gz
-          cd bcos-boostssl-${GITHUB_SHA}
-          yum install -y -q epel-release centos-release-scl flex bison patch glibc-static glibc-devel libzstd-devel
+          cat /etc/yum.repos.d/*.repo
+          yum clean all
+          yum makecache
+          yum update -y
+          yum install -y epel-release centos-release-scl centos-release-scl-rh
+          yum install -y https://packages.endpointdev.com/rhel/7/os/x86_64/endpoint-repo.x86_64.rpm
+          yum install -y -q flex bison patch glibc-static glibc-devel libzstd-devel
           yum install -y -q devtoolset-11 llvm-toolset-7.0 rh-perl530-perl cmake3 zlib-devel ccache python-devel python3-devel python3-pip automake openssl
-          yum reinstall -y -q https://packages.endpointdev.com/rhel/7/os/x86_64/endpoint-repo.x86_64.rpm
           yum install -y -q git
       - name: configure
         run: |
-          source /opt/rh/devtoolset-7/enable
+          source /opt/rh/devtoolset-11/enable
           mkdir -p build && cd build
-          cmake3 ../
+          cmake3 -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake ../
       - name: compile
         run: |
-          source /opt/rh/devtoolset-7/enable
+          source /opt/rh/devtoolset-11/enable
           mkdir -p build && cd build
           make -j4
 
