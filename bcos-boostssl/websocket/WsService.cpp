@@ -137,20 +137,23 @@ void WsService::stop()
     }
     m_running = false;
 
-    // stop ioc thread
-    if (m_ioservicePool)
-    {
-        m_ioservicePool->stop();
-    }
-
     if (m_statTimer)
     {
         m_statTimer->stop();
+    }
+    if (m_timerFactory)
+    {
+        m_timerFactory.reset();
     }
 
     if (m_reconnectTimer)
     {
         m_reconnectTimer->stop();
+    }
+    // stop ioc thread
+    if (m_ioservicePool)
+    {
+        m_ioservicePool->stop();
     }
 
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("stop") << LOG_DESC("stop websocket service successfully");
@@ -309,7 +312,7 @@ void WsService::reconnect()
         {
             std::string connectedEndPoint = peer.detail();
             auto session = getSession(connectedEndPoint);
-            if (session)
+            if (session && session->isConnected())
             {
                 continue;
             }
